@@ -479,6 +479,158 @@
   .theme-toggle .theme-icon-dark { display: inline; }
   body.dark .theme-toggle .theme-icon-light { display: inline; }
   body.dark .theme-toggle .theme-icon-dark { display: none; }
+  
+  /* Mode tabs (Grid / Advanced within Screens section) */
+  .mode-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border-section);
+    margin-bottom: 14px;
+    gap: 2px;
+  }
+  .mode-tab {
+    padding: 8px 16px;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--text-secondary);
+    font-weight: 500;
+  }
+  .mode-tab.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+  }
+  .mode-tab:hover:not(.active) {
+    color: var(--text-primary);
+    background: var(--hover-bg);
+  }
+  
+  /* Tile types panel */
+  .tile-types-list {
+    margin: 12px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .tile-type-item {
+    background: var(--bg-secondary);
+    border: 2px solid var(--border-tertiary);
+    border-radius: 6px;
+    padding: 10px 12px;
+    cursor: pointer;
+    transition: border-color 0.1s;
+  }
+  .tile-type-item.selected {
+    border-color: var(--accent);
+    background: var(--bg-pill-info);
+  }
+  .tile-type-item-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+  }
+  .tile-type-swatch {
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
+    border: 1px solid var(--border-input);
+    flex-shrink: 0;
+  }
+  .tile-type-name {
+    font-weight: 500;
+    font-size: 13px;
+    flex: 1;
+    color: var(--text-primary);
+  }
+  .tile-type-controls {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .tile-type-controls input[type="number"] {
+    width: 70px;
+    padding: 3px 6px;
+    font-size: 12px;
+  }
+  .tile-type-controls input[type="text"] {
+    width: 110px;
+    padding: 3px 6px;
+    font-size: 12px;
+  }
+  .tile-type-controls input[type="color"] {
+    width: 32px;
+    height: 26px;
+  }
+  .tile-type-controls select {
+    padding: 3px 6px;
+    font-size: 12px;
+  }
+  .tile-type-controls label {
+    font-size: 11px;
+    color: var(--text-muted);
+    min-width: auto;
+  }
+  .tile-type-actions {
+    display: flex;
+    gap: 4px;
+    margin-top: 6px;
+  }
+  .tile-type-actions button {
+    padding: 3px 8px;
+    font-size: 11px;
+  }
+  
+  /* Advanced canvas overlay - tile placement */
+  .advanced-canvas-wrap {
+    position: relative;
+    background: var(--bg-grid-wrap);
+    padding: 8px;
+    border-radius: 4px;
+    border: 1px solid var(--border-input);
+    overflow: auto;
+    max-height: 500px;
+  }
+  .advanced-canvas-wrap canvas {
+    cursor: crosshair;
+    background: white;
+    border: 1px solid var(--border-input);
+    display: block;
+    image-rendering: pixelated;
+  }
+  body.dark .advanced-canvas-wrap canvas { background: #e6e6e8; }
+  .advanced-toolbar {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-bottom: 10px;
+    padding: 8px;
+    background: var(--bg-secondary);
+    border-radius: 4px;
+  }
+  .advanced-toolbar label {
+    min-width: auto;
+    font-size: 12px;
+  }
+  .selected-type-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--bg-pill-info);
+    border: 1px solid var(--border-pill-info);
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+  }
+  .selected-type-indicator .swatch {
+    width: 14px;
+    height: 14px;
+    border-radius: 2px;
+    border: 1px solid rgba(0,0,0,0.2);
+  }
 </style>
 </head>
 <body>
@@ -551,6 +703,11 @@
       
       <hr/>
       
+      <div class="mode-tabs">
+        <button class="mode-tab active" data-mode="grid" data-i18n="mode_grid">Grid mode</button>
+        <button class="mode-tab" data-mode="advanced" data-i18n="mode_advanced">Advanced (free placement)</button>
+      </div>
+      
       <div id="screen-config">
         <div class="row">
           <label data-i18n="tile_pixels">Tile pixels</label>
@@ -603,9 +760,47 @@
           <button id="invert" data-i18n="invert">Invert</button>
         </div>
       </div>
+      
+      <div id="advanced-config" style="display: none;">
+        <div class="row">
+          <label data-i18n="screen_label">Screen label</label>
+          <input type="text" class="sc-input-adv" data-key="label" value="" data-i18n-placeholder="screen_placeholder" placeholder="e.g. IMAG STAGE RIGHT" style="width: 200px;" />
+        </div>
+        <div class="row">
+          <label data-i18n="offset">Offset on canvas</label>
+          <input type="number" class="sc-input-adv" data-key="offsetX" value="0" min="-10000" max="20000" />
+          <span>×</span>
+          <input type="number" class="sc-input-adv" data-key="offsetY" value="0" min="-10000" max="20000" />
+          <span style="font-size: 12px; color: var(--text-muted);">px</span>
+        </div>
+        
+        <h3 style="margin: 14px 0 8px; font-size: 13px; font-weight: 500;" data-i18n="tile_types">Tile types</h3>
+        <div class="info" data-i18n="tile_types_info">Define one or more tile types with their own dimensions and colors. Select a type, then click on the canvas below to place tiles.</div>
+        <div id="tile-types-list" class="tile-types-list"></div>
+        <div class="row">
+          <button id="add-tile-type-btn" data-i18n="add_tile_type">+ Add tile type</button>
+        </div>
+        
+        <h3 style="margin: 18px 0 8px; font-size: 13px; font-weight: 500;" data-i18n="place_tiles">Place tiles</h3>
+        <div class="advanced-toolbar">
+          <span class="selected-type-indicator" id="selected-type-indicator">
+            <span class="swatch" id="selected-type-swatch"></span>
+            <span id="selected-type-name">Default</span>
+          </span>
+          <label><input type="checkbox" id="adv-snap-enabled" checked /> <span data-i18n="snap">Snap</span></label>
+          <label><span data-i18n="snap_size">Snap size</span></label>
+          <input type="number" id="adv-snap-size" value="8" min="1" max="200" style="width: 60px;" />
+          <span style="font-size: 12px; color: var(--text-muted);">px</span>
+          <button id="adv-clear-all" data-i18n="clear_all">Clear all</button>
+        </div>
+        <div class="info" data-i18n="advanced_canvas_hint">Click to place. Click existing tile to select. Drag to move. Right-click or Delete key to remove. Scroll to zoom.</div>
+        <div class="advanced-canvas-wrap">
+          <canvas id="advanced-canvas" width="800" height="400"></canvas>
+        </div>
+      </div>
     </div>
 
-    <div class="section">
+    <div class="section" id="grid-edit-section">
       <h2 data-i18n="edit_tiles">Edit tiles</h2>
       <div class="info" data-i18n="edit_info">Click to toggle. Click+drag to paint multiple tiles. Active tiles will appear on output.</div>
       <div class="stats" id="stats"></div>
@@ -744,6 +939,25 @@ const I18N = {
     dir_vertical: 'Vertical ↓',
     dir_diagonal: 'Diagonal ↘',
     dir_diagonal_rev: 'Diagonal ↗',
+    mode_grid: 'Grid mode',
+    mode_advanced: 'Advanced (free placement)',
+    tile_types: 'Tile types',
+    tile_types_info: 'Define one or more tile types with their own dimensions and colors. Select a type, then click on the canvas below to place tiles.',
+    add_tile_type: '+ Add tile type',
+    place_tiles: 'Place tiles',
+    snap: 'Snap',
+    snap_size: 'Snap size',
+    advanced_canvas_hint: 'Click to place. Click existing tile to select. Drag to move. Right-click or Delete key to remove.',
+    type_name: 'Name',
+    type_w: 'W',
+    type_h: 'H',
+    delete_type: 'Delete type',
+    select_type: 'Select',
+    selected_type: '✓ Selected',
+    confirm_delete_type: 'Delete this tile type? All placed tiles of this type will also be removed.',
+    confirm_clear_advanced: 'Remove all placed tiles?',
+    convert_to_advanced: 'Convert grid to advanced',
+    convert_advanced_warning: 'Switching to advanced mode will convert your current grid into individually placed tiles. Continue?',
     screen_label: 'Screen label',
     screen_placeholder: 'e.g. IMAG STAGE RIGHT',
     rebuild_grid: 'Rebuild this screen\'s grid',
@@ -851,6 +1065,25 @@ const I18N = {
     dir_vertical: 'Verticaal ↓',
     dir_diagonal: 'Diagonaal ↘',
     dir_diagonal_rev: 'Diagonaal ↗',
+    mode_grid: 'Grid modus',
+    mode_advanced: 'Geavanceerd (vrij plaatsen)',
+    tile_types: 'Tegel types',
+    tile_types_info: 'Definieer één of meer tegel types met eigen afmetingen en kleuren. Selecteer een type en klik op het canvas hieronder om tegels te plaatsen.',
+    add_tile_type: '+ Tegel type toevoegen',
+    place_tiles: 'Tegels plaatsen',
+    snap: 'Uitlijnen',
+    snap_size: 'Uitlijn raster',
+    advanced_canvas_hint: 'Klik om te plaatsen. Klik bestaande tegel om te selecteren. Sleep om te verplaatsen. Rechtermuisknop of Delete om te verwijderen.',
+    type_name: 'Naam',
+    type_w: 'B',
+    type_h: 'H',
+    delete_type: 'Type verwijderen',
+    select_type: 'Selecteer',
+    selected_type: '✓ Geselecteerd',
+    confirm_delete_type: 'Dit tegel type verwijderen? Alle geplaatste tegels van dit type worden ook verwijderd.',
+    confirm_clear_advanced: 'Alle geplaatste tegels verwijderen?',
+    convert_to_advanced: 'Grid naar geavanceerd omzetten',
+    convert_advanced_warning: 'Overschakelen naar geavanceerde modus zet je huidige grid om naar individueel geplaatste tegels. Doorgaan?',
     screen_label: 'Scherm label',
     screen_placeholder: 'bijv. IMAG STAGE RIGHT',
     rebuild_grid: 'Grid van dit scherm opnieuw bouwen',
@@ -991,7 +1224,13 @@ let state = {
       colorB: '#781414',
       gradientMode: 'checker',
       gradientDir: 'horizontal',
-      active: null, // 2D array
+      active: null, // 2D array (grid mode)
+      // Advanced mode: free X/Y placement with multiple tile types
+      advancedMode: false,
+      tileTypes: [], // [{id, name, w, h, colorA, colorB, gradientMode, gradientDir}]
+      placedTiles: [], // [{x, y, typeId}]
+      snapEnabled: true,
+      snapSize: 8,
     }
   ],
   activeScreenId: 1,
@@ -1047,6 +1286,78 @@ function lerpColor(hexA, hexB, t) {
 
 function activeScreen() {
   return state.screens.find(s => s.id === state.activeScreenId);
+}
+
+// ============================================================
+// ADVANCED MODE HELPERS
+// ============================================================
+let tileTypeIdCounter = 0;
+function nextTileTypeId() { tileTypeIdCounter++; return `tt_${Date.now()}_${tileTypeIdCounter}`; }
+let placedTileIdCounter = 0;
+function nextPlacedTileId() { placedTileIdCounter++; return placedTileIdCounter; }
+
+// Make sure a screen has at least one tile type defined (for advanced mode)
+function ensureDefaultTileType(s) {
+  if (!s.tileTypes || s.tileTypes.length === 0) {
+    s.tileTypes = [{
+      id: nextTileTypeId(),
+      name: 'Default',
+      w: s.tileW || 56,
+      h: s.tileH || 112,
+      colorA: s.colorA || '#d23c3c',
+      colorB: s.colorB || '#781414',
+      gradientMode: s.gradientMode || 'checker',
+      gradientDir: s.gradientDir || 'horizontal',
+    }];
+  }
+  if (!s.selectedTileTypeId) {
+    s.selectedTileTypeId = s.tileTypes[0].id;
+  }
+  if (!s.placedTiles) s.placedTiles = [];
+  if (s.snapEnabled === undefined) s.snapEnabled = true;
+  if (!s.snapSize) s.snapSize = 8;
+}
+
+function getTileType(s, typeId) {
+  return s.tileTypes.find(t => t.id === typeId) || s.tileTypes[0];
+}
+
+// Convert from grid mode to advanced mode (preserve active tiles as placed tiles of default type)
+function convertScreenToAdvanced(s) {
+  ensureDefaultTileType(s);
+  const defaultType = s.tileTypes[0];
+  s.placedTiles = [];
+  if (s.active) {
+    for (let r = 0; r < s.rows; r++) {
+      for (let c = 0; c < s.cols; c++) {
+        if (s.active[r][c]) {
+          s.placedTiles.push({
+            id: nextPlacedTileId(),
+            x: c * s.tileW,
+            y: r * s.tileH,
+            typeId: defaultType.id,
+          });
+        }
+      }
+    }
+  }
+  s.advancedMode = true;
+}
+
+// Get bounding box of all placed tiles
+function getAdvancedBBox(s) {
+  if (!s.placedTiles || s.placedTiles.length === 0) {
+    return { minX: 0, minY: 0, maxX: 0, maxY: 0, w: 0, h: 0 };
+  }
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  s.placedTiles.forEach(pt => {
+    const t = getTileType(s, pt.typeId);
+    if (pt.x < minX) minX = pt.x;
+    if (pt.y < minY) minY = pt.y;
+    if (pt.x + t.w > maxX) maxX = pt.x + t.w;
+    if (pt.y + t.h > maxY) maxY = pt.y + t.h;
+  });
+  return { minX, minY, maxX, maxY, w: maxX - minX, h: maxY - minY };
 }
 
 const $ = id => document.getElementById(id);
@@ -1195,6 +1506,9 @@ function renderScreenTabs() {
       syncScreenToUI();
       renderGrid();
       renderStats();
+      updateModeUI();
+      renderTileTypesList();
+      renderAdvancedCanvas();
     };
     container.appendChild(tab);
   });
@@ -1522,7 +1836,13 @@ function renderCanvas() {
     ctx.textBaseline = 'middle';
     // Top label - find empty space (right side after last screen)
     let labelX = cw / 2;
-    const screensFarRight = Math.max(...state.screens.map(s => s.offsetX + s.cols*s.tileW));
+    const screensFarRight = Math.max(...state.screens.map(s => {
+      if (s.advancedMode) {
+        ensureDefaultTileType(s);
+        return s.offsetX + getAdvancedBBox(s).maxX;
+      }
+      return s.offsetX + s.cols*s.tileW;
+    }));
     if (screensFarRight < cw - 200) {
       labelX = screensFarRight + (cw - screensFarRight) / 2;
     }
@@ -1538,7 +1858,13 @@ function renderCanvas() {
     
     // Right side - vertical label
     let labelY = ch / 2;
-    const screensFarBot = Math.max(...state.screens.map(s => s.offsetY + s.rows*s.tileH));
+    const screensFarBot = Math.max(...state.screens.map(s => {
+      if (s.advancedMode) {
+        ensureDefaultTileType(s);
+        return s.offsetY + getAdvancedBBox(s).maxY;
+      }
+      return s.offsetY + s.rows*s.tileH;
+    }));
     if (screensFarBot < ch - 200) {
       labelY = screensFarBot + (ch - screensFarBot) / 2;
     }
@@ -1617,6 +1943,12 @@ function updatePageIndicator() {
 }
 
 function drawScreen(ctx, s, cw, ch, accent) {
+  // If screen is in advanced mode, use a different rendering pipeline
+  if (s.advancedMode) {
+    drawScreenAdvanced(ctx, s, cw, ch, accent);
+    return;
+  }
+  
   const INSET = 2;
   
   // Compute active BB (in screen-local coords)
@@ -1873,6 +2205,272 @@ function drawScreen(ctx, s, cw, ch, accent) {
   }
 }
 
+// ============================================================
+// ADVANCED MODE RENDERING (free-placed tiles with multiple types)
+// ============================================================
+function drawScreenAdvanced(ctx, s, cw, ch, accent) {
+  ensureDefaultTileType(s);
+  if (!s.placedTiles || s.placedTiles.length === 0) return;
+  
+  const INSET = 2;
+  
+  // Compute bounding box of placed tiles
+  const bb = getAdvancedBBox(s);
+  const bbX = s.offsetX + bb.minX;
+  const bbY = s.offsetY + bb.minY;
+  const bbW = bb.w;
+  const bbH = bb.h;
+  
+  // Pre-compute right/bottom edges for inset detection
+  // For each tile, check if its right edge is at bb.maxX (i.e. it's on the right outer edge)
+  // and similarly for bottom
+  s.placedTiles.forEach(pt => {
+    const t = getTileType(s, pt.typeId);
+    pt._isRightEdge = (pt.x + t.w >= bb.maxX - 1);
+    pt._isBottomEdge = (pt.y + t.h >= bb.maxY - 1);
+  });
+  
+  // Build full-screen gradient cache per type (for 'full_screen' mode)
+  const fullGradByType = {};
+  s.tileTypes.forEach(t => {
+    if ((t.gradientMode || 'checker') !== 'full_screen') return;
+    const dir = t.gradientDir || 'horizontal';
+    let gx1, gy1, gx2, gy2;
+    if (dir === 'horizontal')      { gx1=bbX; gy1=bbY; gx2=bbX+bbW; gy2=bbY; }
+    else if (dir === 'vertical')   { gx1=bbX; gy1=bbY; gx2=bbX; gy2=bbY+bbH; }
+    else if (dir === 'diagonal')   { gx1=bbX; gy1=bbY; gx2=bbX+bbW; gy2=bbY+bbH; }
+    else                            { gx1=bbX; gy1=bbY+bbH; gx2=bbX+bbW; gy2=bbY; }
+    const g = ctx.createLinearGradient(gx1, gy1, gx2, gy2);
+    g.addColorStop(0, t.colorA);
+    g.addColorStop(1, t.colorB);
+    fullGradByType[t.id] = g;
+  });
+  
+  // Draw each placed tile
+  s.placedTiles.forEach((pt, idx) => {
+    const t = getTileType(s, pt.typeId);
+    let x0 = s.offsetX + pt.x;
+    let y0 = s.offsetY + pt.y;
+    let x1 = x0 + t.w;
+    let y1 = y0 + t.h;
+    // Apply 2px inset on outer right and outer bottom edges
+    if (pt._isRightEdge) x1 -= INSET;
+    if (pt._isBottomEdge) y1 -= INSET;
+    
+    const gradientMode = t.gradientMode || 'checker';
+    const gradientDir = t.gradientDir || 'horizontal';
+    
+    if (gradientMode === 'checker') {
+      // Pseudo-checker based on position
+      const checkCol = Math.floor(pt.x / t.w);
+      const checkRow = Math.floor(pt.y / t.h);
+      const isAlt = (checkCol + checkRow) % 2 === 0;
+      ctx.fillStyle = isAlt ? t.colorA : t.colorB;
+    } else if (gradientMode === 'per_tile') {
+      let gx1, gy1, gx2, gy2;
+      if (gradientDir === 'horizontal')      { gx1=x0; gy1=y0; gx2=x1; gy2=y0; }
+      else if (gradientDir === 'vertical')   { gx1=x0; gy1=y0; gx2=x0; gy2=y1; }
+      else if (gradientDir === 'diagonal')   { gx1=x0; gy1=y0; gx2=x1; gy2=y1; }
+      else                                    { gx1=x0; gy1=y1; gx2=x1; gy2=y0; }
+      const g = ctx.createLinearGradient(gx1, gy1, gx2, gy2);
+      g.addColorStop(0, t.colorA);
+      g.addColorStop(1, t.colorB);
+      ctx.fillStyle = g;
+    } else {
+      ctx.fillStyle = fullGradByType[t.id] || t.colorA;
+    }
+    ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
+  });
+  
+  // ============ OVERLAY (clipped to placed tiles) ============
+  if (state.display.overlayCircle || state.display.overlayCross) {
+    ctx.save();
+    const region = new Path2D();
+    s.placedTiles.forEach(pt => {
+      const t = getTileType(s, pt.typeId);
+      let x0 = s.offsetX + pt.x;
+      let y0 = s.offsetY + pt.y;
+      let x1 = x0 + t.w;
+      let y1 = y0 + t.h;
+      if (pt._isRightEdge) x1 -= INSET;
+      if (pt._isBottomEdge) y1 -= INSET;
+      region.rect(x0, y0, x1 - x0, y1 - y0);
+    });
+    ctx.clip(region);
+    
+    ctx.strokeStyle = accent;
+    ctx.lineWidth = Math.max(4, Math.round(cw / 320));
+    if (state.display.overlayCross) {
+      ctx.beginPath();
+      ctx.moveTo(bbX, bbY);
+      ctx.lineTo(bbX + bbW - 1, bbY + bbH - 1);
+      ctx.moveTo(bbX + bbW - 1, bbY);
+      ctx.lineTo(bbX, bbY + bbH - 1);
+      ctx.stroke();
+    }
+    if (state.display.overlayCircle) {
+      const cx = bbX + bbW / 2;
+      const cy = bbY + bbH / 2;
+      const radius = Math.min(bbW, bbH) / 2 * 0.85;
+      ctx.beginPath();
+      ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+  
+  // ============ SCREEN OUTLINE (around BB) ============
+  if (state.display.showScreenOutline) {
+    ctx.strokeStyle = accent;
+    ctx.lineWidth = 3;
+    ctx.strokeRect(bbX + 1.5, bbY + 1.5, bbW - 3, bbH - 3);
+  }
+  
+  // ============ CENTER TEXT ============
+  if (state.display.showScreenCenterText) {
+    drawCenterText(ctx, accent, bbX, bbY, bbW, bbH);
+  }
+  
+  // ============ SCREEN LABEL ============
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'alphabetic';
+  if (s.label) {
+    const fs = Math.max(20, Math.round(Math.min(bbW, bbH) / 12));
+    ctx.font = `700 ${fs}px sans-serif`;
+    const w = ctx.measureText(s.label).width;
+    const lx = bbX + bbW / 2 - w / 2;
+    const ly = bbY + bbH - fs - 30;
+    ctx.fillStyle = 'rgba(0,0,0,0.55)';
+    ctx.fillRect(lx - 14, ly - 8, w + 28, fs + 16);
+    ctx.fillStyle = 'white';
+    ctx.textBaseline = 'top';
+    ctx.fillText(s.label, lx, ly);
+    ctx.textBaseline = 'alphabetic';
+  }
+  
+  // ============ RULERS ============
+  if (state.display.showRulers) {
+    // Approximate ntilesH/V using bb dimensions and first tile type
+    const firstType = s.tileTypes[0];
+    const ntilesH = Math.round(bbW / firstType.w);
+    const ntilesV = Math.round(bbH / firstType.h);
+    drawRulersForAdvanced(ctx, s, bbX, bbY, bbW, bbH, cw, ch, accent);
+  }
+}
+
+// Helper to extract center-text drawing so it's reusable
+function drawCenterText(ctx, accent, bbX, bbY, bbW, bbH) {
+  const titleFs = state.display.centerTextSize || 28;
+  const subFs = Math.round(titleFs * 0.55);
+  const resFs = Math.round(titleFs * 0.75);
+  const lineGap = Math.round(titleFs * 0.25);
+  const screenRes = `${bbW} × ${bbH} px`;
+  const totalH = titleFs + lineGap + subFs + lineGap + resFs;
+  const centerX = bbX + bbW / 2;
+  const centerY = bbY + bbH / 2;
+  const startY = centerY - totalH / 2;
+  
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  
+  ctx.font = `700 ${titleFs}px sans-serif`;
+  const titleW = ctx.measureText(state.project.name).width;
+  ctx.font = `400 ${subFs}px sans-serif`;
+  const subW = ctx.measureText(state.project.subtitle).width;
+  ctx.font = `700 ${resFs}px Menlo, Monaco, monospace`;
+  const resW = ctx.measureText(screenRes).width;
+  const maxW = Math.max(titleW, subW, resW);
+  const padX = titleFs * 0.6;
+  const padY = titleFs * 0.4;
+  
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
+  const bgX = centerX - maxW/2 - padX;
+  const bgY = startY - padY;
+  const bgW = maxW + padX*2;
+  const bgH = totalH + padY*2;
+  const radius = Math.min(titleFs * 0.4, bgH / 2, bgW / 2);
+  ctx.beginPath();
+  ctx.moveTo(bgX + radius, bgY);
+  ctx.lineTo(bgX + bgW - radius, bgY);
+  ctx.quadraticCurveTo(bgX + bgW, bgY, bgX + bgW, bgY + radius);
+  ctx.lineTo(bgX + bgW, bgY + bgH - radius);
+  ctx.quadraticCurveTo(bgX + bgW, bgY + bgH, bgX + bgW - radius, bgY + bgH);
+  ctx.lineTo(bgX + radius, bgY + bgH);
+  ctx.quadraticCurveTo(bgX, bgY + bgH, bgX, bgY + bgH - radius);
+  ctx.lineTo(bgX, bgY + radius);
+  ctx.quadraticCurveTo(bgX, bgY, bgX + radius, bgY);
+  ctx.closePath();
+  ctx.fill();
+  
+  ctx.fillStyle = 'white';
+  ctx.font = `700 ${titleFs}px sans-serif`;
+  ctx.fillText(state.project.name, centerX, startY);
+  
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+  ctx.font = `400 ${subFs}px sans-serif`;
+  ctx.fillText(state.project.subtitle, centerX, startY + titleFs + lineGap);
+  
+  ctx.fillStyle = accent;
+  ctx.font = `700 ${resFs}px Menlo, Monaco, monospace`;
+  ctx.fillText(screenRes, centerX, startY + titleFs + lineGap + subFs + lineGap);
+  
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'alphabetic';
+}
+
+// Simplified rulers for advanced mode (just BB dimensions, no tile-grid ticks)
+function drawRulersForAdvanced(ctx, s, bbX, bbY, bbW, bbH, cw, ch, accent) {
+  const offset = Math.max(20, cw / 80);
+  const rulerCol = '#505055';
+  const fs = Math.max(14, Math.round(cw / 100));
+  
+  // Horizontal ruler bottom
+  const ry = bbY + bbH + offset;
+  if (ry < ch - 100) {
+    ctx.strokeStyle = rulerCol;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(bbX, ry); ctx.lineTo(bbX + bbW, ry);
+    ctx.stroke();
+    ctx.strokeStyle = accent;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(bbX, ry - 12); ctx.lineTo(bbX, ry + 12);
+    ctx.moveTo(bbX + bbW, ry - 12); ctx.lineTo(bbX + bbW, ry + 12);
+    ctx.stroke();
+    ctx.fillStyle = '#1e1e23';
+    ctx.font = `700 ${fs}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.fillText(`${bbW} px`, bbX + bbW / 2, ry + 20 + fs);
+    ctx.textAlign = 'left';
+  }
+  
+  // Vertical ruler right
+  const rx = bbX + bbW + offset;
+  if (rx < cw - 100) {
+    ctx.strokeStyle = rulerCol;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(rx, bbY); ctx.lineTo(rx, bbY + bbH);
+    ctx.stroke();
+    ctx.strokeStyle = accent;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(rx - 12, bbY); ctx.lineTo(rx + 12, bbY);
+    ctx.moveTo(rx - 12, bbY + bbH); ctx.lineTo(rx + 12, bbY + bbH);
+    ctx.stroke();
+    ctx.save();
+    ctx.translate(rx + 22 + fs, bbY + bbH / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.fillStyle = '#1e1e23';
+    ctx.font = `700 ${fs}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.fillText(`${bbH} px`, 0, 0);
+    ctx.restore();
+    ctx.textAlign = 'left';
+  }
+}
+
 function drawRulers(ctx, s, bbX, bbY, bbW, bbH, ntilesH, ntilesV, cw, ch, accent) {
   const offset = Math.max(20, cw / 80);
   const rulerCol = '#505055';
@@ -2086,6 +2684,11 @@ function drawInfoBlock(ctx, cw, ch, accent, name, subtitle, mode) {
   } else {
     // Try to fit below the screens
     const farBottom = Math.max(...state.screens.map(s => {
+      if (s.advancedMode) {
+        ensureDefaultTileType(s);
+        const bb = getAdvancedBBox(s);
+        return s.offsetY + bb.maxY;
+      }
       let maxR=-1;
       for (let r=0;r<s.rows;r++)for(let c=0;c<s.cols;c++)if(s.active[r][c])maxR=Math.max(maxR,r);
       return s.offsetY + (maxR+1) * s.tileH;
@@ -2117,6 +2720,22 @@ function drawInfoBlock(ctx, cw, ch, accent, name, subtitle, mode) {
   let totalActive = 0;
   let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
   state.screens.forEach(s => {
+    if (s.advancedMode) {
+      ensureDefaultTileType(s);
+      const bb = getAdvancedBBox(s);
+      totalActive += (s.placedTiles || []).length;
+      if (bb.w > 0) {
+        const x0 = s.offsetX + bb.minX;
+        const y0 = s.offsetY + bb.minY;
+        const x1 = x0 + bb.w;
+        const y1 = y0 + bb.h;
+        if (x0 < minX) minX = x0;
+        if (x1 > maxX) maxX = x1;
+        if (y0 < minY) minY = y0;
+        if (y1 > maxY) maxY = y1;
+      }
+      return;
+    }
     for (let r=0;r<s.rows;r++) for (let c=0;c<s.cols;c++) {
       if (s.active[r][c]) {
         totalActive++;
@@ -2133,6 +2752,30 @@ function drawInfoBlock(ctx, cw, ch, accent, name, subtitle, mode) {
   
   // Calculate per-screen stats
   const screenStats = state.screens.map((s, idx) => {
+    if (s.advancedMode) {
+      // Advanced mode stats
+      ensureDefaultTileType(s);
+      const bb = getAdvancedBBox(s);
+      const numTiles = (s.placedTiles || []).length;
+      const numTypes = (s.tileTypes || []).length;
+      // Build a tile size summary - if all tiles same type, show that; otherwise show "mixed"
+      let tileSize;
+      if (numTypes === 1) {
+        const t = s.tileTypes[0];
+        tileSize = `${t.w} × ${t.h}`;
+      } else {
+        tileSize = `mixed (${numTypes})`;
+      }
+      return {
+        label: s.label || `Screen ${idx + 1}`,
+        resolution: bb.w > 0 ? `${bb.w} × ${bb.h}` : '—',
+        offset: `${s.offsetX}, ${s.offsetY}`,
+        grid: 'advanced',
+        tileSize: tileSize,
+        active: `${numTiles}`,
+        colorA: s.tileTypes[0] ? s.tileTypes[0].colorA : '#888',
+      };
+    }
     let active = 0;
     let sMinR = s.rows, sMaxR = -1, sMinC = s.cols, sMaxC = -1;
     for (let r=0;r<s.rows;r++) for (let c=0;c<s.cols;c++) {
@@ -3059,6 +3702,455 @@ function handleImport(event) {
 // ============================================================
 // EVENT WIRING
 // ============================================================
+// ============================================================
+// ADVANCED MODE UI (tile types panel + canvas editor)
+// ============================================================
+
+function setMode(mode) {
+  const s = activeScreen();
+  if (!s) return;
+  
+  if (mode === 'advanced' && !s.advancedMode) {
+    if (s.active && s.active.some(row => row.some(v => v))) {
+      // Has existing grid content - confirm conversion
+      if (!confirm(T('convert_advanced_warning'))) {
+        // Update tabs back
+        document.querySelectorAll('.mode-tab').forEach(t => {
+          t.classList.toggle('active', t.dataset.mode === (s.advancedMode ? 'advanced' : 'grid'));
+        });
+        return;
+      }
+      convertScreenToAdvanced(s);
+    } else {
+      ensureDefaultTileType(s);
+      s.advancedMode = true;
+    }
+  } else if (mode === 'grid' && s.advancedMode) {
+    s.advancedMode = false;
+  }
+  
+  updateModeUI();
+  renderTileTypesList();
+  renderAdvancedCanvas();
+  renderGrid();
+  renderStats();
+  renderScreenTabs();
+  scheduleRender();
+}
+
+function updateModeUI() {
+  const s = activeScreen();
+  if (!s) return;
+  const isAdv = !!s.advancedMode;
+  
+  // Toggle tab visuals
+  document.querySelectorAll('.mode-tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.mode === (isAdv ? 'advanced' : 'grid'));
+  });
+  
+  // Toggle config panels
+  $('screen-config').style.display = isAdv ? 'none' : '';
+  $('advanced-config').style.display = isAdv ? '' : 'none';
+  $('grid-edit-section').style.display = isAdv ? 'none' : '';
+  
+  // Sync advanced inputs from state
+  if (isAdv) {
+    document.querySelectorAll('.sc-input-adv').forEach(inp => {
+      const key = inp.dataset.key;
+      inp.value = s[key] !== undefined ? s[key] : '';
+    });
+    $('adv-snap-enabled').checked = s.snapEnabled !== false;
+    $('adv-snap-size').value = s.snapSize || 8;
+    updateSelectedTypeIndicator();
+  }
+}
+
+function updateSelectedTypeIndicator() {
+  const s = activeScreen();
+  if (!s || !s.advancedMode) return;
+  ensureDefaultTileType(s);
+  const t = getTileType(s, s.selectedTileTypeId);
+  $('selected-type-swatch').style.background = t.colorA;
+  $('selected-type-name').textContent = `${t.name} (${t.w}×${t.h})`;
+}
+
+function renderTileTypesList() {
+  const s = activeScreen();
+  if (!s || !s.advancedMode) return;
+  ensureDefaultTileType(s);
+  
+  const container = $('tile-types-list');
+  container.innerHTML = '';
+  
+  s.tileTypes.forEach(t => {
+    const item = document.createElement('div');
+    item.className = 'tile-type-item' + (s.selectedTileTypeId === t.id ? ' selected' : '');
+    item.dataset.typeId = t.id;
+    item.innerHTML = `
+      <div class="tile-type-item-header">
+        <div class="tile-type-swatch" style="background:${t.colorA}"></div>
+        <div class="tile-type-name">${escapeHtml(t.name)} <span style="font-size: 11px; color: var(--text-muted); font-weight: 400;">(${t.w}×${t.h} px)</span></div>
+        <button data-act="select-type" data-id="${t.id}" style="padding: 4px 10px; font-size: 11px;">${s.selectedTileTypeId === t.id ? T('selected_type') : T('select_type')}</button>
+      </div>
+      <div class="tile-type-controls">
+        <label>${T('type_name')}</label>
+        <input type="text" data-prop="name" data-id="${t.id}" value="${escapeHtml(t.name)}" />
+        <label>${T('type_w')}</label>
+        <input type="number" data-prop="w" data-id="${t.id}" value="${t.w}" min="1" max="2000" />
+        <label>${T('type_h')}</label>
+        <input type="number" data-prop="h" data-id="${t.id}" value="${t.h}" min="1" max="2000" />
+        <input type="color" data-prop="colorA" data-id="${t.id}" value="${t.colorA}" title="${T('tile_color_a')}" />
+        <input type="color" data-prop="colorB" data-id="${t.id}" value="${t.colorB}" title="${T('tile_color_b')}" />
+        <select data-prop="gradientMode" data-id="${t.id}">
+          <option value="checker"${t.gradientMode === 'checker' ? ' selected' : ''}>${T('grad_checker')}</option>
+          <option value="per_tile"${t.gradientMode === 'per_tile' ? ' selected' : ''}>${T('grad_per_tile')}</option>
+          <option value="full_screen"${t.gradientMode === 'full_screen' ? ' selected' : ''}>${T('grad_full')}</option>
+        </select>
+        <select data-prop="gradientDir" data-id="${t.id}">
+          <option value="horizontal"${t.gradientDir === 'horizontal' ? ' selected' : ''}>${T('dir_horizontal')}</option>
+          <option value="vertical"${t.gradientDir === 'vertical' ? ' selected' : ''}>${T('dir_vertical')}</option>
+          <option value="diagonal"${t.gradientDir === 'diagonal' ? ' selected' : ''}>${T('dir_diagonal')}</option>
+          <option value="diagonal_rev"${t.gradientDir === 'diagonal_rev' ? ' selected' : ''}>${T('dir_diagonal_rev')}</option>
+        </select>
+        ${s.tileTypes.length > 1 ? `<button data-act="delete-type" data-id="${t.id}" class="danger" style="padding: 3px 8px; font-size: 11px;">${T('delete_type')}</button>` : ''}
+      </div>
+    `;
+    container.appendChild(item);
+  });
+  
+  // Wire selects/inputs
+  container.querySelectorAll('input[data-prop], select[data-prop]').forEach(el => {
+    el.oninput = (e) => {
+      const id = el.dataset.id;
+      const prop = el.dataset.prop;
+      const t = s.tileTypes.find(tt => tt.id === id);
+      if (!t) return;
+      let val = el.value;
+      if (el.type === 'number') val = parseInt(val) || 1;
+      t[prop] = val;
+      renderTileTypesList();
+      updateSelectedTypeIndicator();
+      renderAdvancedCanvas();
+      scheduleRender();
+    };
+  });
+  
+  container.querySelectorAll('button[data-act]').forEach(btn => {
+    btn.onclick = (e) => {
+      e.stopPropagation();
+      const id = btn.dataset.id;
+      if (btn.dataset.act === 'select-type') {
+        s.selectedTileTypeId = id;
+        renderTileTypesList();
+        updateSelectedTypeIndicator();
+      } else if (btn.dataset.act === 'delete-type') {
+        if (s.tileTypes.length <= 1) return;
+        if (!confirm(T('confirm_delete_type'))) return;
+        s.tileTypes = s.tileTypes.filter(t => t.id !== id);
+        // Remove placed tiles of this type
+        s.placedTiles = s.placedTiles.filter(pt => pt.typeId !== id);
+        if (s.selectedTileTypeId === id) s.selectedTileTypeId = s.tileTypes[0].id;
+        renderTileTypesList();
+        updateSelectedTypeIndicator();
+        renderAdvancedCanvas();
+        scheduleRender();
+      }
+    };
+  });
+}
+
+function addTileType() {
+  const s = activeScreen();
+  if (!s) return;
+  ensureDefaultTileType(s);
+  const newType = {
+    id: nextTileTypeId(),
+    name: `Type ${s.tileTypes.length + 1}`,
+    w: 56,
+    h: 112,
+    colorA: '#2c7c34',
+    colorB: '#0e3a14',
+    gradientMode: 'checker',
+    gradientDir: 'horizontal',
+  };
+  s.tileTypes.push(newType);
+  s.selectedTileTypeId = newType.id;
+  renderTileTypesList();
+  updateSelectedTypeIndicator();
+  scheduleRender();
+}
+
+// ----- Advanced canvas (small editor) -----
+const ADV_CANVAS_W = 800;
+const ADV_CANVAS_H = 400;
+let advView = { scale: 1, panX: 0, panY: 0 };
+let advDrag = null; // { tileIdx, mode: 'move' | 'place', startX, startY, origX, origY }
+let advHoverTile = null;
+
+function renderAdvancedCanvas() {
+  const s = activeScreen();
+  if (!s || !s.advancedMode) return;
+  ensureDefaultTileType(s);
+  
+  const canvas = $('advanced-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  
+  // Compute viewport scale to fit all placed tiles + some headroom
+  const cw = canvas.width, ch = canvas.height;
+  ctx.fillStyle = '#f0f0f3';
+  if (document.body.classList.contains('dark')) ctx.fillStyle = '#22222a';
+  ctx.fillRect(0, 0, cw, ch);
+  
+  // Determine content bounds
+  let bbW, bbH, originX, originY;
+  if (s.placedTiles.length > 0) {
+    const bb = getAdvancedBBox(s);
+    bbW = bb.w; bbH = bb.h;
+    originX = bb.minX; originY = bb.minY;
+  } else {
+    bbW = 800; bbH = 400; originX = 0; originY = 0;
+  }
+  // Compute scale: fit content + 30% margin
+  const margin = 60;
+  const scaleX = (cw - margin * 2) / Math.max(bbW, 400);
+  const scaleY = (ch - margin * 2) / Math.max(bbH, 200);
+  const scale = Math.min(scaleX, scaleY, 1);
+  advView.scale = scale;
+  advView.panX = (cw - bbW * scale) / 2 - originX * scale;
+  advView.panY = (ch - bbH * scale) / 2 - originY * scale;
+  
+  // Helper to convert canvas-coord to screen-pixel
+  function toScreen(x, y) {
+    return [advView.panX + x * scale, advView.panY + y * scale];
+  }
+  
+  // Draw light grid in the background (snap grid hint)
+  if (s.snapEnabled && s.snapSize) {
+    ctx.strokeStyle = document.body.classList.contains('dark') ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)';
+    ctx.lineWidth = 1;
+    const snapPx = s.snapSize * scale;
+    if (snapPx > 6) {  // don't draw if grid is too dense
+      const startGridX = Math.floor(-advView.panX / snapPx) * snapPx;
+      const startGridY = Math.floor(-advView.panY / snapPx) * snapPx;
+      for (let x = startGridX; x < cw + snapPx; x += snapPx) {
+        const sx = advView.panX + x;
+        if (sx >= 0 && sx <= cw) {
+          ctx.beginPath();
+          ctx.moveTo(sx, 0); ctx.lineTo(sx, ch);
+          ctx.stroke();
+        }
+      }
+      for (let y = startGridY; y < ch + snapPx; y += snapPx) {
+        const sy = advView.panY + y;
+        if (sy >= 0 && sy <= ch) {
+          ctx.beginPath();
+          ctx.moveTo(0, sy); ctx.lineTo(cw, sy);
+          ctx.stroke();
+        }
+      }
+    }
+  }
+  
+  // Origin axes (0,0)
+  ctx.strokeStyle = document.body.classList.contains('dark') ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)';
+  ctx.lineWidth = 1;
+  const [ox, oy] = toScreen(0, 0);
+  ctx.beginPath();
+  ctx.moveTo(0, oy); ctx.lineTo(cw, oy);
+  ctx.moveTo(ox, 0); ctx.lineTo(ox, ch);
+  ctx.stroke();
+  
+  // Draw placed tiles
+  s.placedTiles.forEach((pt, idx) => {
+    const t = getTileType(s, pt.typeId);
+    const [sx, sy] = toScreen(pt.x, pt.y);
+    const sw = t.w * scale;
+    const sh = t.h * scale;
+    // Use colorA as base; if checker, alternate based on position
+    const checkCol = Math.floor(pt.x / t.w);
+    const checkRow = Math.floor(pt.y / t.h);
+    const fillCol = (t.gradientMode === 'checker' && (checkCol + checkRow) % 2 !== 0) ? t.colorB : t.colorA;
+    
+    if (t.gradientMode === 'per_tile') {
+      const dir = t.gradientDir || 'horizontal';
+      let gx1, gy1, gx2, gy2;
+      if (dir === 'horizontal')      { gx1=sx; gy1=sy; gx2=sx+sw; gy2=sy; }
+      else if (dir === 'vertical')   { gx1=sx; gy1=sy; gx2=sx; gy2=sy+sh; }
+      else if (dir === 'diagonal')   { gx1=sx; gy1=sy; gx2=sx+sw; gy2=sy+sh; }
+      else                            { gx1=sx; gy1=sy+sh; gx2=sx+sw; gy2=sy; }
+      const g = ctx.createLinearGradient(gx1, gy1, gx2, gy2);
+      g.addColorStop(0, t.colorA);
+      g.addColorStop(1, t.colorB);
+      ctx.fillStyle = g;
+    } else {
+      ctx.fillStyle = fillCol;
+    }
+    ctx.fillRect(sx, sy, sw, sh);
+    
+    // Subtle outline
+    ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(sx + 0.5, sy + 0.5, sw - 1, sh - 1);
+    
+    // Highlight if selected/hovered
+    if (advHoverTile === idx) {
+      ctx.strokeStyle = '#2590ce';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(sx, sy, sw, sh);
+    }
+  });
+  
+  // Draw bounding box outline
+  if (s.placedTiles.length > 0) {
+    const bb = getAdvancedBBox(s);
+    const [bx, by] = toScreen(bb.minX, bb.minY);
+    ctx.strokeStyle = '#2590ce';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4, 4]);
+    ctx.strokeRect(bx, by, bb.w * scale, bb.h * scale);
+    ctx.setLineDash([]);
+    
+    // BB dimensions label
+    ctx.fillStyle = document.body.classList.contains('dark') ? '#aaa' : '#555';
+    ctx.font = '11px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(`${bb.w} × ${bb.h} px`, bx + bb.w * scale / 2, by + bb.h * scale + 14);
+    ctx.textAlign = 'left';
+  }
+}
+
+function advCanvasCoords(evt) {
+  const canvas = $('advanced-canvas');
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = canvas.width / rect.width;
+  const scaleY = canvas.height / rect.height;
+  const screenX = (evt.clientX - rect.left) * scaleX;
+  const screenY = (evt.clientY - rect.top) * scaleY;
+  // Convert to canvas (model) coordinates
+  return {
+    x: (screenX - advView.panX) / advView.scale,
+    y: (screenY - advView.panY) / advView.scale,
+    screenX, screenY,
+  };
+}
+
+function snapValue(s, val) {
+  if (!s.snapEnabled) return Math.round(val);
+  const sz = s.snapSize || 8;
+  return Math.round(val / sz) * sz;
+}
+
+function findTileAt(s, x, y) {
+  // Reverse order so top-most tile gets hit first
+  for (let i = s.placedTiles.length - 1; i >= 0; i--) {
+    const pt = s.placedTiles[i];
+    const t = getTileType(s, pt.typeId);
+    if (x >= pt.x && x < pt.x + t.w && y >= pt.y && y < pt.y + t.h) {
+      return i;
+    }
+  }
+  return -1;
+}
+
+function attachAdvancedCanvasHandlers() {
+  const canvas = $('advanced-canvas');
+  if (!canvas) return;
+  
+  canvas.onmousedown = (e) => {
+    const s = activeScreen();
+    if (!s || !s.advancedMode) return;
+    e.preventDefault();
+    const { x, y } = advCanvasCoords(e);
+    
+    if (e.button === 2) {
+      // Right click: delete tile if hit
+      const idx = findTileAt(s, x, y);
+      if (idx >= 0) {
+        s.placedTiles.splice(idx, 1);
+        renderAdvancedCanvas();
+        scheduleRender();
+      }
+      return;
+    }
+    
+    const idx = findTileAt(s, x, y);
+    if (idx >= 0) {
+      // Start dragging existing tile
+      const pt = s.placedTiles[idx];
+      advDrag = {
+        tileIdx: idx,
+        mode: 'move',
+        startX: x,
+        startY: y,
+        origX: pt.x,
+        origY: pt.y,
+      };
+      // Also switch selected type to match clicked tile
+      s.selectedTileTypeId = pt.typeId;
+      updateSelectedTypeIndicator();
+      renderTileTypesList();
+    } else {
+      // Place new tile at click position
+      ensureDefaultTileType(s);
+      const t = getTileType(s, s.selectedTileTypeId);
+      const px = snapValue(s, x - t.w / 2);
+      const py = snapValue(s, y - t.h / 2);
+      s.placedTiles.push({
+        id: nextPlacedTileId(),
+        x: px,
+        y: py,
+        typeId: s.selectedTileTypeId,
+      });
+      renderAdvancedCanvas();
+      scheduleRender();
+    }
+  };
+  
+  canvas.onmousemove = (e) => {
+    const s = activeScreen();
+    if (!s || !s.advancedMode) return;
+    const { x, y } = advCanvasCoords(e);
+    
+    if (advDrag) {
+      const pt = s.placedTiles[advDrag.tileIdx];
+      if (!pt) { advDrag = null; return; }
+      const dx = x - advDrag.startX;
+      const dy = y - advDrag.startY;
+      pt.x = snapValue(s, advDrag.origX + dx);
+      pt.y = snapValue(s, advDrag.origY + dy);
+      renderAdvancedCanvas();
+      scheduleRender();
+    } else {
+      const idx = findTileAt(s, x, y);
+      if (idx !== advHoverTile) {
+        advHoverTile = idx;
+        canvas.style.cursor = idx >= 0 ? 'move' : 'crosshair';
+        renderAdvancedCanvas();
+      }
+    }
+  };
+  
+  canvas.onmouseup = () => { advDrag = null; };
+  canvas.onmouseleave = () => { advDrag = null; advHoverTile = null; renderAdvancedCanvas(); };
+  canvas.oncontextmenu = (e) => { e.preventDefault(); };
+  
+  // Delete key support when canvas is hovered/focused
+  canvas.tabIndex = 0;
+  canvas.onkeydown = (e) => {
+    if (e.key === 'Delete' || e.key === 'Backspace') {
+      const s = activeScreen();
+      if (!s || !s.advancedMode) return;
+      if (advHoverTile != null && advHoverTile >= 0) {
+        s.placedTiles.splice(advHoverTile, 1);
+        advHoverTile = null;
+        renderAdvancedCanvas();
+        scheduleRender();
+      }
+    }
+  };
+}
+
 function wireUp() {
   $('add-screen-btn').onclick = () => { addScreen(); scheduleRender(); };
   $('rebuild-grid').onclick = () => { rebuildActiveGrid(); scheduleRender(); };
@@ -3130,6 +4222,54 @@ function wireUp() {
   // Theme toggle
   $('theme-toggle').onclick = toggleTheme;
   
+  // Mode tabs (Grid / Advanced)
+  document.querySelectorAll('.mode-tab').forEach(tab => {
+    tab.onclick = () => setMode(tab.dataset.mode);
+  });
+  
+  // Advanced inputs (label, offsetX, offsetY)
+  document.querySelectorAll('.sc-input-adv').forEach(inp => {
+    inp.oninput = () => {
+      const s = activeScreen();
+      if (!s) return;
+      const key = inp.dataset.key;
+      let val = inp.value;
+      if (inp.type === 'number') val = parseInt(val) || 0;
+      s[key] = val;
+      renderScreenTabs();
+      scheduleRender();
+    };
+  });
+  
+  // Add tile type
+  $('add-tile-type-btn').onclick = addTileType;
+  
+  // Snap controls
+  $('adv-snap-enabled').onchange = (e) => {
+    const s = activeScreen();
+    if (s) s.snapEnabled = e.target.checked;
+    renderAdvancedCanvas();
+  };
+  $('adv-snap-size').oninput = (e) => {
+    const s = activeScreen();
+    if (s) s.snapSize = parseInt(e.target.value) || 8;
+    renderAdvancedCanvas();
+  };
+  
+  // Clear all placed tiles
+  $('adv-clear-all').onclick = () => {
+    const s = activeScreen();
+    if (!s || !s.advancedMode) return;
+    if (s.placedTiles.length === 0) return;
+    if (!confirm(T('confirm_clear_advanced'))) return;
+    s.placedTiles = [];
+    renderAdvancedCanvas();
+    scheduleRender();
+  };
+  
+  // Advanced canvas interactions
+  attachAdvancedCanvasHandlers();
+  
   // Context menu prevent on grid
   $('grid').oncontextmenu = e => e.preventDefault();
 }
@@ -3151,6 +4291,10 @@ function init() {
   renderCanvas();
   wireUp();
   drawSelectionOverlayOnPreview();
+  // Advanced mode UI
+  updateModeUI();
+  renderTileTypesList();
+  renderAdvancedCanvas();
 }
 
 init();
