@@ -5,17 +5,89 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>LED Pixelmap Generator — GENES//MEDIA</title>
 <style>
+  :root {
+    /* Light mode (default) */
+    --bg-body: #f5f5f7;
+    --bg-section: white;
+    --bg-secondary: #f6f6f8;
+    --bg-tertiary: #f0f0f3;
+    --bg-grid-wrap: #ececec;
+    --bg-canvas-wrap: #d0d0d3;
+    --bg-input: white;
+    --bg-thumb: white;
+    --bg-pill-info: #f0f7fc;
+    --bg-overflow: #fff3cd;
+    
+    --text-primary: #1e1e23;
+    --text-secondary: #555;
+    --text-muted: #76767b;
+    --text-overflow: #806000;
+    --text-accent-soft: #1a7ab0;
+    
+    --border-section: #e0e0e3;
+    --border-input: #d0d0d3;
+    --border-input-strong: #c0c0c3;
+    --border-tertiary: #d8d8db;
+    --border-overflow: #ffd95a;
+    --border-pill-info: #b5d8ec;
+    
+    --accent: #2590ce;
+    --accent-hover: #1a7ab0;
+    --danger: #c53030;
+    --danger-soft: #e0a0a0;
+    --danger-bg: #fef0f0;
+    
+    --hover-bg: #f0f0f3;
+    --border-hover: #909093;
+  }
+  
+  body.dark {
+    --bg-body: #15151a;
+    --bg-section: #1f1f25;
+    --bg-secondary: #1a1a20;
+    --bg-tertiary: #25252c;
+    --bg-grid-wrap: #18181d;
+    --bg-canvas-wrap: #0e0e12;
+    --bg-input: #2a2a32;
+    --bg-thumb: #2a2a32;
+    --bg-pill-info: #102838;
+    --bg-overflow: #3a2e10;
+    
+    --text-primary: #e8e8eb;
+    --text-secondary: #b0b0b5;
+    --text-muted: #8a8a90;
+    --text-overflow: #f0d080;
+    --text-accent-soft: #5fb1e0;
+    
+    --border-section: #2e2e36;
+    --border-input: #3a3a44;
+    --border-input-strong: #4a4a55;
+    --border-tertiary: #353540;
+    --border-overflow: #6e5e20;
+    --border-pill-info: #2c5070;
+    
+    --accent: #2590ce;
+    --accent-hover: #3aa3df;
+    --danger: #e85050;
+    --danger-soft: #a04545;
+    --danger-bg: #2a1818;
+    
+    --hover-bg: #2a2a32;
+    --border-hover: #5a5a65;
+  }
+  
   * { box-sizing: border-box; }
   body {
     margin: 0;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    background: #f5f5f7;
-    color: #1e1e23;
+    background: var(--bg-body);
+    color: var(--text-primary);
     line-height: 1.5;
+    transition: background 0.2s, color 0.2s;
   }
   header {
-    background: white;
-    border-bottom: 1px solid #e0e0e3;
+    background: var(--bg-section);
+    border-bottom: 1px solid var(--border-section);
     padding: 16px 24px;
     display: flex;
     justify-content: space-between;
@@ -27,7 +99,7 @@
     font-weight: 500;
   }
   header .accent {
-    color: #2590ce;
+    color: var(--accent);
     font-weight: 700;
   }
   .container {
@@ -42,8 +114,8 @@
     .container { grid-template-columns: 1fr; }
   }
   .section {
-    background: white;
-    border: 1px solid #e0e0e3;
+    background: var(--bg-section);
+    border: 1px solid var(--border-section);
     border-radius: 8px;
     padding: 16px 18px;
     margin-bottom: 16px;
@@ -52,8 +124,8 @@
     margin: 0 0 12px;
     font-size: 14px;
     font-weight: 500;
-    color: #1e1e23;
-    border-bottom: 2px solid #2590ce;
+    color: var(--text-primary);
+    border-bottom: 2px solid var(--accent);
     padding-bottom: 6px;
     display: inline-block;
   }
@@ -66,62 +138,71 @@
   }
   .row label {
     font-size: 13px;
-    color: #555;
+    color: var(--text-secondary);
     min-width: 100px;
   }
   input[type="number"], input[type="text"], select {
     padding: 6px 10px;
-    border: 1px solid #d0d0d3;
+    border: 1px solid var(--border-input);
     border-radius: 4px;
     font-size: 13px;
     font-family: inherit;
-    background: white;
+    background: var(--bg-section);
+    color: var(--text-primary);
   }
   input[type="number"] { width: 80px; }
   input[type="text"] { width: 200px; }
-  input[type="color"] { width: 50px; height: 32px; border: 1px solid #d0d0d3; border-radius: 4px; cursor: pointer; padding: 2px; }
+  input[type="color"] { width: 50px; height: 32px; border: 1px solid var(--border-input); border-radius: 4px; cursor: pointer; padding: 2px; background: var(--bg-section); }
+  input[type="checkbox"] {
+    accent-color: var(--accent);
+  }
+  /* Select dropdown option color (Firefox/Safari mainly) */
+  select option {
+    background: var(--bg-section);
+    color: var(--text-primary);
+  }
   button {
     padding: 7px 14px;
-    background: white;
-    border: 1px solid #c0c0c3;
+    background: var(--bg-section);
+    border: 1px solid var(--border-input-strong);
     border-radius: 4px;
     font-size: 13px;
     font-family: inherit;
     cursor: pointer;
-    color: #1e1e23;
+    color: var(--text-primary);
     transition: all 0.1s;
   }
-  button:hover { background: #f0f0f3; border-color: #909093; }
+  button:hover { background: var(--bg-tertiary); border-color: var(--border-hover); }
   button:active { transform: scale(0.97); }
   button.primary {
-    background: #2590ce;
+    background: var(--accent);
     color: white;
-    border-color: #2590ce;
+    border-color: var(--accent);
   }
-  button.primary:hover { background: #1a7ab0; border-color: #1a7ab0; }
+  button.primary:hover { background: var(--accent-hover); border-color: var(--text-accent-soft); }
   button.danger {
-    background: white;
-    color: #c53030;
-    border-color: #e0a0a0;
+    background: var(--bg-section);
+    color: var(--danger);
+    border-color: var(--danger-soft);
   }
-  button.danger:hover { background: #fef0f0; }
+  button.danger:hover { background: var(--danger-bg); }
   .screen-tab {
     display: inline-flex;
     align-items: center;
     gap: 6px;
     padding: 6px 12px;
-    border: 1px solid #d0d0d3;
+    border: 1px solid var(--border-input);
     border-radius: 4px;
     margin-right: 6px;
     margin-bottom: 6px;
     cursor: pointer;
     font-size: 13px;
-    background: white;
+    background: var(--bg-section);
   }
   .screen-tab.active {
-    background: #2590ce;
+    background: var(--accent);
     color: white;
-    border-color: #2590ce;
+    border-color: var(--accent);
   }
   .screen-tab .swatch {
     width: 12px;
@@ -137,22 +218,22 @@
   }
   .screen-tab .close:hover { opacity: 1; }
   .grid-wrap {
-    background: #ececec;
+    background: var(--bg-grid-wrap);
     padding: 8px;
     border-radius: 4px;
     overflow: auto;
     max-height: 460px;
-    border: 1px solid #d0d0d3;
+    border: 1px solid var(--border-input);
   }
   #grid {
     display: inline-block;
   }
   .canvas-wrap {
-    background: #d0d0d3;
+    background: var(--bg-canvas-wrap);
     padding: 8px;
     border-radius: 4px;
     text-align: center;
-    border: 1px solid #c0c0c3;
+    border: 1px solid var(--border-input-strong);
     overflow: auto;
     max-height: 500px;
   }
@@ -160,7 +241,7 @@
     max-width: 100%;
     height: auto;
     display: inline-block;
-    background: white;
+    background: var(--bg-section);
   }
   .stats {
     display: grid;
@@ -169,13 +250,13 @@
     margin-bottom: 12px;
   }
   .stat {
-    background: #f0f0f3;
+    background: var(--bg-tertiary);
     padding: 6px 10px;
     border-radius: 4px;
   }
   .stat-label {
     font-size: 10px;
-    color: #76767b;
+    color: var(--text-muted);
     text-transform: uppercase;
     letter-spacing: 0.5px;
   }
@@ -186,7 +267,7 @@
   }
   .info {
     font-size: 11px;
-    color: #76767b;
+    color: var(--text-muted);
     margin-bottom: 8px;
     line-height: 1.5;
   }
@@ -196,7 +277,7 @@
   }
   hr {
     border: none;
-    border-top: 1px solid #e0e0e3;
+    border-top: 1px solid var(--border-section);
     margin: 14px 0;
   }
   .full-width {
@@ -205,7 +286,7 @@
   .footer-note {
     text-align: center;
     font-size: 11px;
-    color: #76767b;
+    color: var(--text-muted);
     padding: 16px;
   }
   details {
@@ -214,10 +295,10 @@
   summary {
     font-size: 13px;
     cursor: pointer;
-    color: #555;
+    color: var(--text-secondary);
     padding: 4px 0;
   }
-  summary:hover { color: #2590ce; }
+  summary:hover { color: var(--accent); }
   .preset-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
@@ -226,16 +307,45 @@
   }
   .preset-card {
     padding: 8px 10px;
-    border: 1px solid #d0d0d3;
+    border: 1px solid var(--border-input);
     border-radius: 4px;
     cursor: pointer;
-    background: white;
+    background: var(--bg-section);
     text-align: left;
     font-size: 12px;
   }
   .preset-card:hover {
-    background: #f0f0f3;
-    border-color: #2590ce;
+    background: var(--bg-tertiary);
+    border-color: var(--accent);
+  }
+  .preset-card-user:hover {
+    border-color: var(--danger);
+  }
+  .preset-delete-btn {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    background: var(--bg-section);
+    color: var(--danger);
+    border: 1px solid var(--danger-soft);
+    border-radius: 50%;
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+  }
+  .preset-delete-btn:hover {
+    background: var(--danger);
+    color: white;
+    border-color: var(--danger);
+    transform: scale(1.1);
   }
   .preset-card strong {
     display: block;
@@ -243,19 +353,19 @@
     margin-bottom: 2px;
   }
   .preset-card .desc {
-    color: #76767b;
+    color: var(--text-muted);
     font-size: 11px;
   }
   .logo-item {
-    background: #f6f6f8;
-    border: 1px solid #d8d8db;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-tertiary);
     border-radius: 6px;
     padding: 10px 12px;
     margin-bottom: 8px;
   }
   .logo-item.selected {
-    border-color: #2590ce;
-    background: #f0f7fc;
+    border-color: var(--accent);
+    background: var(--bg-pill-info);
   }
   .logo-item .header {
     display: flex;
@@ -273,8 +383,8 @@
     width: 40px;
     height: 40px;
     object-fit: contain;
-    background: white;
-    border: 1px solid #d8d8db;
+    background: var(--bg-section);
+    border: 1px solid var(--border-tertiary);
     border-radius: 3px;
     margin-right: 8px;
     image-rendering: -webkit-optimize-contrast;
@@ -287,7 +397,7 @@
   .logo-item .details {
     flex: 1;
     font-size: 11px;
-    color: #76767b;
+    color: var(--text-muted);
   }
   .logo-item .controls {
     display: flex;
@@ -302,7 +412,7 @@
   }
   .logo-item .controls label {
     font-size: 11px;
-    color: #76767b;
+    color: var(--text-muted);
     min-width: auto;
     margin-right: 2px;
   }
@@ -314,38 +424,61 @@
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    background: #f0f7fc;
+    background: var(--bg-pill-info);
     padding: 4px 10px;
-    border: 1px solid #b5d8ec;
+    border: 1px solid var(--border-pill-info);
     border-radius: 4px;
     font-size: 12px;
-    color: #1a7ab0;
+    color: var(--text-accent-soft);
   }
   .lang-switcher {
     display: inline-flex;
-    border: 1px solid #d0d0d3;
+    border: 1px solid var(--border-input);
     border-radius: 4px;
     overflow: hidden;
   }
   .lang-btn {
     padding: 4px 10px;
-    background: white;
+    background: var(--bg-section);
     border: none;
     border-radius: 0;
     font-size: 12px;
     font-weight: 500;
     cursor: pointer;
-    color: #555;
-    border-right: 1px solid #d0d0d3;
+    color: var(--text-secondary);
+    border-right: 1px solid var(--border-input);
   }
   .lang-btn:last-child { border-right: none; }
   .lang-btn.active {
-    background: #2590ce;
+    background: var(--accent);
     color: white;
   }
   .lang-btn:hover:not(.active) {
-    background: #f0f0f3;
+    background: var(--bg-tertiary);
   }
+  .theme-toggle {
+    width: 36px;
+    height: 32px;
+    padding: 0;
+    background: var(--bg-section);
+    border: 1px solid var(--border-input);
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+    line-height: 1;
+    color: var(--text-primary);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .theme-toggle:hover {
+    background: var(--hover-bg);
+    border-color: var(--border-hover);
+  }
+  .theme-toggle .theme-icon-light { display: none; }
+  .theme-toggle .theme-icon-dark { display: inline; }
+  body.dark .theme-toggle .theme-icon-light { display: inline; }
+  body.dark .theme-toggle .theme-icon-dark { display: none; }
 </style>
 </head>
 <body>
@@ -357,7 +490,11 @@
       <button class="lang-btn" data-lang="en">EN</button>
       <button class="lang-btn" data-lang="nl">NL</button>
     </div>
-    <div style="font-size: 12px; color: #76767b;" data-i18n="version">v1.1</div>
+    <button class="theme-toggle" id="theme-toggle" title="Toggle dark mode">
+      <span class="theme-icon-light">☀</span>
+      <span class="theme-icon-dark">☾</span>
+    </button>
+    <div style="font-size: 12px; color: var(--text-muted);" data-i18n="version">v1.1</div>
   </div>
 </header>
 
@@ -369,23 +506,23 @@
       <h2 data-i18n="project">Project</h2>
       <div class="row">
         <label data-i18n="title">Title</label>
-        <input type="text" id="proj-name" value="DAUWPOP" />
+        <input type="text" id="proj-name" value="PROJECT" />
       </div>
       <div class="row">
         <label data-i18n="subtitle">Subtitle</label>
-        <input type="text" id="proj-subtitle" value="Mainstage · Pixelmap Reference" style="width: 280px;" />
+        <input type="text" id="proj-subtitle" value="LED Pixelmap Reference" style="width: 280px;" />
       </div>
       <div class="row">
         <label data-i18n="canvas_size">Canvas</label>
         <input type="number" id="canvas-w" value="1920" min="100" max="20000" />
         <span>×</span>
         <input type="number" id="canvas-h" value="1080" min="100" max="20000" />
-        <span style="font-size: 12px; color: #76767b;">px</span>
+        <span style="font-size: 12px; color: var(--text-muted);">px</span>
       </div>
       <div class="row">
         <label data-i18n="accent_color">Accent color</label>
         <input type="color" id="color-accent" value="#2590ce" />
-        <span style="font-size: 12px; color: #76767b;" data-i18n="accent_help">Used for outlines, overlays, labels</span>
+        <span style="font-size: 12px; color: var(--text-muted);" data-i18n="accent_help">Used for outlines, overlays, labels</span>
       </div>
     </div>
 
@@ -432,13 +569,28 @@
           <input type="number" class="sc-input" data-key="offsetX" value="0" min="-10000" max="20000" />
           <span>×</span>
           <input type="number" class="sc-input" data-key="offsetY" value="0" min="-10000" max="20000" />
-          <span style="font-size: 12px; color: #76767b;">px</span>
+          <span style="font-size: 12px; color: var(--text-muted);">px</span>
         </div>
         <div class="row">
           <label data-i18n="tile_color_a">Tile color A</label>
           <input type="color" class="sc-input" data-key="colorA" value="#d23c3c" />
           <label style="min-width: 90px;" data-i18n="tile_color_b">Tile color B</label>
           <input type="color" class="sc-input" data-key="colorB" value="#781414" />
+        </div>
+        <div class="row">
+          <label data-i18n="gradient_mode">Gradient</label>
+          <select class="sc-input" data-key="gradientMode">
+            <option value="checker" data-i18n="grad_checker">Checker (A + B)</option>
+            <option value="per_tile" data-i18n="grad_per_tile">Gradient per tile</option>
+            <option value="full_screen" data-i18n="grad_full">Gradient across screen</option>
+          </select>
+          <label style="min-width: auto; margin-left: 10px;" data-i18n="gradient_dir">Direction</label>
+          <select class="sc-input" data-key="gradientDir">
+            <option value="horizontal" data-i18n="dir_horizontal">Horizontal →</option>
+            <option value="vertical" data-i18n="dir_vertical">Vertical ↓</option>
+            <option value="diagonal" data-i18n="dir_diagonal">Diagonal ↘</option>
+            <option value="diagonal_rev" data-i18n="dir_diagonal_rev">Diagonal ↗</option>
+          </select>
         </div>
         <div class="row">
           <label data-i18n="screen_label">Screen label</label>
@@ -488,6 +640,14 @@
         <label><input type="checkbox" id="opt-show-canvas-corners" checked /> <span data-i18n="canvas_corners">Canvas corner coords</span></label>
         <label><input type="checkbox" id="opt-show-canvas-dims" checked /> <span data-i18n="canvas_dims">Canvas width/height labels</span></label>
       </div>
+      <div class="row checkbox-row">
+        <label><input type="checkbox" id="opt-show-center-text" /> <span data-i18n="show_center_text">Title + subtitle + resolution centered on screen</span></label>
+      </div>
+      <div class="row">
+        <label data-i18n="center_text_size">Center text size</label>
+        <input type="number" id="opt-center-text-size" value="28" min="8" max="200" />
+        <span style="font-size: 12px; color: var(--text-muted);">px</span>
+      </div>
     </div>
 
     <div class="section">
@@ -502,7 +662,7 @@
 
     <div class="section">
       <h2 data-i18n="preview">Preview</h2>
-      <div id="page-indicator" style="display: none; background: #fff3cd; border: 1px solid #ffd95a; padding: 8px 12px; border-radius: 4px; font-size: 12px; color: #806000; margin-bottom: 10px;"></div>
+      <div id="page-indicator" style="display: none; background: var(--bg-overflow); border: 1px solid var(--border-overflow); padding: 8px 12px; border-radius: 4px; font-size: 12px; color: var(--text-overflow); margin-bottom: 10px;"></div>
       <div class="canvas-wrap">
         <canvas id="canvas" width="1920" height="1080"></canvas>
       </div>
@@ -515,7 +675,7 @@
       </div>
       <details>
         <summary data-i18n="tips">Tips</summary>
-        <div style="font-size: 12px; color: #555; padding: 6px 0;">
+        <div style="font-size: 12px; color: var(--text-secondary); padding: 6px 0;">
           <p style="margin: 4px 0;" data-i18n="tips_multi"></p>
           <p style="margin: 4px 0;" data-i18n="tips_precision"></p>
           <p style="margin: 4px 0;" data-i18n="tips_save"></p>
@@ -575,6 +735,15 @@ const I18N = {
     offset: 'Offset on canvas',
     tile_color_a: 'Tile color A',
     tile_color_b: 'Tile color B',
+    gradient_mode: 'Gradient',
+    gradient_dir: 'Direction',
+    grad_checker: 'Checker (A + B)',
+    grad_per_tile: 'Gradient per tile',
+    grad_full: 'Gradient across screen',
+    dir_horizontal: 'Horizontal →',
+    dir_vertical: 'Vertical ↓',
+    dir_diagonal: 'Diagonal ↘',
+    dir_diagonal_rev: 'Diagonal ↗',
     screen_label: 'Screen label',
     screen_placeholder: 'e.g. IMAG STAGE RIGHT',
     rebuild_grid: 'Rebuild this screen\'s grid',
@@ -598,6 +767,8 @@ const I18N = {
     screen_outline: 'Per-screen outline (accent border)',
     canvas_corners: 'Canvas corner coords',
     canvas_dims: 'Canvas width/height labels',
+    show_center_text: 'Title + subtitle + resolution centered on screen',
+    center_text_size: 'Center text size',
     // Logos
     logos_info: 'Add PNG, JPG, GIF, or SVG. Drag on the preview to position, or use coordinate inputs.',
     add_logo: '+ Add logo',
@@ -671,6 +842,15 @@ const I18N = {
     offset: 'Offset op canvas',
     tile_color_a: 'Tegel kleur A',
     tile_color_b: 'Tegel kleur B',
+    gradient_mode: 'Gradient',
+    gradient_dir: 'Richting',
+    grad_checker: 'Schaakbord (A + B)',
+    grad_per_tile: 'Gradient per tegel',
+    grad_full: 'Gradient over scherm',
+    dir_horizontal: 'Horizontaal →',
+    dir_vertical: 'Verticaal ↓',
+    dir_diagonal: 'Diagonaal ↘',
+    dir_diagonal_rev: 'Diagonaal ↗',
     screen_label: 'Scherm label',
     screen_placeholder: 'bijv. IMAG STAGE RIGHT',
     rebuild_grid: 'Grid van dit scherm opnieuw bouwen',
@@ -691,6 +871,8 @@ const I18N = {
     screen_outline: 'Scherm omlijning (accent kleur)',
     canvas_corners: 'Canvas hoek coördinaten',
     canvas_dims: 'Canvas breedte/hoogte labels',
+    show_center_text: 'Titel + ondertitel + resolutie gecentreerd op scherm',
+    center_text_size: 'Lettergrootte midden',
     logos_info: 'Voeg PNG, JPG, GIF, of SVG toe. Sleep op het voorbeeld om te plaatsen, of gebruik coördinaat velden.',
     add_logo: '+ Logo toevoegen',
     no_logos: 'Nog geen logo\'s toegevoegd.',
@@ -745,6 +927,27 @@ function setLanguage(lang) {
   scheduleRender();
 }
 
+// ============================================================
+// THEME (DARK MODE)
+// ============================================================
+function getStoredTheme() {
+  try {
+    return localStorage.getItem('genes_pixelmap_theme') || 'light';
+  } catch(e) { return 'light'; }
+}
+function applyTheme(theme) {
+  if (theme === 'dark') {
+    document.body.classList.add('dark');
+  } else {
+    document.body.classList.remove('dark');
+  }
+  try { localStorage.setItem('genes_pixelmap_theme', theme); } catch(e) {}
+}
+function toggleTheme() {
+  const isDark = document.body.classList.contains('dark');
+  applyTheme(isDark ? 'light' : 'dark');
+}
+
 // Apply translations to all UI elements with data-i18n attributes
 function applyTranslations() {
   document.querySelectorAll('[data-i18n]').forEach(el => {
@@ -768,8 +971,8 @@ function applyTranslations() {
 // ============================================================
 let state = {
   project: {
-    name: 'DAUWPOP',
-    subtitle: 'Mainstage · Pixelmap Reference',
+    name: 'PROJECT',
+    subtitle: 'LED Pixelmap Reference',
     canvasW: 1920,
     canvasH: 1080,
     accent: '#2590ce',
@@ -786,6 +989,8 @@ let state = {
       offsetY: 0,
       colorA: '#d23c3c',
       colorB: '#781414',
+      gradientMode: 'checker',
+      gradientDir: 'horizontal',
       active: null, // 2D array
     }
   ],
@@ -800,6 +1005,8 @@ let state = {
     showScreenOutline: true,
     showCanvasCorners: true,
     showCanvasDims: true,
+    showScreenCenterText: false,
+    centerTextSize: 28,
   },
   logos: [], // {id, name, dataUrl, image (HTMLImageElement), x, y, w, h, aspectLocked, opacity}
   selectedLogoId: null,
@@ -819,6 +1026,25 @@ function makeActiveArray(rows, cols, defaultVal = true) {
   return arr;
 }
 
+function hexToRgb(hex) {
+  hex = hex.replace('#', '');
+  if (hex.length === 3) hex = hex.split('').map(c => c+c).join('');
+  return {
+    r: parseInt(hex.substr(0, 2), 16),
+    g: parseInt(hex.substr(2, 2), 16),
+    b: parseInt(hex.substr(4, 2), 16),
+  };
+}
+
+function lerpColor(hexA, hexB, t) {
+  const a = hexToRgb(hexA);
+  const b = hexToRgb(hexB);
+  const r = Math.round(a.r + (b.r - a.r) * t);
+  const g = Math.round(a.g + (b.g - a.g) * t);
+  const bl = Math.round(a.b + (b.b - a.b) * t);
+  return `rgb(${r},${g},${bl})`;
+}
+
 function activeScreen() {
   return state.screens.find(s => s.id === state.activeScreenId);
 }
@@ -830,10 +1056,36 @@ const $ = id => document.getElementById(id);
 // ============================================================
 const BUILTIN_PRESETS = [
   {
-    name: 'Dauwpop Main',
-    desc: '1120×560 LED, 20×5 tiles',
+    name: 'Single screen (HD)',
+    desc: '1920×1080 canvas, 16×9 grid',
     config: {
-      project: { name: 'DAUWPOP', subtitle: 'Mainstage Backwall · Pixelmap Reference', canvasW: 1920, canvasH: 1080, accent: '#2590ce' },
+      project: { name: 'PROJECT', subtitle: 'LED Pixelmap Reference', canvasW: 1920, canvasH: 1080, accent: '#2590ce' },
+      screens: [{
+        id: 1, label: '', tileW: 120, tileH: 120, cols: 16, rows: 9,
+        offsetX: 0, offsetY: 0, colorA: '#d23c3c', colorB: '#781414',
+        active: makeActiveArray(9, 16, true)
+      }],
+      activeScreenId: 1,
+    }
+  },
+  {
+    name: 'Single screen (4K)',
+    desc: '3840×2160 canvas, 20×10 grid',
+    config: {
+      project: { name: 'PROJECT', subtitle: 'LED Pixelmap Reference', canvasW: 3840, canvasH: 2160, accent: '#2590ce' },
+      screens: [{
+        id: 1, label: '', tileW: 192, tileH: 216, cols: 20, rows: 10,
+        offsetX: 0, offsetY: 0, colorA: '#d23c3c', colorB: '#781414',
+        active: makeActiveArray(10, 20, true)
+      }],
+      activeScreenId: 1,
+    }
+  },
+  {
+    name: 'Backwall example',
+    desc: 'Single LED wall, 1120×560 px',
+    config: {
+      project: { name: 'PROJECT', subtitle: 'Mainstage Backwall · Pixelmap Reference', canvasW: 1920, canvasH: 1080, accent: '#2590ce' },
       screens: [{
         id: 1, label: '', tileW: 56, tileH: 112, cols: 20, rows: 5,
         offsetX: 0, offsetY: 0, colorA: '#d23c3c', colorB: '#781414',
@@ -843,10 +1095,10 @@ const BUILTIN_PRESETS = [
     }
   },
   {
-    name: 'Dauwpop IMAG',
-    desc: '2 pyramids, 2880×1440 BB',
+    name: 'Dual IMAG (pyramid)',
+    desc: 'Two mirrored pyramid screens',
     config: {
-      project: { name: 'DAUWPOP', subtitle: 'Mainstage IMAG Screens · Pixelmap Reference', canvasW: 3840, canvasH: 2160, accent: '#2590ce' },
+      project: { name: 'PROJECT', subtitle: 'Mainstage IMAG Screens · Pixelmap Reference', canvasW: 3840, canvasH: 2160, accent: '#2590ce' },
       screens: [
         {
           id: 1, label: 'IMAG STAGE RIGHT', tileW: 72, tileH: 144, cols: 20, rows: 10,
@@ -859,32 +1111,6 @@ const BUILTIN_PRESETS = [
           active: pyramidArray(10, 20, [5, 8, 11, 13, 14, 16, 17, 19, 20, 20], 'left')
         }
       ],
-      activeScreenId: 1,
-    }
-  },
-  {
-    name: '1080p single',
-    desc: '1920×1080 canvas, 16×9 tiles (120 px)',
-    config: {
-      project: { name: 'PROJECT', subtitle: 'LED Pixelmap', canvasW: 1920, canvasH: 1080, accent: '#2590ce' },
-      screens: [{
-        id: 1, label: '', tileW: 120, tileH: 120, cols: 16, rows: 9,
-        offsetX: 0, offsetY: 0, colorA: '#d23c3c', colorB: '#781414',
-        active: makeActiveArray(9, 16, true)
-      }],
-      activeScreenId: 1,
-    }
-  },
-  {
-    name: '4K single',
-    desc: '3840×2160 canvas, 20×10 tiles',
-    config: {
-      project: { name: 'PROJECT', subtitle: 'LED Pixelmap', canvasW: 3840, canvasH: 2160, accent: '#2590ce' },
-      screens: [{
-        id: 1, label: '', tileW: 192, tileH: 216, cols: 20, rows: 10,
-        offsetX: 0, offsetY: 0, colorA: '#d23c3c', colorB: '#781414',
-        active: makeActiveArray(10, 20, true)
-      }],
       activeScreenId: 1,
     }
   },
@@ -1008,6 +1234,8 @@ function addScreen() {
     offsetY: prev ? prev.offsetY : 0,
     colorA: '#3c5adc',
     colorB: '#0a1482',
+    gradientMode: prev ? (prev.gradientMode || 'checker') : 'checker',
+    gradientDir: prev ? (prev.gradientDir || 'horizontal') : 'horizontal',
     active: null,
   };
   newScreen.active = makeActiveArray(newScreen.rows, newScreen.cols, true);
@@ -1121,8 +1349,36 @@ document.addEventListener('mouseup', () => { isPainting = false; });
 function updateCellVisual(cell, r, c) {
   const s = activeScreen();
   if (s.active[r][c]) {
-    const checker = (r + c) % 2 === 0;
-    cell.style.background = checker ? s.colorA : s.colorB;
+    const mode = s.gradientMode || 'checker';
+    const dir = s.gradientDir || 'horizontal';
+    if (mode === 'checker') {
+      const checker = (r + c) % 2 === 0;
+      cell.style.background = checker ? s.colorA : s.colorB;
+    } else if (mode === 'per_tile') {
+      const cssDir = dir === 'horizontal' ? 'to right'
+                   : dir === 'vertical' ? 'to bottom'
+                   : dir === 'diagonal' ? 'to bottom right'
+                   : 'to top right';
+      cell.style.background = `linear-gradient(${cssDir}, ${s.colorA}, ${s.colorB})`;
+    } else {
+      // full_screen: interpolate by tile position within active grid
+      let minR = s.rows, maxR = -1, minC = s.cols, maxC = -1;
+      for (let rr = 0; rr < s.rows; rr++) {
+        for (let cc = 0; cc < s.cols; cc++) {
+          if (s.active[rr][cc]) {
+            if (rr<minR) minR=rr; if (rr>maxR) maxR=rr;
+            if (cc<minC) minC=cc; if (cc>maxC) maxC=cc;
+          }
+        }
+      }
+      const ww = maxC - minC, hh = maxR - minR;
+      let t = 0;
+      if (dir === 'horizontal') t = ww > 0 ? (c - minC) / ww : 0;
+      else if (dir === 'vertical') t = hh > 0 ? (r - minR) / hh : 0;
+      else if (dir === 'diagonal') t = (ww + hh) > 0 ? ((c - minC) + (r - minR)) / (ww + hh) : 0;
+      else t = (ww + hh) > 0 ? ((c - minC) + (maxR - r)) / (ww + hh) : 0;
+      cell.style.background = lerpColor(s.colorA, s.colorB, t);
+    }
     cell.style.opacity = '1';
   } else {
     cell.style.background = '#fafafa';
@@ -1172,6 +1428,8 @@ function syncDisplayFromUI() {
   state.display.showScreenOutline = $('opt-show-screen-outline').checked;
   state.display.showCanvasCorners = $('opt-show-canvas-corners').checked;
   state.display.showCanvasDims = $('opt-show-canvas-dims').checked;
+  state.display.showScreenCenterText = $('opt-show-center-text').checked;
+  state.display.centerTextSize = parseInt($('opt-center-text-size').value) || 28;
 }
 function syncDisplayToUI() {
   $('opt-overlay-circle').checked = state.display.overlayCircle;
@@ -1183,6 +1441,8 @@ function syncDisplayToUI() {
   $('opt-show-screen-outline').checked = state.display.showScreenOutline;
   $('opt-show-canvas-corners').checked = state.display.showCanvasCorners;
   $('opt-show-canvas-dims').checked = state.display.showCanvasDims;
+  $('opt-show-center-text').checked = state.display.showScreenCenterText || false;
+  $('opt-center-text-size').value = state.display.centerTextSize || 28;
 }
 
 // ============================================================
@@ -1371,6 +1631,35 @@ function drawScreen(ctx, s, cw, ch, accent) {
   }
   if (maxR < 0) return; // no active tiles in this screen
   
+  // Resolve gradient settings (with defaults for backwards-compat with old configs)
+  const gradientMode = s.gradientMode || 'checker';
+  const gradientDir = s.gradientDir || 'horizontal';
+  
+  // For 'full_screen' gradient, we need the active BB extents
+  // (so the gradient maps to where actual tiles are, not the full grid)
+  const ssBbX = s.offsetX + minC * s.tileW;
+  const ssBbY = s.offsetY + minR * s.tileH;
+  const ssBbW = (maxC - minC + 1) * s.tileW;
+  const ssBbH = (maxR - minR + 1) * s.tileH;
+  
+  // Helper: gradient endpoints relative to active BB
+  function gradEndpoints() {
+    if (gradientDir === 'horizontal')   return [ssBbX, ssBbY, ssBbX + ssBbW, ssBbY];
+    if (gradientDir === 'vertical')     return [ssBbX, ssBbY, ssBbX, ssBbY + ssBbH];
+    if (gradientDir === 'diagonal')     return [ssBbX, ssBbY, ssBbX + ssBbW, ssBbY + ssBbH];
+    if (gradientDir === 'diagonal_rev') return [ssBbX, ssBbY + ssBbH, ssBbX + ssBbW, ssBbY];
+    return [ssBbX, ssBbY, ssBbX + ssBbW, ssBbY];
+  }
+  
+  // Pre-build full-screen gradient (used in 'full_screen' mode)
+  let fullGrad = null;
+  if (gradientMode === 'full_screen') {
+    const [gx1, gy1, gx2, gy2] = gradEndpoints();
+    fullGrad = ctx.createLinearGradient(gx1, gy1, gx2, gy2);
+    fullGrad.addColorStop(0, s.colorA);
+    fullGrad.addColorStop(1, s.colorB);
+  }
+  
   // Draw tiles with inclusive coords (pixel-precise)
   for (let r=0; r<s.rows; r++) {
     for (let c=0; c<s.cols; c++) {
@@ -1382,8 +1671,24 @@ function drawScreen(ctx, s, cw, ch, accent) {
       // Inset on outer-right + outer-bottom of active area
       if (c === maxC) x1 -= INSET;
       if (r === maxR) y1 -= INSET;
-      const checker = (r + c) % 2 === 0;
-      ctx.fillStyle = checker ? s.colorA : s.colorB;
+      
+      if (gradientMode === 'checker') {
+        const checker = (r + c) % 2 === 0;
+        ctx.fillStyle = checker ? s.colorA : s.colorB;
+      } else if (gradientMode === 'per_tile') {
+        let gx1, gy1, gx2, gy2;
+        if (gradientDir === 'horizontal')      { gx1=x0; gy1=y0; gx2=x1; gy2=y0; }
+        else if (gradientDir === 'vertical')   { gx1=x0; gy1=y0; gx2=x0; gy2=y1; }
+        else if (gradientDir === 'diagonal')   { gx1=x0; gy1=y0; gx2=x1; gy2=y1; }
+        else                                    { gx1=x0; gy1=y1; gx2=x1; gy2=y0; }
+        const g = ctx.createLinearGradient(gx1, gy1, gx2, gy2);
+        g.addColorStop(0, s.colorA);
+        g.addColorStop(1, s.colorB);
+        ctx.fillStyle = g;
+      } else {
+        // full_screen: use the shared gradient
+        ctx.fillStyle = fullGrad;
+      }
       ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
     }
   }
@@ -1478,7 +1783,76 @@ function drawScreen(ctx, s, cw, ch, accent) {
     ctx.textBaseline = 'alphabetic';
   }
   
+  // ============ SCREEN CENTER TEXT (title + subtitle + resolution) ============
+  if (state.display.showScreenCenterText) {
+    const titleFs = state.display.centerTextSize || 28;
+    const subFs = Math.round(titleFs * 0.55);
+    const resFs = Math.round(titleFs * 0.75);
+    const lineGap = Math.round(titleFs * 0.25);
+    const screenRes = `${bbW} × ${bbH} px`;
+    
+    // Total height of text block
+    const totalH = titleFs + lineGap + subFs + lineGap + resFs;
+    const centerX = bbX + bbW / 2;
+    const centerY = bbY + bbH / 2;
+    const startY = centerY - totalH / 2;
+    
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    
+    // Subtle dark backing to keep text legible against checker pattern
+    // Measure widest line to size the backing
+    ctx.font = `700 ${titleFs}px sans-serif`;
+    const titleW = ctx.measureText(state.project.name).width;
+    ctx.font = `400 ${subFs}px sans-serif`;
+    const subW = ctx.measureText(state.project.subtitle).width;
+    ctx.font = `700 ${resFs}px Menlo, Monaco, monospace`;
+    const resW = ctx.measureText(screenRes).width;
+    const maxW = Math.max(titleW, subW, resW);
+    const padX = titleFs * 0.6;
+    const padY = titleFs * 0.4;
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
+    const bgX = centerX - maxW/2 - padX;
+    const bgY = startY - padY;
+    const bgW = maxW + padX*2;
+    const bgH = totalH + padY*2;
+    const radius = Math.min(titleFs * 0.4, bgH / 2, bgW / 2);
+    ctx.beginPath();
+    ctx.moveTo(bgX + radius, bgY);
+    ctx.lineTo(bgX + bgW - radius, bgY);
+    ctx.quadraticCurveTo(bgX + bgW, bgY, bgX + bgW, bgY + radius);
+    ctx.lineTo(bgX + bgW, bgY + bgH - radius);
+    ctx.quadraticCurveTo(bgX + bgW, bgY + bgH, bgX + bgW - radius, bgY + bgH);
+    ctx.lineTo(bgX + radius, bgY + bgH);
+    ctx.quadraticCurveTo(bgX, bgY + bgH, bgX, bgY + bgH - radius);
+    ctx.lineTo(bgX, bgY + radius);
+    ctx.quadraticCurveTo(bgX, bgY, bgX + radius, bgY);
+    ctx.closePath();
+    ctx.fill();
+    
+    // Title
+    ctx.fillStyle = 'white';
+    ctx.font = `700 ${titleFs}px sans-serif`;
+    ctx.fillText(state.project.name, centerX, startY);
+    
+    // Subtitle
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+    ctx.font = `400 ${subFs}px sans-serif`;
+    ctx.fillText(state.project.subtitle, centerX, startY + titleFs + lineGap);
+    
+    // Resolution
+    ctx.fillStyle = accent;
+    ctx.font = `700 ${resFs}px Menlo, Monaco, monospace`;
+    ctx.fillText(screenRes, centerX, startY + titleFs + lineGap + subFs + lineGap);
+    
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'alphabetic';
+  }
+  
   // ============ SCREEN LABEL (on the screen) ============
+  // Force consistent text state regardless of previous render steps
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'alphabetic';
   if (s.label) {
     const fs = Math.max(20, Math.round(s.tileH / 4));
     ctx.font = `700 ${fs}px sans-serif`;
@@ -2108,7 +2482,7 @@ function renderLogoList() {
       <div class="logo-item-row">
         <img class="thumb" src="${logo.dataUrl}" alt="" />
         <div class="details">
-          <strong style="display: block; color: #1e1e23; font-size: 13px;">${escapeHtml(logo.name)}</strong>
+          <strong style="display: block; color: var(--text-primary); font-size: 13px;">${escapeHtml(logo.name)}</strong>
           <span>${T('native')}: ${logo.image.naturalWidth}×${logo.image.naturalHeight}</span>
         </div>
         <button data-act="select" data-id="${logo.id}" style="margin-right: 4px;">${state.selectedLogoId === logo.id ? T('selected') : T('select')}</button>
@@ -2528,12 +2902,13 @@ function renderPresets() {
   }
   userPresets.forEach((p, i) => {
     const card = document.createElement('div');
-    card.className = 'preset-card';
+    card.className = 'preset-card preset-card-user';
     card.style.position = 'relative';
+    card.style.paddingRight = '36px';
     card.innerHTML = `<strong>${p.name}</strong><span class="desc">${p.desc || ''}</span>
-      <span style="position: absolute; top: 4px; right: 6px; color: #c53030; cursor: pointer; font-size: 14px;" data-del="${i}">×</span>`;
+      <button class="preset-delete-btn" data-del="${i}" title="${T('delete_preset_q')}">×</button>`;
     card.onclick = (e) => {
-      if (e.target.dataset.del !== undefined) {
+      if (e.target.dataset.del !== undefined || e.target.classList.contains('preset-delete-btn')) {
         if (confirm(`${T('delete_preset_q')} "${p.name}"?`)) {
           const list = loadUserPresets();
           list.splice(parseInt(e.target.dataset.del), 1);
@@ -2729,9 +3104,10 @@ function wireUp() {
   });
   
   // Display options
-  document.querySelectorAll('#opt-overlay-circle, #opt-overlay-cross, #opt-show-coords, #opt-show-grid-lines, #opt-show-rulers, #opt-show-info, #opt-show-screen-outline, #opt-show-canvas-corners, #opt-show-canvas-dims').forEach(el => {
+  document.querySelectorAll('#opt-overlay-circle, #opt-overlay-cross, #opt-show-coords, #opt-show-grid-lines, #opt-show-rulers, #opt-show-info, #opt-show-screen-outline, #opt-show-canvas-corners, #opt-show-canvas-dims, #opt-show-center-text').forEach(el => {
     el.onchange = () => { syncDisplayFromUI(); scheduleRender(); };
   });
+  $('opt-center-text-size').oninput = () => { syncDisplayFromUI(); scheduleRender(); };
   
   // Drag/resize logos on canvas
   attachCanvasDragHandlers();
@@ -2751,6 +3127,9 @@ function wireUp() {
     btn.onclick = () => setLanguage(btn.dataset.lang);
   });
   
+  // Theme toggle
+  $('theme-toggle').onclick = toggleTheme;
+  
   // Context menu prevent on grid
   $('grid').oncontextmenu = e => e.preventDefault();
 }
@@ -2759,6 +3138,7 @@ function wireUp() {
 // INIT
 // ============================================================
 function init() {
+  applyTheme(getStoredTheme());
   applyTranslations();
   syncProjectToUI();
   syncScreenToUI();
