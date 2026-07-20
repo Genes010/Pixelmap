@@ -14,6 +14,7 @@
     --bg-chip: #1b1f27;
     --bg-viewport: #0f1218;
     --bg-hover: #232834;
+    --bg-tooltip: #2a2f3a;
     --bg-active-row: #1a2733;
     --bg-pill-info: #102838;
     --bg-overflow: #3a2e10;
@@ -47,6 +48,7 @@
     --bg-chip: #eef0f3;
     --bg-viewport: #e2e4e9;
     --bg-hover: #e7eaef;
+    --bg-tooltip: #2c3038;
     --bg-active-row: #e7f3fa;
     --bg-pill-info: #f0f7fc;
     --bg-overflow: #fff3cd;
@@ -227,6 +229,28 @@
     color: var(--text-primary);
   }
   .scr-row .dot { width: 9px; height: 9px; border-radius: 2px; flex-shrink: 0; }
+  .scr-row .scr-thumb {
+    width: 34px; height: 26px;
+    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--bg-input);
+    border: 1px solid var(--border-input);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .scr-row .scr-thumb svg { display: block; max-width: 100%; max-height: 100%; }
+  .scr-rename-input {
+    flex: 1;
+    min-width: 0;
+    font-size: 11px;
+    font-family: inherit;
+    padding: 2px 5px;
+    border: 1px solid var(--accent);
+    border-radius: 3px;
+    background: var(--bg-input);
+    color: var(--text-primary);
+    outline: none;
+  }
   .scr-row .nm { flex: 1; font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .scr-row .res { font-family: var(--mono); font-size: 8.5px; color: var(--text-muted); }
   .scr-row .close {
@@ -355,12 +379,71 @@
     left: 14px;
     display: flex;
     align-items: center;
-    gap: 5px;
+    gap: 4px;
     background: var(--bg-panel);
     border: 1px solid var(--border-input);
     border-radius: 8px;
-    padding: 5px 8px;
+    padding: 4px;
     z-index: 6;
+  }
+  .tile-toolbar .tt-sep { width: 1px; align-self: stretch; background: var(--border-input); margin: 2px 3px; }
+  /* Reusable icon-button with delayed tooltip. Add class "tool-btn" and a data-tip attribute. */
+  .tool-btn {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    background: var(--bg-chip);
+    border: 1px solid var(--border-input);
+    border-radius: 6px;
+    color: var(--text-primary);
+    cursor: pointer;
+  }
+  .tool-btn svg { width: 16px; height: 16px; display: block; }
+  .tool-btn:hover { background: var(--bg-hover); }
+  .tool-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .tool-btn[data-tip]::after {
+    content: attr(data-tip);
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    white-space: nowrap;
+    background: var(--bg-tooltip, #000);
+    color: #fff;
+    font-size: 10.5px;
+    font-family: inherit;
+    letter-spacing: 0.01em;
+    padding: 4px 8px;
+    border-radius: 5px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.12s;
+    transition-delay: 0s;
+    z-index: 20;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.35);
+  }
+  .tool-btn[data-tip]::before {
+    content: "";
+    position: absolute;
+    bottom: calc(100% + 3px);
+    left: 50%;
+    transform: translateX(-50%);
+    border: 5px solid transparent;
+    border-top-color: var(--bg-tooltip, #000);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.12s;
+    transition-delay: 0s;
+    z-index: 20;
+  }
+  .tool-btn[data-tip]:hover::after,
+  .tool-btn[data-tip]:hover::before {
+    opacity: 1;
+    transition-delay: 0.7s; /* tooltip appears after a short hover */
   }
   .tile-toolbar .tt-label {
     font-size: 9px;
@@ -369,14 +452,54 @@
     color: var(--text-muted);
     margin-right: 2px;
   }
-  .tile-toolbar button {
-    padding: 5px 11px;
-    font-size: 10.5px;
-    background: var(--bg-chip);
-    border: 1px solid var(--border-input);
-    color: var(--text-primary);
+  .tile-toolbar button.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+  /* Reusable modal dialog */
+  .modal-backdrop {
+    position: fixed; inset: 0; z-index: 1000;
+    background: rgba(0,0,0,0.55);
+    display: flex; align-items: center; justify-content: center;
+    padding: 24px;
   }
-  .tile-toolbar button:hover { background: var(--bg-hover); }
+  .modal-box {
+    background: var(--bg-card);
+    border: 1px solid var(--border-input);
+    border-radius: 10px;
+    width: 100%; max-width: 420px;
+    max-height: 85vh;
+    display: flex; flex-direction: column;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.4);
+    overflow: hidden;
+  }
+  .modal-box h3 {
+    margin: 0; padding: 16px 18px;
+    font-size: 14px; color: var(--text-primary);
+    border-bottom: 1px solid var(--border-input);
+  }
+  .modal-body { padding: 14px 18px; overflow-y: auto; }
+  .modal-body .modal-sub { font-size: 10.5px; color: var(--text-muted); margin: 0 0 10px; }
+  .modal-check {
+    display: flex; align-items: center; gap: 9px;
+    padding: 7px 8px; border-radius: 6px; cursor: pointer;
+    font-size: 12px; color: var(--text-primary);
+  }
+  .modal-check:hover { background: var(--bg-hover); }
+  .modal-check input { width: auto; margin: 0; flex-shrink: 0; }
+  .modal-check .mc-thumb { width: 30px; height: 22px; flex-shrink: 0; display:flex; align-items:center; justify-content:center; background: var(--bg-input); border:1px solid var(--border-input); border-radius:3px; overflow:hidden; }
+  .modal-check .mc-thumb svg { max-width:100%; max-height:100%; display:block; }
+  .modal-check .mc-name { flex: 1; }
+  .modal-check .mc-res { font-family: var(--mono); font-size: 9px; color: var(--text-muted); }
+  .modal-row { display:flex; align-items:center; justify-content:space-between; gap:10px; margin: 10px 0; font-size: 12px; color: var(--text-primary); }
+  .modal-row select, .modal-row input[type="number"] { min-width: 90px; }
+  .modal-foot {
+    display: flex; justify-content: space-between; gap: 10px;
+    padding: 13px 18px; border-top: 1px solid var(--border-input);
+  }
+  .modal-foot .mf-right { display:flex; gap:8px; margin-left:auto; }
+  .modal-foot button { padding: 7px 16px; font-size: 12px; border-radius: 6px; cursor: pointer; }
+  .modal-foot .btn-primary { background: var(--accent); border: 1px solid var(--accent); color: #fff; }
+  .modal-foot .btn-ghost { background: var(--bg-chip); border: 1px solid var(--border-input); color: var(--text-primary); }
+  .modal-foot .btn-link { background: none; border: none; color: var(--text-muted); font-size: 11px; padding: 7px 4px; }
+  .modal-foot .btn-link:hover { color: var(--accent); }
   .zoombar {
     position: absolute;
     bottom: 14px;
@@ -540,6 +663,29 @@
   select { font-family: inherit; max-width: 140px; }
   input:focus, select:focus { border-color: var(--accent); }
   select option { background: var(--bg-card); color: var(--text-primary); }
+  /* Number spinner styling — replace the faint/ugly default arrows with a tidy up/down control */
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    align-self: stretch;
+    margin: -4px -8px -4px 4px;   /* fill the input's vertical padding, sit flush right */
+    border-left: 1px solid var(--border-input);
+    border-radius: 0 3px 3px 0;
+    background-color: var(--bg-chip);
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 8px 8px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Cpath d='M1.5 3L4 0.5 6.5 3M1.5 5L4 7.5 6.5 5' fill='none' stroke='%23888' stroke-width='1' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    cursor: pointer;
+    transition: background-color 0.12s;
+  }
+  input[type="number"]::-webkit-inner-spin-button:hover,
+  input[type="number"]::-webkit-outer-spin-button:hover {
+    background-color: var(--bg-hover);
+  }
+  /* Firefox keeps its native control */
   input[type="color"] {
     width: 26px; height: 24px;
     border: 1px solid var(--border-input);
@@ -859,10 +1005,34 @@
     </div>
     <div id="page-indicator" style="display: none;"></div>
     <div class="tile-toolbar" id="tile-toolbar">
-      <span class="tt-label" data-i18n="tiles_label">Tiles</span>
-      <button id="tt-fill" data-i18n="fill_all">Fill all</button>
-      <button id="tt-clear" data-i18n="clear_all">Clear</button>
-      <button id="tt-invert" data-i18n="invert">Invert</button>
+      <button class="tool-btn active" id="tt-pointer" data-tip="Pointer" data-tool="pointer">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M5 3l6.5 15.5 2-6 6-2L5 3z"/>
+        </svg>
+      </button>
+      <button class="tool-btn" id="tt-move" data-tip="Move screens" data-tool="move">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M18 11V6.5a1.5 1.5 0 0 0-3 0V6a1.5 1.5 0 0 0-3 0 1.5 1.5 0 0 0-3 0v1.5"/>
+          <path d="M9 7.5V4a1.5 1.5 0 0 0-3 0v9"/>
+          <path d="M18 11a1.5 1.5 0 0 1 3 0c0 4-1.5 8-6 8H10.5a5 5 0 0 1-3.5-1.5L3.5 14A1.7 1.7 0 0 1 6 11.7l2 1.8"/>
+        </svg>
+      </button>
+      <button class="tool-btn" id="tt-tile" data-tip="Toggle tiles" data-tool="tile">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="7" height="7" rx="1"/>
+          <rect x="14" y="3" width="7" height="7" rx="1"/>
+          <rect x="3" y="14" width="7" height="7" rx="1"/>
+          <path d="M14 17.5h7M17.5 14v7"/>
+        </svg>
+      </button>
+      <div class="tt-sep"></div>
+      <button class="tool-btn active" id="tt-snap" data-tip="Snap on" aria-pressed="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="8" height="8" rx="1"/>
+          <rect x="13" y="13" width="8" height="8" rx="1"/>
+          <path d="M11 7h4a2 2 0 0 1 2 2v4"/>
+        </svg>
+      </button>
     </div>
     <div class="canvas-wrap">
       <canvas id="canvas" width="1920" height="1080"></canvas>
@@ -1148,8 +1318,17 @@
 <!-- ═══════════ TEST PATTERN MODE ═══════════ -->
 <div class="app" id="container-testpattern" style="display: none;">
 
-  <!-- LEFT: patterns -->
+  <!-- LEFT: sessions + patterns -->
   <aside class="left-panel">
+    <div class="panel-h"><span data-i18n="tp_screens">Screens</span></div>
+    <div id="tp-session-list"></div>
+    <div id="tp-overview-wrap" style="padding: 8px 10px;">
+      <div class="tt-label" style="font-size:9px;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);margin-bottom:5px;" data-i18n="tp_overview">Layout overview</div>
+      <div id="tp-overview" style="background:var(--bg-input);border:1px solid var(--border-input);border-radius:4px;padding:4px;"></div>
+    </div>
+    <div class="btn-row" style="padding: 6px 10px;">
+      <button id="tp-sync-screens-btn" data-i18n="tp_sync_screens">↻ From pixelmap</button>
+    </div>
     <div class="panel-h"><span data-i18n="tp_pattern">Patterns</span></div>
     <div class="tp-pattern-grid" id="tp-pattern-grid"></div>
   </aside>
@@ -1343,6 +1522,7 @@ const I18N = {
     import_project_json: 'Import project JSON',
     name_project: 'Name this project:',
     rename_project: 'Rename project',
+    rename_hint: 'Double-click to rename',
     delete_project_q: 'Delete project',
     unsaved_changes_warning: 'Unsaved changes to this project will be lost. Switch anyway?',
     imported_load_now_q: 'load it now?',
@@ -1392,6 +1572,10 @@ const I18N = {
     tp_preset_custom: 'Custom...',
     tp_custom_res: 'Resolution',
     tp_pattern: 'Pattern type',
+    tp_screens: 'Screens',
+    tp_overview: 'Layout overview',
+    tp_no_sessions: 'No screens with content yet. Draw tiles in the pixelmap, then sync.',
+    tp_sync_screens: '↻ From pixelmap',
     tp_pattern_info: 'Choose a test pattern. Each one is designed for a specific calibration purpose.',
     tp_options: 'Pattern options',
     tp_usage_summary: 'Usage tips',
@@ -1467,6 +1651,17 @@ const I18N = {
     fill_all: 'Fill all',
     clear_all: 'Clear all',
     invert: 'Invert',
+    screens_label: 'Screens',
+    move_screens_hint: 'Alt + drag to move screens',
+    tool_pointer: 'Pointer',
+    tool_move: 'Move screens (drag)',
+    tool_tile: 'Toggle tiles on/off',
+    snap_toggle: 'Snap: on',
+    snap_label: 'Snap',
+    snap_on: 'Snap on',
+    snap_off: 'Snap off',
+    on: 'on',
+    off: 'off',
     // Edit tiles
     edit_info: 'Click to toggle. Click+drag to paint multiple tiles. Active tiles will appear on output.',
     // Stats
@@ -1506,6 +1701,16 @@ const I18N = {
     // Preview
     render_preview: 'Render preview',
     download_png: 'Download PNG',
+    cancel: 'Cancel',
+    ok: 'OK',
+    select_all: 'Select all',
+    select_screens_info: 'Choose which screens to export.',
+    export_screens_title: 'Export screens',
+    dl_full_canvas: 'Full canvas (all screens composited)',
+    dl_per_screen: 'Individual screens (one PNG each)',
+    no_radar_screens: 'No screens have a radar pulse yet. Add a radar pulse overlay to a screen first.',
+    rendering: 'Rendering frame',
+    zipping: 'Zipping...',
     auto_render: 'Auto-render',
     auto_render_tooltip: 'Automatically re-render after every change',
     tips: 'Tips',
@@ -1573,6 +1778,7 @@ const I18N = {
     import_project_json: 'Project-JSON importeren',
     name_project: 'Naam voor dit project:',
     rename_project: 'Project hernoemen',
+    rename_hint: 'Dubbelklik om te hernoemen',
     delete_project_q: 'Verwijder project',
     unsaved_changes_warning: 'Niet-opgeslagen wijzigingen in dit project gaan verloren. Toch wisselen?',
     imported_load_now_q: 'nu laden?',
@@ -1621,6 +1827,10 @@ const I18N = {
     tp_preset_custom: 'Aangepast...',
     tp_custom_res: 'Resolutie',
     tp_pattern: 'Patroon type',
+    tp_screens: 'Schermen',
+    tp_overview: 'Layout overzicht',
+    tp_no_sessions: 'Nog geen schermen met inhoud. Teken tegels in de pixelmap en synchroniseer.',
+    tp_sync_screens: '↻ Uit pixelmap',
     tp_pattern_info: 'Kies een test patroon. Elk patroon is ontworpen voor een specifiek kalibratie doel.',
     tp_options: 'Patroon opties',
     tp_usage_summary: 'Gebruikstips',
@@ -1696,6 +1906,17 @@ const I18N = {
     fill_all: 'Alles vullen',
     clear_all: 'Alles wissen',
     invert: 'Omkeren',
+    screens_label: 'Schermen',
+    move_screens_hint: 'Alt + sleep om schermen te verplaatsen',
+    tool_pointer: 'Aanwijzer',
+    tool_move: 'Schermen verplaatsen (sleep)',
+    tool_tile: 'Tegels aan/uit',
+    snap_toggle: 'Snap: aan',
+    snap_label: 'Snap',
+    snap_on: 'Snap aan',
+    snap_off: 'Snap uit',
+    on: 'aan',
+    off: 'uit',
     edit_info: 'Klik om aan/uit. Klik+sleep om meerdere tegels te verven. Actieve tegels verschijnen in de output.',
     active: 'Actief',
     active_bb: 'Resolutie',
@@ -1730,6 +1951,16 @@ const I18N = {
     opacity: 'Doorzichtigheid',
     render_preview: 'Voorbeeld renderen',
     download_png: 'PNG downloaden',
+    cancel: 'Annuleren',
+    ok: 'OK',
+    select_all: 'Alles selecteren',
+    select_screens_info: 'Kies welke schermen je wilt exporteren.',
+    export_screens_title: 'Schermen exporteren',
+    dl_full_canvas: 'Volledig canvas (alle schermen samengesteld)',
+    dl_per_screen: 'Losse schermen (elk een eigen PNG)',
+    no_radar_screens: 'Nog geen schermen met een radar puls. Voeg eerst een radar puls overlay toe aan een scherm.',
+    rendering: 'Frame renderen',
+    zipping: 'Zippen...',
     auto_render: 'Auto-render',
     auto_render_tooltip: 'Automatisch opnieuw renderen na elke wijziging',
     tips: 'Tips',
@@ -2271,6 +2502,113 @@ function syncProjectToUI() {
 // ============================================================
 // UI: SCREENS
 // ============================================================
+// The largest screen extent across all screens (used to scale thumbnails proportionally,
+// so a small screen shows a small thumbnail relative to a big one).
+function maxScreenExtent() {
+  let m = 1;
+  state.screens.forEach(s => {
+    let gw, gh;
+    if (s.advancedMode) { const bb = getAdvancedBBox(s); gw = bb.w; gh = bb.h; }
+    else { gw = s.cols * s.tileW; gh = s.rows * s.tileH; }
+    if (gw > m) m = gw;
+    if (gh > m) m = gh;
+  });
+  return m;
+}
+
+// Build a small SVG thumbnail of a screen's tile layout, in the screen's aspect ratio,
+// scaled proportionally to the largest screen (scaleRef). Active tiles are drawn in the
+// screen's colour; the outline shows the full grid extent.
+function screenThumbSVG(s, boxW, boxH, scaleRef) {
+  const accent = state.project.accent || '#2590ce';
+  const ref = scaleRef || maxScreenExtent();
+  let gw, gh, cols, rows;
+  if (s.advancedMode) {
+    const bb = getAdvancedBBox(s);
+    if (!bb || bb.w <= 0) return `<svg viewBox="0 0 ${boxW} ${boxH}"></svg>`;
+    gw = bb.w; gh = bb.h;
+  } else {
+    cols = s.cols; rows = s.rows;
+    gw = cols * s.tileW; gh = rows * s.tileH;
+  }
+  // Scale so that the largest screen fills ~90% of the box; this screen is drawn
+  // proportionally smaller if it's smaller than the reference.
+  const usable = 0.9;
+  const scale = (Math.min(boxW, boxH) * usable) / ref;
+  const w = gw * scale, h = gh * scale;
+  const x = (boxW - w) / 2, y = (boxH - h) / 2;
+  const col = s.colorA || accent;
+  
+  if (s.advancedMode) {
+    return `<svg viewBox="0 0 ${boxW} ${boxH}" xmlns="http://www.w3.org/2000/svg">`
+      + `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${w.toFixed(1)}" height="${h.toFixed(1)}" fill="${col}" rx="1"/></svg>`;
+  }
+  const cw = w / cols, ch = h / rows;
+  const colA = s.colorA || accent;
+  const colB = s.colorB || colA;
+  const mode = s.gradientMode || 'checker';
+  let rects = '';
+  if (s.active) {
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        if (s.active[r] && s.active[r][c]) {
+          // Match the canvas coloring so colorB / checker / gradient show in the thumbnail
+          let fill;
+          if (mode === 'checker') fill = ((r + c) % 2 === 0) ? colA : colB;
+          else if (cols > 1) {
+            // gradient approximation: blend A→B across columns
+            fill = mixHex(colA, colB, cols === 1 ? 0 : c / (cols - 1));
+          } else fill = colA;
+          rects += `<rect x="${(x + c * cw).toFixed(2)}" y="${(y + r * ch).toFixed(2)}" width="${(cw + 0.3).toFixed(2)}" height="${(ch + 0.3).toFixed(2)}" fill="${fill}"/>`;
+        }
+      }
+    }
+  } else {
+    rects = `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${w.toFixed(1)}" height="${h.toFixed(1)}" fill="${colA}"/>`;
+  }
+  return `<svg viewBox="0 0 ${boxW} ${boxH}" xmlns="http://www.w3.org/2000/svg">`
+    + rects
+    + `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${w.toFixed(1)}" height="${h.toFixed(1)}" fill="none" stroke="${accent}" stroke-width="0.5" opacity="0.5"/>`
+    + `</svg>`;
+}
+
+// Simple aspect-ratio rectangle thumbnail from a width/height (for test-pattern sessions)
+function aspectThumbSVG(width, height, boxW, boxH, fill) {
+  const ar = width / height;
+  let w = boxW, h = boxH;
+  if (w / h > ar) w = h * ar; else h = w / ar;
+  const x = (boxW - w) / 2, y = (boxH - h) / 2;
+  const accent = state.project.accent || '#2590ce';
+  return `<svg viewBox="0 0 ${boxW} ${boxH}" xmlns="http://www.w3.org/2000/svg">`
+    + `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${w.toFixed(1)}" height="${h.toFixed(1)}" fill="${fill || 'none'}" stroke="${accent}" stroke-width="1" rx="1"/></svg>`;
+}
+
+// Turn a screen-name span into an inline text editor on double-click.
+// onCommit(newName) is called with the trimmed value (or empty to clear the label).
+function startInlineRename(span, currentName, onCommit) {
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.value = currentName;
+  input.className = 'scr-rename-input';
+  input.onclick = (e) => e.stopPropagation();
+  input.ondblclick = (e) => e.stopPropagation();
+  let done = false;
+  const commit = (save) => {
+    if (done) return;
+    done = true;
+    if (save) onCommit(input.value.trim());
+    else onCommit(null); // cancelled — re-render without change
+  };
+  input.onkeydown = (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); commit(true); }
+    else if (e.key === 'Escape') { e.preventDefault(); commit(false); }
+  };
+  input.onblur = () => commit(true);
+  span.replaceWith(input);
+  input.focus();
+  input.select();
+}
+
 function renderScreenTabs() {
   const container = $('screen-tabs');
   container.innerHTML = '';
@@ -2294,11 +2632,26 @@ function renderScreenTabs() {
       }
       if (maxR >= 0) res = `${(maxC-minC+1)*s.tileW}×${(maxR-minR+1)*s.tileH}`;
     }
-    row.innerHTML = `<span class="dot" style="background:${s.colorA}"></span>`
+    row.innerHTML = `<span class="scr-thumb">${screenThumbSVG(s, 34, 26)}</span>`
       + `<span class="nm">${escapeHtml(name)}</span>`
       + `<span class="res">${res}</span>`
       + (state.screens.length > 1 ? `<span class="close" data-id="${s.id}" title="Remove">×</span>` : '');
     row.dataset.id = s.id;
+    const nmSpan = row.querySelector('.nm');
+    if (nmSpan) {
+      nmSpan.title = T('rename_hint');
+      nmSpan.ondblclick = (e) => {
+        e.stopPropagation();
+        startInlineRename(nmSpan, s.label || '', (val) => {
+          if (val !== null) {
+            s.label = val;
+            syncScreenToUI();
+            scheduleRender();
+          }
+          renderScreenTabs();
+        });
+      };
+    }
     row.onclick = (e) => {
       if (e.target.classList.contains('close')) {
         if (confirm(T('remove_screen_q'))) {
@@ -2629,6 +2982,26 @@ function readableTextColor(hex) {
   return lum > 140 ? '#1e1e23' : '#f0f0f2';
 }
 
+// Lighten (amt>0) or darken (amt<0) a hex color by a fraction (-1..1)
+function shadeColor(hex, amt) {
+  const h = (hex || '#e6e6e8').replace('#','');
+  if (h.length < 6) return hex || '#a0a0a4';
+  let r = parseInt(h.substr(0,2),16), g = parseInt(h.substr(2,2),16), b = parseInt(h.substr(4,2),16);
+  const f = (v) => Math.max(0, Math.min(255, Math.round(v + 255 * amt)));
+  r = f(r); g = f(g); b = f(b);
+  return '#' + [r,g,b].map(v => v.toString(16).padStart(2,'0')).join('');
+}
+
+// Linearly blend two hex colors; t=0 → a, t=1 → b
+function mixHex(a, b, t) {
+  const pa = (a || '#000').replace('#',''), pb = (b || '#000').replace('#','');
+  if (pa.length < 6 || pb.length < 6) return a;
+  const ar = parseInt(pa.substr(0,2),16), ag = parseInt(pa.substr(2,2),16), ab = parseInt(pa.substr(4,2),16);
+  const br = parseInt(pb.substr(0,2),16), bg = parseInt(pb.substr(2,2),16), bb = parseInt(pb.substr(4,2),16);
+  const m = (x,y) => Math.round(x + (y - x) * t);
+  return '#' + [m(ar,br),m(ag,bg),m(ab,bb)].map(v => v.toString(16).padStart(2,'0')).join('');
+}
+
 // Resolve per-screen overlay settings. Default: on, white, 2px. Per-screen fields override.
 function resolveOverlayCircle(s) { return s.overlayCircle === undefined ? true : !!s.overlayCircle; }
 function resolveOverlayCross(s)  { return s.overlayCross  === undefined ? true : !!s.overlayCross; }
@@ -2687,6 +3060,48 @@ function removeScreenInfoItem(s) {
   }
 }
 
+// Computes how far screens extend beyond the logical canvas (0..cw, 0..ch),
+// so the preview can show off-canvas content instead of clipping it.
+// Returns the bleed margins + the enlarged element size and the draw offset.
+// When suppressCanvasBleed is set (during export), always returns a zero bleed
+// so downloads are exactly cw×ch with off-canvas content clipped as before.
+let suppressCanvasBleed = false;
+let frozenCanvasBleed = null; // pinned during a screen drag so the element doesn't resize mid-drag
+function getCanvasBleed(cw, ch) {
+  if (suppressCanvasBleed) {
+    return { left: 0, top: 0, right: 0, bottom: 0, elW: cw, elH: ch, offX: 0, offY: 0 };
+  }
+  if (frozenCanvasBleed) return frozenCanvasBleed;
+  let minX = 0, minY = 0, maxX = cw, maxY = ch;
+  state.screens.forEach(s => {
+    let sx0 = s.offsetX, sy0 = s.offsetY, sx1, sy1;
+    if (s.advancedMode) {
+      const bb = getAdvancedBBox(s);
+      sx0 = s.offsetX + bb.minX; sy0 = s.offsetY + bb.minY;
+      sx1 = s.offsetX + bb.maxX; sy1 = s.offsetY + bb.maxY;
+    } else {
+      sx1 = s.offsetX + s.cols * s.tileW;
+      sy1 = s.offsetY + s.rows * s.tileH;
+    }
+    if (sx0 < minX) minX = sx0;
+    if (sy0 < minY) minY = sy0;
+    if (sx1 > maxX) maxX = sx1;
+    if (sy1 > maxY) maxY = sy1;
+  });
+  const pad = Math.round(Math.max(cw, ch) * 0.02); // small breathing room
+  const left = Math.max(0, Math.ceil(-minX)) + (minX < 0 ? pad : 0);
+  const top = Math.max(0, Math.ceil(-minY)) + (minY < 0 ? pad : 0);
+  const right = Math.max(0, Math.ceil(maxX - cw)) + (maxX > cw ? pad : 0);
+  const bottom = Math.max(0, Math.ceil(maxY - ch)) + (maxY > ch ? pad : 0);
+  return {
+    left, top, right, bottom,
+    elW: cw + left + right,
+    elH: ch + top + bottom,
+    offX: left, // add to logical coords to get element coords
+    offY: top,
+  };
+}
+
 function renderCanvas() {
   syncProjectFromUI();
   syncScreenFromUI();
@@ -2701,12 +3116,23 @@ function renderCanvas() {
   };
   
   const canvas = $('canvas');
-  canvas.width = cw;
-  canvas.height = ch;
+  const bleed = getCanvasBleed(cw, ch);
+  state.canvasBleed = bleed; // stash for coord conversion + selection overlay
+  canvas.width = bleed.elW;
+  canvas.height = bleed.elH;
   const ctx = canvas.getContext('2d');
   
-  // Canvas background (configurable)
+  // Fill the whole (enlarged) element with a darker "off-canvas" tone first
   const canvasBg = state.project.canvasBg || '#e6e6e8';
+  const offCanvasTone = shadeColor(canvasBg, -0.35);
+  ctx.fillStyle = offCanvasTone;
+  ctx.fillRect(0, 0, bleed.elW, bleed.elH);
+  
+  // Everything below is drawn in logical coordinates; shift into the bleed area
+  ctx.save();
+  ctx.translate(bleed.offX, bleed.offY);
+  
+  // Canvas background (configurable) — only the logical canvas region
   ctx.fillStyle = canvasBg;
   ctx.fillRect(0, 0, cw, ch);
   
@@ -2821,6 +3247,18 @@ function renderCanvas() {
       drawPage2Notice(ctx, cw, ch, accent);
     }
   }
+  // ============ LOGICAL CANVAS BOUNDARY (dashed) — only when content bleeds out ============
+  if (bleed.left || bleed.top || bleed.right || bleed.bottom) {
+    ctx.save();
+    ctx.strokeStyle = accent;
+    ctx.lineWidth = Math.max(2, cw / 900);
+    ctx.setLineDash([Math.max(8, cw/120), Math.max(6, cw/160)]);
+    ctx.strokeRect(0, 0, cw, ch);
+    ctx.setLineDash([]);
+    ctx.restore();
+  }
+  
+  ctx.restore(); // undo bleed translate
   
   // Update UI indicator
   updatePageIndicator();
@@ -4390,14 +4828,21 @@ function escapeHtml(s) {
 // ============================================================
 let dragState = null; // { logoId, mode: 'move'|'resize', handle, startX, startY, origX, origY, origW, origH }
 let paintState = null; // { screen, newValue, painted: Set of "row,col" }
+let screenDragState = null; // { screen, startX, startY, origOffsetX, origOffsetY }
+let screenSnapEnabled = true;
+let activeTool = 'pointer'; // 'pointer' (default: select/paint) | 'move' (drag screens)
+let activeSnapGuides = []; // [{type:'v'|'h', pos, from, to}] in logical coords, for preview render
 
 function getCanvasCoords(evt) {
   const canvas = $('canvas');
   const rect = canvas.getBoundingClientRect();
   const scaleX = canvas.width / rect.width;
   const scaleY = canvas.height / rect.height;
-  const x = (evt.clientX - rect.left) * scaleX;
-  const y = (evt.clientY - rect.top) * scaleY;
+  let x = (evt.clientX - rect.left) * scaleX;
+  let y = (evt.clientY - rect.top) * scaleY;
+  // Convert from element space back to logical canvas space (remove bleed offset)
+  const bleed = state.canvasBleed;
+  if (bleed) { x -= bleed.offX; y -= bleed.offY; }
   return { x, y, scale: scaleX };
 }
 
@@ -4467,37 +4912,141 @@ function hitTestLogo(x, y) {
   return null;
 }
 
+// Outer rect of a screen (offset + full grid / advanced BB) in logical coords
+function screenRect(s) {
+  if (s.advancedMode) {
+    const bb = getAdvancedBBox(s);
+    return { x: s.offsetX + bb.minX, y: s.offsetY + bb.minY, w: bb.w, h: bb.h };
+  }
+  return { x: s.offsetX, y: s.offsetY, w: s.cols * s.tileW, h: s.rows * s.tileH };
+}
+
+// Which screen is under a logical point (topmost first)
+function findScreenAt(x, y) {
+  for (let si = state.screens.length - 1; si >= 0; si--) {
+    const r = screenRect(state.screens[si]);
+    if (x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h) return state.screens[si];
+  }
+  return null;
+}
+
+// Snap a dragged screen's proposed offset to canvas edges + other screens' edges.
+// Returns { offsetX, offsetY, guides: [...] }. Snap threshold scales with canvas size.
+function snapScreenOffset(movingScreen, propOffX, propOffY) {
+  const cw = state.project.canvasW, ch = state.project.canvasH;
+  const r = screenRect(movingScreen);
+  // Offset delta between screenRect origin and the raw offset (advanced mode bb)
+  const rectDX = r.x - movingScreen.offsetX;
+  const rectDY = r.y - movingScreen.offsetY;
+  const w = r.w, h = r.h;
+  const threshold = Math.max(6, Math.round(Math.max(cw, ch) / 180));
+  
+  // Candidate target lines from canvas + other screens
+  const vLines = [0, cw]; // x positions
+  const hLines = [0, ch]; // y positions
+  const vSpan = [], hSpan = [];
+  state.screens.forEach(s => {
+    if (s === movingScreen) return;
+    const sr = screenRect(s);
+    vLines.push(sr.x, sr.x + sr.w);
+    hLines.push(sr.y, sr.y + sr.h);
+  });
+  
+  let bestVDelta = null, bestV = null, bestVGuide = null;
+  let bestHDelta = null, bestH = null, bestHGuide = null;
+  const propLeft = propOffX + rectDX;
+  const propTop = propOffY + rectDY;
+  
+  // Try snapping this screen's left OR right edge to each vertical line
+  vLines.forEach(line => {
+    // left edge
+    let d = Math.abs(propLeft - line);
+    if (d <= threshold && (bestVDelta === null || d < bestVDelta)) { bestVDelta = d; bestV = line - rectDX; bestVGuide = line; }
+    // right edge
+    d = Math.abs(propLeft + w - line);
+    if (d <= threshold && (bestVDelta === null || d < bestVDelta)) { bestVDelta = d; bestV = line - w - rectDX; bestVGuide = line; }
+  });
+  hLines.forEach(line => {
+    let d = Math.abs(propTop - line);
+    if (d <= threshold && (bestHDelta === null || d < bestHDelta)) { bestHDelta = d; bestH = line - rectDY; bestHGuide = line; }
+    d = Math.abs(propTop + h - line);
+    if (d <= threshold && (bestHDelta === null || d < bestHDelta)) { bestHDelta = d; bestH = line - h - rectDY; bestHGuide = line; }
+  });
+  
+  const guides = [];
+  const outOffX = bestV !== null ? Math.round(bestV) : Math.round(propOffX);
+  const outOffY = bestH !== null ? Math.round(bestH) : Math.round(propOffY);
+  if (bestVGuide !== null) guides.push({ type: 'v', pos: bestVGuide });
+  if (bestHGuide !== null) guides.push({ type: 'h', pos: bestHGuide });
+  return { offsetX: outOffX, offsetY: outOffY, guides };
+}
+
+// Draw snapping guide lines during a screen drag (preview only)
+function drawScreenDragGuides(ctx) {
+  if (!activeSnapGuides.length) return;
+  const cw = state.project.canvasW, ch = state.project.canvasH;
+  ctx.save();
+  ctx.strokeStyle = '#ff3b6b';
+  ctx.lineWidth = Math.max(1.5, cw / 1200);
+  ctx.setLineDash([6, 4]);
+  activeSnapGuides.forEach(g => {
+    ctx.beginPath();
+    if (g.type === 'v') { ctx.moveTo(g.pos, -2000); ctx.lineTo(g.pos, ch + 2000); }
+    else { ctx.moveTo(-2000, g.pos); ctx.lineTo(cw + 2000, g.pos); }
+    ctx.stroke();
+  });
+  ctx.setLineDash([]);
+  ctx.restore();
+}
+
 function attachCanvasDragHandlers() {
   const canvas = $('canvas');
   canvas.onmousedown = (e) => {
     const { x, y } = getCanvasCoords(e);
+    // Move tool (or Alt held) grabs a screen and moves it (priority over tile painting)
+    if (activeTool === 'move' || e.altKey) {
+      const sc = findScreenAt(x, y);
+      if (sc) {
+        e.preventDefault();
+        screenDragState = { screen: sc, startX: x, startY: y, origOffsetX: sc.offsetX, origOffsetY: sc.offsetY };
+        state.activeScreenId = sc.id;
+        renderScreenTabs();
+        syncScreenToUI();
+        // Freeze the bleed exactly as it is right now, so the coordinate space
+        // does not shift under the cursor while dragging.
+        frozenCanvasBleed = state.canvasBleed
+          ? Object.assign({}, state.canvasBleed)
+          : getCanvasBleed(state.project.canvasW, state.project.canvasH);
+        $('canvas').style.cursor = 'grabbing';
+        scheduleRender();
+        return;
+      }
+      // In move mode, an empty click does nothing further
+      if (activeTool === 'move') return;
+    }
     const hit = hitTestLogo(x, y);
     if (!hit) {
-      // No overlay hit — try tile painting on grid screens
-      const tileHit = findScreenTileAt(x, y);
-      if (tileHit) {
-        e.preventDefault();
-        // Determine paint mode based on current state of clicked tile (toggle behavior)
-        const currentlyActive = tileHit.screen.active[tileHit.row][tileHit.col];
-        const newValue = !currentlyActive;
-        paintState = {
-          screen: tileHit.screen,
-          newValue: newValue,
-          painted: new Set([`${tileHit.row},${tileHit.col}`]),
-        };
-        tileHit.screen.active[tileHit.row][tileHit.col] = newValue;
-        renderGrid();
-        renderStats();
-        scheduleRender();
-        // Deselect any overlay
-        if (state.selectedLogoId !== null || state.selectedOverlay !== null) {
-          state.selectedLogoId = null;
-          state.selectedOverlay = null;
-          renderLogoList();
+      // Tile painting only in the tile tool
+      if (activeTool === 'tile') {
+        const tileHit = findScreenTileAt(x, y);
+        if (tileHit) {
+          e.preventDefault();
+          // Determine paint mode based on current state of clicked tile (toggle behavior)
+          const currentlyActive = tileHit.screen.active[tileHit.row][tileHit.col];
+          const newValue = !currentlyActive;
+          paintState = {
+            screen: tileHit.screen,
+            newValue: newValue,
+            painted: new Set([`${tileHit.row},${tileHit.col}`]),
+          };
+          tileHit.screen.active[tileHit.row][tileHit.col] = newValue;
+          renderGrid();
+          renderStats();
+          scheduleRender();
         }
         return;
       }
-      // Deselect
+      // Pointer (or any non-tile tool): just deselect overlays
       if (state.selectedLogoId !== null || state.selectedOverlay !== null) {
         state.selectedLogoId = null;
         state.selectedOverlay = null;
@@ -4527,6 +5076,36 @@ function attachCanvasDragHandlers() {
   canvas.onmousemove = (e) => {
     const { x, y } = getCanvasCoords(e);
     updateViewMeta(x, y);
+    // Screen dragging (move mode)
+    if (screenDragState) {
+      const s = screenDragState.screen;
+      let propX = screenDragState.origOffsetX + (x - screenDragState.startX);
+      let propY = screenDragState.origOffsetY + (y - screenDragState.startY);
+      if (screenSnapEnabled) {
+        const snapped = snapScreenOffset(s, propX, propY);
+        s.offsetX = snapped.offsetX;
+        s.offsetY = snapped.offsetY;
+        activeSnapGuides = snapped.guides;
+      } else {
+        s.offsetX = Math.round(propX);
+        s.offsetY = Math.round(propY);
+        activeSnapGuides = [];
+      }
+      // Keep the offset inputs in sync — otherwise the next renderCanvas() calls
+      // syncScreenFromUI() and overwrites the new offset with the stale field value.
+      if (s.id === state.activeScreenId) {
+        const ox = document.querySelector('.sc-input[data-key="offsetX"]');
+        const oy = document.querySelector('.sc-input[data-key="offsetY"]');
+        if (ox) ox.value = s.offsetX;
+        if (oy) oy.value = s.offsetY;
+      }
+      renderNow();
+      return;
+    }
+    if (activeTool === 'move' || e.altKey) {
+      canvas.style.cursor = findScreenAt(x, y) ? 'grab' : 'default';
+      if (activeTool === 'move' || e.altKey) return;
+    }
     const hit = hitTestLogo(x, y);
     if (paintState) {
       // Painting tiles by dragging
@@ -4581,8 +5160,7 @@ function attachCanvasDragHandlers() {
         obj.w = Math.round(newW);
         obj.h = Math.round(newH);
       }
-      renderLogoList();
-      scheduleRender();
+      renderNow();
     } else {
       if (hit) {
         if (hit.mode === 'move') canvas.style.cursor = 'move';
@@ -4590,15 +5168,26 @@ function attachCanvasDragHandlers() {
           const h = hit.handle;
           canvas.style.cursor = (h === 'nw' || h === 'se') ? 'nwse-resize' : 'nesw-resize';
         }
-      } else if (findScreenTileAt(x, y)) {
+      } else if (activeTool === 'tile' && findScreenTileAt(x, y)) {
         canvas.style.cursor = 'crosshair';
       } else {
         canvas.style.cursor = 'default';
       }
     }
   };
-  canvas.onmouseup = () => { dragState = null; paintState = null; };
-  canvas.onmouseleave = () => { dragState = null; paintState = null; updateViewMeta(null, null); };
+  canvas.onmouseup = () => {
+    const wasDragging = dragState || screenDragState;
+    dragState = null; paintState = null;
+    if (screenDragState) { screenDragState = null; activeSnapGuides = []; frozenCanvasBleed = null; renderStats(); canvas.style.cursor = 'default'; }
+    if (wasDragging) { renderLogoList(); scheduleRender(); }
+  };
+  canvas.onmouseleave = () => {
+    const wasDragging = dragState || screenDragState;
+    dragState = null; paintState = null;
+    if (screenDragState) { screenDragState = null; activeSnapGuides = []; frozenCanvasBleed = null; renderStats(); canvas.style.cursor = 'default'; }
+    if (wasDragging) { renderLogoList(); scheduleRender(); }
+    updateViewMeta(null, null);
+  };
 }
 
 // ============================================================
@@ -4622,13 +5211,31 @@ function scheduleRender() {
   }, 50);
 }
 
+// Immediate, un-debounced render coalesced to one per animation frame.
+// Used for interactive dragging so it feels smooth instead of laggy.
+let renderRAF = null;
+function renderNow() {
+  if (!state.autoRender) return;
+  if (renderRAF) return;
+  renderRAF = requestAnimationFrame(() => {
+    renderRAF = null;
+    renderCanvas();
+    drawSelectionOverlayOnPreview();
+  });
+}
+
 function drawSelectionOverlayOnPreview() {
   // After base render, add preview-only overlays on the visible canvas
   const ctx = $('canvas').getContext('2d');
+  const bleed = state.canvasBleed;
+  ctx.save();
+  if (bleed) ctx.translate(bleed.offX, bleed.offY);
   if (state.display.showEditHints !== false) {
     drawInactiveTileHints(ctx);
   }
   drawLogoSelectionOverlay(ctx);
+  drawScreenDragGuides(ctx);
+  ctx.restore();
 }
 
 // Show inactive tiles as faint outlines so you know where to click (preview only, NOT in download)
@@ -4664,10 +5271,206 @@ function drawInactiveTileHints(ctx) {
 // ============================================================
 // DOWNLOAD
 // ============================================================
+// ============================================================
+// REUSABLE MODAL DIALOG
+// buildModal({ title, bodyHTML, primaryLabel, onPrimary }) returns helpers.
+// onPrimary receives the modal root element so it can read inputs, and should
+// return true to close (or call close() itself).
+// ============================================================
+function openModal({ title, bodyHTML, primaryLabel, onPrimary, footExtraHTML }) {
+  const backdrop = document.createElement('div');
+  backdrop.className = 'modal-backdrop';
+  backdrop.innerHTML = `
+    <div class="modal-box" role="dialog" aria-modal="true">
+      <h3>${title}</h3>
+      <div class="modal-body">${bodyHTML}</div>
+      <div class="modal-foot">
+        ${footExtraHTML || ''}
+        <div class="mf-right">
+          <button class="btn-ghost" data-act="cancel">${T('cancel')}</button>
+          <button class="btn-primary" data-act="ok">${primaryLabel}</button>
+        </div>
+      </div>
+    </div>`;
+  const close = () => backdrop.remove();
+  backdrop.onclick = (e) => { if (e.target === backdrop) close(); };
+  backdrop.querySelector('[data-act="cancel"]').onclick = close;
+  backdrop.querySelector('[data-act="ok"]').onclick = () => {
+    const keepOpen = onPrimary && onPrimary(backdrop) === false;
+    if (!keepOpen) close();
+  };
+  document.addEventListener('keydown', function esc(e) {
+    if (e.key === 'Escape') { close(); document.removeEventListener('keydown', esc); }
+  });
+  document.body.appendChild(backdrop);
+  return { root: backdrop, close };
+}
+
+// Screen selection checkbox list (shared markup for both dialogs)
+function screenCheckListHTML(items) {
+  // items: [{ id, name, res, thumb }]
+  return `<div class="modal-sub">${T('select_screens_info')}</div>`
+    + `<div style="margin-bottom:8px;">
+        <label class="modal-check" style="font-weight:600;">
+          <input type="checkbox" data-check-all checked />
+          <span class="mc-name">${T('select_all')}</span>
+        </label>
+      </div>`
+    + items.map(it => `
+        <label class="modal-check">
+          <input type="checkbox" class="mc-screen" value="${it.id}" checked />
+          <span class="mc-thumb">${it.thumb || ''}</span>
+          <span class="mc-name">${escapeHtml(it.name)}</span>
+          <span class="mc-res">${it.res}</span>
+        </label>`).join('');
+}
+
+function wireCheckAll(root) {
+  const all = root.querySelector('[data-check-all]');
+  const boxes = Array.from(root.querySelectorAll('.mc-screen'));
+  if (all) all.onchange = () => boxes.forEach(b => { b.checked = all.checked; });
+  boxes.forEach(b => b.onchange = () => {
+    if (all) all.checked = boxes.every(x => x.checked);
+  });
+}
+
+// Per-screen PNG export dialog (pixelmap mode).
+// Renders each selected screen individually at its own resolution.
+function openScreenExportModal() {
+  const items = state.screens.map(s => {
+    const res = tpScreenResolution(s);
+    return {
+      id: s.id,
+      name: s.label || `Screen ${s.id}`,
+      res: res ? `${res.w}×${res.h}` : '—',
+      thumb: screenThumbSVG(s, 30, 22),
+    };
+  });
+  openModal({
+    title: T('export_screens_title'),
+    bodyHTML: screenCheckListHTML(items),
+    primaryLabel: T('download_png'),
+    onPrimary: (root) => {
+      const ids = Array.from(root.querySelectorAll('.mc-screen:checked')).map(b => parseInt(b.value));
+      if (ids.length === 0) return false; // keep open, nothing selected
+      exportScreensAsPng(ids);
+    },
+  });
+  wireCheckAll(document.querySelector('.modal-backdrop'));
+}
+
+// Render each given screen on its own canvas at full resolution and download
+// (single PNG if one, zip if several).
+async function exportScreensAsPng(ids) {
+  const name = state.project.name.replace(/[^\w]+/g, '_') || 'pixelmap';
+  const files = [];
+  for (const id of ids) {
+    const s = state.screens.find(sc => sc.id === id);
+    if (!s) continue;
+    const res = tpScreenResolution(s);
+    if (!res) continue;
+    const off = document.createElement('canvas');
+    off.width = res.w; off.height = res.h;
+    const octx = off.getContext('2d');
+    drawSingleScreenToCanvas(octx, s, res.w, res.h);
+    const safe = (s.label || `Screen_${s.id}`).replace(/[^\w]+/g, '_');
+    if (ids.length === 1) {
+      const link = document.createElement('a');
+      link.download = `${name}_${safe}_${res.w}x${res.h}.png`;
+      link.href = off.toDataURL('image/png');
+      link.click();
+      return;
+    }
+    const blob = await new Promise(r => off.toBlob(r, 'image/png'));
+    files.push({ filename: `${safe}_${res.w}x${res.h}.png`, data: new Uint8Array(await blob.arrayBuffer()) });
+  }
+  if (files.length) {
+    const zipBlob = createZip(files);
+    const url = URL.createObjectURL(zipBlob);
+    const link = document.createElement('a');
+    link.download = `${name}_screens.png.zip`;
+    link.href = url; link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 100);
+  }
+}
+
+// Render a single screen onto a canvas sized to that screen, at origin 0,0.
+// Reuses drawScreen by temporarily zeroing the screen's offset.
+function drawSingleScreenToCanvas(ctx, s, w, h) {
+  const accent = state.project.accent || '#2590ce';
+  ctx.fillStyle = state.project.canvasBg || '#000';
+  ctx.fillRect(0, 0, w, h);
+  // Temporarily move this screen's content origin to 0,0
+  const savedOX = s.offsetX, savedOY = s.offsetY;
+  let shiftX = 0, shiftY = 0;
+  if (s.advancedMode) {
+    const bb = getAdvancedBBox(s);
+    shiftX = bb.minX; shiftY = bb.minY;
+  }
+  s.offsetX = -shiftX;
+  s.offsetY = -shiftY;
+  // drawScreen draws overlays/labels relative to the screen bbox, which is what we want
+  drawScreen(ctx, s, w, h, accent);
+  s.offsetX = savedOX;
+  s.offsetY = savedOY;
+}
+
+// Pixelmap download chooser: full composited canvas, or individual screens.
+function openDownloadModal() {
+  const items = state.screens.map(s => {
+    const res = tpScreenResolution(s);
+    return {
+      id: s.id,
+      name: s.label || `Screen ${s.id}`,
+      res: res ? `${res.w}×${res.h}` : '—',
+      thumb: screenThumbSVG(s, 30, 22),
+    };
+  });
+  const bodyHTML = `
+    <div class="modal-row" style="margin-top:0;">
+      <label class="modal-check" style="flex:1;">
+        <input type="radio" name="dlmode" value="full" checked />
+        <span class="mc-name">${T('dl_full_canvas')}</span>
+      </label>
+    </div>
+    <div class="modal-row" style="margin-top:2px;">
+      <label class="modal-check" style="flex:1;">
+        <input type="radio" name="dlmode" value="screens" />
+        <span class="mc-name">${T('dl_per_screen')}</span>
+      </label>
+    </div>
+    <div id="dl-screen-list" style="display:none; border-top:1px solid var(--border-input); margin-top:8px; padding-top:10px;">
+      ${screenCheckListHTML(items)}
+    </div>`;
+  openModal({
+    title: T('download_png'),
+    bodyHTML,
+    primaryLabel: T('download_png'),
+    onPrimary: (root) => {
+      const mode = root.querySelector('input[name="dlmode"]:checked').value;
+      if (mode === 'full') {
+        downloadPng();
+      } else {
+        const ids = Array.from(root.querySelectorAll('.mc-screen:checked')).map(b => parseInt(b.value));
+        if (ids.length === 0) return false;
+        exportScreensAsPng(ids);
+      }
+    },
+  });
+  const root = document.querySelector('.modal-backdrop');
+  const list = root.querySelector('#dl-screen-list');
+  root.querySelectorAll('input[name="dlmode"]').forEach(r => {
+    r.onchange = () => { list.style.display = root.querySelector('input[name="dlmode"]:checked').value === 'screens' ? '' : 'none'; };
+  });
+  wireCheckAll(root);
+}
+
 async function downloadPng() {
   // Save selection state, hide selection during render, restore after
   const savedSelection = state.selectedLogoId;
   state.selectedLogoId = null;
+  // Export at exact canvas size — no off-canvas bleed in the downloaded file
+  suppressCanvasBleed = true;
   renderCanvas();
   const canvas = $('canvas');
   const name = state.project.name.replace(/[^\w]+/g, '_') || 'pixelmap';
@@ -4703,8 +5506,9 @@ async function downloadPng() {
     link.click();
   }
   
-  // Restore selection
+  // Restore selection + preview bleed
   state.selectedLogoId = savedSelection;
+  suppressCanvasBleed = false;
   scheduleRender();
 }
 
@@ -5466,7 +6270,7 @@ function wireUp() {
   if ($('invert-canvas')) $('invert-canvas').onclick = () => { invertAll(); scheduleRender(); };
   
   $('render-btn').onclick = renderCanvas;
-  $('download-btn').onclick = downloadPng;
+  $('download-btn').onclick = openDownloadModal;
   
   $('save-preset-btn').onclick = saveCurrentPreset;
   $('export-json-btn').onclick = exportJson;
@@ -5499,13 +6303,25 @@ function wireUp() {
   
   // Live update screen colors in grid when changed
   document.querySelectorAll('.sc-input').forEach(inp => {
-    inp.oninput = () => {
+    const scInputHandler = () => {
+      const key = inp.dataset.key;
+      if (key === 'rows' || key === 'cols') {
+        // Grid dimensions changed — rebuild the active array so new rows/cols appear
+        // (preserving existing tiles). rebuildActiveGrid() calls syncScreenFromUI itself.
+        rebuildActiveGrid();
+        renderScreenTabs();
+        scheduleRender();
+        return;
+      }
       syncScreenFromUI();
       renderGrid();
       renderStats();
       renderScreenTabs();
       scheduleRender();
     };
+    inp.oninput = scInputHandler;
+    // Color inputs sometimes only settle on 'change' (picker close) — refresh then too
+    if (inp.type === 'color') inp.onchange = scInputHandler;
   });
   
   // Per-screen overlay controls
@@ -5678,6 +6494,291 @@ function nextTpLogoId() { tpLogoIdCounter++; return tpLogoIdCounter; }
 let tpItemIdCounter = 0;
 function nextTpItemId() { tpItemIdCounter++; return `pi_${tpItemIdCounter}`; }
 
+// ============================================================
+// TEST PATTERN SESSIONS
+// Test Pattern mode holds one "session" per pixelmap screen, each with its own
+// resolution, pattern and options. tpState stays the single active working object
+// (all existing draw/export code reads it unchanged); switching sessions just
+// serializes tpState in/out of the session list.
+// Sessions are auto-generated from state.screens and kept in live sync when the
+// pixelmap screens change (add/remove/resize).
+// ============================================================
+let tpSessions = [];          // [{ id, screenId, name, width, height, pattern, options, placedItems, logos, radarPhase }]
+let tpActiveSessionId = null;
+let tpSessionIdCounter = 0;
+function nextTpSessionId() { tpSessionIdCounter++; return `tps_${tpSessionIdCounter}`; }
+
+// Fields that belong to a per-screen session (everything resolution/pattern-specific)
+function tpCaptureStateToSession(sess) {
+  sess.width = tpState.width;
+  sess.height = tpState.height;
+  sess.pattern = tpState.pattern;
+  sess.options = JSON.parse(JSON.stringify(tpState.options));
+  sess.placedItems = JSON.parse(JSON.stringify(tpState.placedItems));
+  sess.radarPhase = tpState.radarPhase;
+  // Logos keep their live Image objects, so copy the array reference-safe:
+  sess.logos = tpState.logos;
+}
+function tpApplySessionToState(sess) {
+  tpState.width = sess.width;
+  tpState.height = sess.height;
+  tpState.pattern = sess.pattern;
+  tpState.options = JSON.parse(JSON.stringify(sess.options));
+  tpState.placedItems = JSON.parse(JSON.stringify(sess.placedItems));
+  tpState.radarPhase = sess.radarPhase || 0;
+  tpState.logos = sess.logos || [];
+  tpState.selectedItem = null;
+}
+
+function tpDefaultSessionFields() {
+  return {
+    pattern: 'colorbars',
+    options: {
+      show_info: true, show_safe: false, show_outline: true,
+      bg_color: '#000000', fg_color: '#ffffff', grid_color: '#ffffff',
+      line_spacing: 50, line_width: 2, solid_color: '#808080',
+      gradient_from: '#000000', gradient_to: '#ffffff', gradient_dir: 'horizontal',
+    },
+    placedItems: [], logos: [], radarPhase: 0,
+  };
+}
+
+function tpActiveSession() {
+  return tpSessions.find(s => s.id === tpActiveSessionId) || null;
+}
+
+// Persist current edits into the active session before switching/exporting
+function tpSaveActiveSession() {
+  const sess = tpActiveSession();
+  if (sess) tpCaptureStateToSession(sess);
+}
+
+function tpLoadSession(id) {
+  if (id === tpActiveSessionId) return;
+  tpStopRadarAnimation();
+  tpSaveActiveSession();
+  const sess = tpSessions.find(s => s.id === id);
+  if (!sess) return;
+  tpActiveSessionId = id;
+  tpApplySessionToState(sess);
+  // Reflect into the resolution inputs
+  if ($('tp-width')) $('tp-width').value = tpState.width;
+  if ($('tp-height')) $('tp-height').value = tpState.height;
+  if ($('tp-preset')) {
+    const match = `${tpState.width}x${tpState.height}`;
+    const opt = Array.from($('tp-preset').options).find(o => o.value === match);
+    $('tp-preset').value = opt ? match : 'custom';
+  }
+  renderTpSessionList();
+  renderTpPatternGrid();
+  renderTpOptions();
+  renderTpLogoList();
+  tpUpdateVideoSectionVisibility();
+  if (tpAnyRadarPulseItems()) tpStartRadarAnimation();
+  const r = $('tp-vm-res');
+  if (r) r.textContent = `${tpState.width}×${tpState.height}`;
+  tpRenderWithOverlay();
+}
+
+// Full output resolution of a screen (the whole tile grid / advanced BB),
+// independent of which individual tiles are toggled on. A test pattern should
+// fill the screen's real output, so this is what drives the session resolution.
+function tpScreenResolution(s) {
+  if (s.advancedMode) {
+    const bb = getAdvancedBBox(s);
+    if (!bb || bb.w <= 0 || bb.h <= 0) return null;
+    return { w: Math.round(bb.w), h: Math.round(bb.h) };
+  }
+  const w = s.cols * s.tileW;
+  const h = s.rows * s.tileH;
+  if (w <= 0 || h <= 0) return null;
+  return { w, h };
+}
+
+// Generate / update sessions from the pixelmap screens (live sync).
+// Existing sessions for a screen keep their pattern/options; only the resolution
+// (and name) follow the screen.
+function tpSyncFromScreens() {
+  tpSaveActiveSession();
+  const seen = new Set();
+  state.screens.forEach(s => {
+    const res = tpScreenResolution(s);
+    if (!res) return;
+    const w = Math.max(16, res.w);
+    const h = Math.max(16, res.h);
+    const name = s.label || `Screen ${s.id}`;
+    seen.add(s.id);
+    let sess = tpSessions.find(t => t.screenId === s.id);
+    if (sess) {
+      sess.width = w; sess.height = h; sess.name = name;
+    } else {
+      sess = Object.assign({ id: nextTpSessionId(), screenId: s.id, name, width: w, height: h }, tpDefaultSessionFields());
+      tpSessions.push(sess);
+    }
+  });
+  // Drop sessions whose screen no longer exists
+  tpSessions = tpSessions.filter(t => seen.has(t.screenId));
+  // Keep ordering aligned with the screens list
+  tpSessions.sort((a, b) => state.screens.findIndex(s => s.id === a.screenId) - state.screens.findIndex(s => s.id === b.screenId));
+  
+  if (tpSessions.length === 0) {
+    tpActiveSessionId = null;
+  } else if (!tpSessions.find(t => t.id === tpActiveSessionId)) {
+    // Active session gone (or none yet) — load the first
+    tpActiveSessionId = null;
+    tpLoadSession(tpSessions[0].id);
+  } else {
+    // Active session still valid — its resolution may have changed under it
+    const sess = tpActiveSession();
+    if (sess && (sess.width !== tpState.width || sess.height !== tpState.height)) {
+      tpApplySessionToState(sess);
+      if ($('tp-width')) $('tp-width').value = tpState.width;
+      if ($('tp-height')) $('tp-height').value = tpState.height;
+    }
+  }
+  renderTpSessionList();
+}
+
+// Thumbnail for a test-pattern session: the chosen pattern's mini-preview,
+// drawn into a rectangle matching the screen's aspect ratio (scaled proportionally
+// to the largest session, like the pixelmap thumbnails).
+function tpSessionThumbSVG(sess, boxW, boxH) {
+  const accent = state.project.accent || '#2590ce';
+  // Scale proportionally to the largest session extent
+  let ref = 1;
+  tpSessions.forEach(t => { if (t.width > ref) ref = t.width; if (t.height > ref) ref = t.height; });
+  const usable = 0.9;
+  const scale = (Math.min(boxW, boxH) * usable) / ref;
+  const w = sess.width * scale, h = sess.height * scale;
+  const x = (boxW - w) / 2, y = (boxH - h) / 2;
+  const inner = TP_PREVIEW_SVGS[sess.pattern];
+  const clipId = `tpc_${sess.id}`;
+  if (inner) {
+    // Strip the outer <svg ...> / </svg> so we can re-embed the pattern body scaled into our rect
+    let body = inner.replace(/^[\s\S]*?<svg[^>]*>/, '').replace(/<\/svg>\s*$/, '');
+    // Namespace internal ids (e.g. gradient defs) so multiple thumbnails don't collide
+    const uid = `${sess.id}`;
+    body = body.replace(/id="([^"]+)"/g, (m, id) => `id="${id}_${uid}"`)
+               .replace(/url\(#([^)]+)\)/g, (m, id) => `url(#${id}_${uid})`);
+    // The pattern bodies use a 100x50 viewBox; map that onto our rect
+    return `<svg viewBox="0 0 ${boxW} ${boxH}" xmlns="http://www.w3.org/2000/svg">`
+      + `<defs><clipPath id="${clipId}"><rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${w.toFixed(1)}" height="${h.toFixed(1)}" rx="1"/></clipPath></defs>`
+      + `<g clip-path="url(#${clipId})">`
+      + `<g transform="translate(${x.toFixed(2)},${y.toFixed(2)}) scale(${(w/100).toFixed(4)},${(h/50).toFixed(4)})">${body}</g>`
+      + `</g>`
+      + `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${w.toFixed(1)}" height="${h.toFixed(1)}" fill="none" stroke="${accent}" stroke-width="0.5" opacity="0.6" rx="1"/>`
+      + `</svg>`;
+  }
+  // Fallback: plain aspect rect
+  return `<svg viewBox="0 0 ${boxW} ${boxH}" xmlns="http://www.w3.org/2000/svg">`
+    + `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${w.toFixed(1)}" height="${h.toFixed(1)}" fill="#111" stroke="${accent}" stroke-width="0.5" rx="1"/></svg>`;
+}
+
+function renderTpSessionList() {
+  const container = $('tp-session-list');
+  if (!container) return;
+  container.innerHTML = '';
+  if (tpSessions.length === 0) {
+    container.innerHTML = `<div class="info" style="padding:6px 10px;">${T('tp_no_sessions')}</div>`;
+    return;
+  }
+  tpSessions.forEach(sess => {
+    const row = document.createElement('div');
+    row.className = 'scr-row' + (sess.id === tpActiveSessionId ? ' on' : '');
+    const scr = state.screens.find(s => s.id === sess.screenId);
+    const thumb = tpSessionThumbSVG(sess, 34, 26);
+    row.innerHTML = `
+      <span class="scr-thumb">${thumb}</span>
+      <span class="nm">${escapeHtml(sess.name)}</span>
+      <span class="res">${sess.width}×${sess.height}</span>
+      <span class="row-actions">
+        <button data-action="dl" title="${T('download_png')}">⬇</button>
+      </span>
+    `;
+    const nmSpan = row.querySelector('.nm');
+    nmSpan.onclick = () => tpLoadSession(sess.id);
+    nmSpan.title = T('rename_hint');
+    nmSpan.ondblclick = (e) => {
+      e.stopPropagation();
+      startInlineRename(nmSpan, sess.name || '', (val) => {
+        if (val !== null) {
+          sess.name = val || sess.name;
+          // Keep the underlying screen label in sync so it survives a re-sync
+          const scr2 = state.screens.find(s => s.id === sess.screenId);
+          if (scr2) { scr2.label = val; renderScreenTabs(); syncScreenToUI(); }
+        }
+        renderTpSessionList();
+      });
+    };
+    row.querySelector('.res').onclick = () => tpLoadSession(sess.id);
+    row.querySelector('.scr-thumb').onclick = () => tpLoadSession(sess.id);
+    row.querySelector('[data-action="dl"]').onclick = (e) => { e.stopPropagation(); tpDownloadSession(sess.id); };
+    container.appendChild(row);
+  });
+  renderTpOverview();
+}
+
+// Mini pixelmap overview for test-pattern mode: shows all screens laid out on the
+// canvas, with the screen of the active session highlighted.
+function renderTpOverview() {
+  const host = $('tp-overview');
+  if (!host) return;
+  const cw = state.project.canvasW, ch = state.project.canvasH;
+  const boxW = 168, pad = 0;
+  const boxH = Math.max(40, Math.round(boxW * (ch / cw)));
+  const activeSess = tpActiveSession();
+  const activeScreenId = activeSess ? activeSess.screenId : null;
+  const accent = state.project.accent || '#2590ce';
+  const sx = boxW / cw, sy = boxH / ch;
+  let rects = '';
+  state.screens.forEach(s => {
+    let rx, ry, rw, rh;
+    if (s.advancedMode) {
+      const bb = getAdvancedBBox(s);
+      rx = (s.offsetX + bb.minX) * sx; ry = (s.offsetY + bb.minY) * sy;
+      rw = bb.w * sx; rh = bb.h * sy;
+    } else {
+      rx = s.offsetX * sx; ry = s.offsetY * sy;
+      rw = s.cols * s.tileW * sx; rh = s.rows * s.tileH * sy;
+    }
+    const isActive = s.id === activeScreenId;
+    const fill = isActive ? accent : 'rgba(255,255,255,0.12)';
+    const stroke = isActive ? accent : 'rgba(255,255,255,0.35)';
+    const label = escapeHtml(s.label || `S${s.id}`);
+    rects += `<rect x="${rx.toFixed(1)}" y="${ry.toFixed(1)}" width="${Math.max(1,rw).toFixed(1)}" height="${Math.max(1,rh).toFixed(1)}" fill="${fill}" stroke="${stroke}" stroke-width="1" rx="1" opacity="${isActive?0.85:1}"/>`;
+    if (rw > 20 && rh > 12) {
+      rects += `<text x="${(rx+rw/2).toFixed(1)}" y="${(ry+rh/2+3).toFixed(1)}" text-anchor="middle" font-size="9" fill="${isActive?'#fff':'rgba(255,255,255,0.6)'}" font-family="sans-serif">${label}</text>`;
+    }
+  });
+  host.innerHTML = `<svg viewBox="0 0 ${boxW} ${boxH}" width="100%" xmlns="http://www.w3.org/2000/svg" style="display:block;">`
+    + `<rect x="0.5" y="0.5" width="${boxW-1}" height="${boxH-1}" fill="none" stroke="var(--border-input)" stroke-width="1" stroke-dasharray="3 2"/>`
+    + rects + `</svg>`;
+}
+
+// Download one session's PNG at its own resolution (without switching the UI to it)
+function tpDownloadSession(id) {
+  const sess = tpSessions.find(s => s.id === id);
+  if (!sess) return;
+  tpSaveActiveSession();
+  const off = document.createElement('canvas');
+  off.width = sess.width;
+  off.height = sess.height;
+  const octx = off.getContext('2d');
+  // Temporarily swap tpState to this session so the existing draw pipeline renders it
+  const backup = {};
+  ['width','height','pattern','options','placedItems','logos','radarPhase','selectedItem'].forEach(k => backup[k] = tpState[k]);
+  tpApplySessionToState(sess);
+  if (tpState.pattern === 'radar' || tpAnyRadarPulseItems()) tpState.radarPhase = 0;
+  tpRenderFrame(octx);
+  // Restore
+  Object.assign(tpState, backup);
+  const link = document.createElement('a');
+  const safe = (sess.name || 'screen').replace(/[^\w]+/g, '_');
+  link.download = `TestPattern_${safe}_${sess.width}x${sess.height}.png`;
+  link.href = off.toDataURL('image/png');
+  link.click();
+}
+
 // SVG previews for pattern cards (simplified visual representations)
 const TP_PREVIEW_SVGS = {
   colorbars: `<svg viewBox="0 0 100 50" xmlns="http://www.w3.org/2000/svg">
@@ -5802,6 +6903,8 @@ function renderTpPatternGrid() {
     `;
     card.onclick = () => {
       tpState.pattern = p.id;
+      tpSaveActiveSession();
+      renderTpSessionList();
       renderTpPatternGrid();
       renderTpOptions();
       renderTpCanvas();
@@ -5860,6 +6963,7 @@ function renderTpOptions() {
         if (cfg.type === 'checkbox') tpState.options[optKey] = inp.checked;
         else if (cfg.type === 'number') tpState.options[optKey] = parseInt(inp.value) || cfg.min;
         else tpState.options[optKey] = inp.value;
+        tpSaveActiveSession();
         renderTpCanvas();
       };
       inp.oninput = handler;
@@ -6660,6 +7764,128 @@ function tpSetVideoButtonsDisabled(disabled) {
   if ($('tp-export-png-seq-btn')) $('tp-export-png-seq-btn').disabled = disabled;
 }
 
+// PNG-sequence export dialog: pick which screens (that contain a radar pulse) to
+// render, plus fps/duration. Renders one sequence per selected screen into a zip.
+function openPngSequenceModal() {
+  // Only sessions whose placedItems include a radar pulse can be animated
+  const radarSessions = tpSessions.filter(sess => {
+    tpSaveActiveSession();
+    return (sess.placedItems || []).some(it => it.type === 'radarpulse');
+  });
+  if (radarSessions.length === 0) {
+    openModal({
+      title: T('tp_export_png_seq'),
+      bodyHTML: `<div class="modal-sub">${T('no_radar_screens')}</div>`,
+      primaryLabel: T('ok'),
+      onPrimary: () => {},
+    });
+    return;
+  }
+  const items = radarSessions.map(sess => ({
+    id: sess.id,
+    name: sess.name,
+    res: `${sess.width}×${sess.height}`,
+    thumb: tpSessionThumbSVG(sess, 30, 22),
+  }));
+  const curFps = parseInt(($('tp-video-fps') || {}).value) || 30;
+  const curDur = parseFloat(($('tp-video-duration') || {}).value) || 4;
+  const bodyHTML = `
+    ${screenCheckListHTML(items).replace('data-check-all', 'data-check-all data-seq')}
+    <div style="border-top:1px solid var(--border-input); margin-top:10px; padding-top:10px;">
+      <div class="modal-row" style="margin-top:0;">
+        <span>${T('tp_video_fps')}</span>
+        <select id="seq-fps">
+          <option value="25"${curFps===25?' selected':''}>25 fps</option>
+          <option value="30"${curFps===30?' selected':''}>30 fps</option>
+          <option value="50"${curFps===50?' selected':''}>50 fps</option>
+          <option value="60"${curFps===60?' selected':''}>60 fps</option>
+        </select>
+      </div>
+      <div class="modal-row">
+        <span>${T('tp_video_duration')}</span>
+        <span class="f-inputs"><input type="number" id="seq-dur" value="${curDur}" min="1" max="30" step="1" /> <span class="sep">${T('tp_video_seconds')}</span></span>
+      </div>
+    </div>`;
+  openModal({
+    title: T('tp_export_png_seq'),
+    bodyHTML,
+    primaryLabel: T('tp_export_png_seq'),
+    onPrimary: (root) => {
+      const ids = Array.from(root.querySelectorAll('.mc-screen:checked')).map(b => b.value);
+      if (ids.length === 0) return false;
+      const fps = parseInt(root.querySelector('#seq-fps').value) || 30;
+      const dur = parseFloat(root.querySelector('#seq-dur').value) || 4;
+      const sessions = radarSessions.filter(s => ids.includes(s.id));
+      exportPngSequences(sessions, fps, dur);
+    },
+  });
+  wireCheckAll(document.querySelector('.modal-backdrop'));
+}
+
+// Render one radar-pulse PNG sequence per session into a single zip.
+async function exportPngSequences(sessions, fps, durationSec) {
+  tpSetVideoButtonsDisabled(true);
+  const wasAnimating = !!tpRadarRAF;
+  tpStopRadarAnimation();
+  tpSaveActiveSession();
+  // Snapshot current working state so we can render each session offscreen
+  const backup = {};
+  ['width','height','pattern','options','placedItems','logos','radarPhase','selectedItem'].forEach(k => backup[k] = tpState[k]);
+  try {
+    const allFiles = [];
+    const totalFrames = Math.max(1, Math.round(fps * durationSec));
+    const pad = String(totalFrames).length;
+    for (let si = 0; si < sessions.length; si++) {
+      const sess = sessions[si];
+      tpApplySessionToState(sess);
+      const safe = (sess.name || 'screen').replace(/[^\w]+/g, '_');
+      const frames = await tpGenerateRadarFrames(fps, durationSec, (done, total) => {
+        tpSetVideoProgress(`${sess.name}: ${T('rendering')} ${done}/${total} (${si+1}/${sessions.length})`);
+      });
+      frames.forEach((data, i) => {
+        allFiles.push({ filename: `${safe}/radarpulse_${String(i + 1).padStart(pad, '0')}.png`, data });
+      });
+      allFiles.push({ filename: `${safe}/README.txt`, data: new TextEncoder().encode(seqReadme(sess, frames.length, fps, durationSec, pad)) });
+    }
+    tpSetVideoProgress(T('zipping'));
+    const zipBlob = createZip(allFiles);
+    const url = URL.createObjectURL(zipBlob);
+    const link = document.createElement('a');
+    link.download = `RadarPulse_sequences_${fps}fps.zip`;
+    link.href = url; link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 100);
+    tpSetVideoProgress(null);
+  } catch (err) {
+    console.error(err);
+    tpSetVideoProgress(`Error: ${err.message || err}`);
+  } finally {
+    Object.assign(tpState, backup);
+    tpSetVideoButtonsDisabled(false);
+    if (wasAnimating) tpStartRadarAnimation();
+    tpRenderWithOverlay();
+  }
+}
+
+function seqReadme(sess, frameCount, fps, durationSec, pad) {
+  return `RadarPulse — ${sess.name} — ${sess.width}x${sess.height}
+Frames: ${frameCount} (radarpulse_${'0'.repeat(pad)}1.png ... radarpulse_${String(frameCount).padStart(pad, '0')}.png)
+Intended playback: ${fps} fps
+Duration: ${durationSec}s — one full loop, designed to repeat seamlessly (starts and ends at zero brightness)
+
+PNG sequences carry no frame-rate metadata — set it explicitly on import,
+or your editor falls back to its default (often 30fps) regardless of frame count.
+
+Premiere / Media Encoder:
+  File > Import > select the first frame > check "Image Sequence".
+  Right-click clip > Modify > Interpret Footage > set frame rate to ${fps} fps.
+  Export as QuickTime > Apple ProRes 422 HQ (or 4444).
+
+ffmpeg (run from inside this folder):
+  ProRes 422 HQ:  ffmpeg -framerate ${fps} -i radarpulse_%0${pad}d.png -c:v prores_ks -profile:v 3 -pix_fmt yuv422p10le out_ProRes422HQ.mov
+  HAP:            ffmpeg -framerate ${fps} -i radarpulse_%0${pad}d.png -vf "pad=ceil(iw/4)*4:ceil(ih/4)*4" -c:v hap -format hap out_HAP.mov
+`;
+}
+
 // --- PNG sequence, zipped (uses the existing pure-JS ZIP builder) ---
 async function tpExportPngSequence() {
   const wasAnimating = !!tpRadarRAF;
@@ -7087,6 +8313,8 @@ function tpHandlePresetChange() {
   tpState.height = h;
   $('tp-width').value = w;
   $('tp-height').value = h;
+  tpSaveActiveSession();
+  renderTpSessionList();
   renderTpCanvas();
 }
 
@@ -7100,6 +8328,8 @@ function tpHandleResolutionChange() {
     if (opt.value === matchStr) { sel.value = matchStr; matched = true; }
   });
   if (!matched) sel.value = 'custom';
+  tpSaveActiveSession();
+  renderTpSessionList();
   renderTpCanvas();
 }
 
@@ -7110,8 +8340,10 @@ function wireTestPatternUI() {
   $('tp-render-btn').onclick = renderTpCanvas;
   $('tp-download-btn').onclick = tpDownload;
   
+  if ($('tp-sync-screens-btn')) $('tp-sync-screens-btn').onclick = () => { tpSyncFromScreens(); tpRenderWithOverlay(); };
+  
   // Radar video export
-  if ($('tp-export-png-seq-btn')) $('tp-export-png-seq-btn').onclick = tpExportPngSequence;
+  if ($('tp-export-png-seq-btn')) $('tp-export-png-seq-btn').onclick = openPngSequenceModal;
   tpUpdateVideoSectionVisibility();
   
   // Project name + subtitle (used by projectinfo items)
@@ -7161,6 +8393,9 @@ function setTopMode(mode) {
   if ($('tp-download-btn')) $('tp-download-btn').style.display = mode === 'testpattern' ? '' : 'none';
   
   if (mode === 'testpattern') {
+    // Auto-generate / refresh one session per pixelmap screen (live sync)
+    tpSyncFromScreens();
+    renderTpSessionList();
     renderTpPatternGrid();
     renderTpOptions();
     renderTpLogoList();
@@ -7171,6 +8406,7 @@ function setTopMode(mode) {
     if (r) r.textContent = `${tpState.width}×${tpState.height}`;
   } else {
     tpStopRadarAnimation();
+    tpSaveActiveSession();
   }
   try { localStorage.setItem('genes_pixelmap_topmode', mode); } catch(e) {}
 }
@@ -7297,6 +8533,7 @@ function init() {
   renderCanvas();
   wireUp();
   drawSelectionOverlayOnPreview();
+  if ($('tt-snap')) $('tt-snap').classList.add('active');
   // Advanced mode UI
   updateModeUI();
   renderTileTypesList();
@@ -7333,9 +8570,27 @@ function init() {
   if ($('page-prev')) $('page-prev').onclick = () => { if (currentPage === 2) showPage(1); };
   if ($('page-next')) $('page-next').onclick = () => { if (currentPage === 1 && state.infoFitsOnPage1 === false) showPage(2); };
   // Floating tile toolbar (over preview)
-  if ($('tt-fill')) $('tt-fill').onclick = () => { fillAll(); scheduleRender(); };
-  if ($('tt-clear')) $('tt-clear').onclick = () => { clearAll(); scheduleRender(); };
-  if ($('tt-invert')) $('tt-invert').onclick = () => { invertAll(); scheduleRender(); };
+  if ($('tt-snap')) $('tt-snap').onclick = () => {
+    screenSnapEnabled = !screenSnapEnabled;
+    $('tt-snap').classList.toggle('active', screenSnapEnabled);
+    $('tt-snap').setAttribute('aria-pressed', screenSnapEnabled ? 'true' : 'false');
+    $('tt-snap').setAttribute('data-tip', screenSnapEnabled ? T('snap_on') : T('snap_off'));
+  };
+  // Tool selection (radio): pointer / move
+  function selectTool(tool) {
+    activeTool = tool;
+    document.querySelectorAll('#tile-toolbar .tool-btn[data-tool]').forEach(b => {
+      b.classList.toggle('active', b.dataset.tool === tool);
+    });
+    const cv = $('canvas');
+    if (cv) cv.style.cursor = tool === 'move' ? 'grab' : 'default';
+  }
+  document.querySelectorAll('#tile-toolbar .tool-btn[data-tool]').forEach(b => {
+    b.onclick = () => selectTool(b.dataset.tool);
+  });
+  if ($('tt-pointer')) $('tt-pointer').setAttribute('data-tip', T('tool_pointer'));
+  if ($('tt-move')) $('tt-move').setAttribute('data-tip', T('tool_move'));
+  if ($('tt-tile')) $('tt-tile').setAttribute('data-tip', T('tool_tile'));
   // New GUI: collapsible cards
   wireCards();
   // New GUI: footer stats
