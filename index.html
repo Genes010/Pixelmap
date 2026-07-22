@@ -178,6 +178,25 @@
     display: flex;
     min-height: 0;
   }
+  /* Draggable seam between a side panel and the center canvas */
+  .panel-resizer {
+    flex-shrink: 0;
+    width: 5px;
+    cursor: col-resize;
+    background: transparent;
+    position: relative;
+    z-index: 5;
+    transition: background 0.12s;
+  }
+  .panel-resizer:hover, .panel-resizer.dragging {
+    background: var(--accent);
+  }
+  .panel-resizer::before {
+    content: "";
+    position: absolute;
+    left: -3px; right: -3px; top: 0; bottom: 0;
+  }
+  body.resizing-panels { cursor: col-resize; user-select: none; }
 
   /* ═══ LEFT PANEL ═══ */
   .left-panel {
@@ -1563,6 +1582,7 @@ const I18N = {
     confirm_clear_advanced: 'Remove all placed tiles?',
     convert_to_advanced: 'Convert grid to advanced',
     convert_advanced_warning: 'Switching to advanced mode will convert your current grid into individually placed tiles. Continue?',
+    mixed_tile_sizes_warning: 'This screen uses more than one tile size. Grid mode supports only a single tile size, so differently sized tiles will be approximated to the most-used size. Switch anyway? (Cancel to stay in advanced mode.)',
     // Top-level modes
     topmode_pixelmap: 'Pixelmap',
     topmode_testpattern: 'Test patterns',
@@ -1656,6 +1676,7 @@ const I18N = {
     tool_pointer: 'Pointer',
     tool_move: 'Move screens (drag)',
     tool_tile: 'Toggle tiles on/off',
+    tool_tile_adv: 'Place tiles (click to add, drag to move, right-click to remove)',
     snap_toggle: 'Snap: on',
     snap_label: 'Snap',
     snap_on: 'Snap on',
@@ -1818,6 +1839,7 @@ const I18N = {
     confirm_clear_advanced: 'Alle geplaatste tegels verwijderen?',
     convert_to_advanced: 'Grid naar geavanceerd omzetten',
     convert_advanced_warning: 'Overschakelen naar geavanceerde modus zet je huidige grid om naar individueel geplaatste tegels. Doorgaan?',
+    mixed_tile_sizes_warning: 'Dit scherm gebruikt meerdere tegelformaten. Grid-modus ondersteunt maar één tegelformaat, dus afwijkende tegels worden benaderd naar het meest gebruikte formaat. Toch overschakelen? (Annuleer om in geavanceerde modus te blijven.)',
     // Top-level modes
     topmode_pixelmap: 'Pixelmap',
     topmode_testpattern: 'Test patronen',
@@ -1911,6 +1933,7 @@ const I18N = {
     tool_pointer: 'Aanwijzer',
     tool_move: 'Schermen verplaatsen (sleep)',
     tool_tile: 'Tegels aan/uit',
+    tool_tile_adv: 'Tegels plaatsen (klik = toevoegen, slepen = verplaatsen, rechtsklik = verwijderen)',
     snap_toggle: 'Snap: aan',
     snap_label: 'Snap',
     snap_on: 'Snap aan',
@@ -2583,6 +2606,21 @@ function aspectThumbSVG(width, height, boxW, boxH, fill) {
     + `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${w.toFixed(1)}" height="${h.toFixed(1)}" fill="${fill || 'none'}" stroke="${accent}" stroke-width="1" rx="1"/></svg>`;
 }
 
+// Detects a "second click" on the same name within a window, without relying on
+// the browser's native dblclick (whose threshold varies and which never fires when
+// the element is replaced by a re-render between the two clicks).
+let _nameClickState = { key: null, time: 0 };
+function handleNameClick(key, onSelect, onRename) {
+  const now = Date.now();
+  if (_nameClickState.key === key && (now - _nameClickState.time) < 450) {
+    _nameClickState = { key: null, time: 0 };
+    onRename();
+  } else {
+    _nameClickState = { key, time: now };
+    onSelect();
+  }
+}
+
 // Turn a screen-name span into an inline text editor on double-click.
 // onCommit(newName) is called with the trimmed value (or empty to clear the label).
 function startInlineRename(span, currentName, onCommit) {
@@ -2638,18 +2676,42 @@ function renderScreenTabs() {
       + (state.screens.length > 1 ? `<span class="close" data-id="${s.id}" title="Remove">×</span>` : '');
     row.dataset.id = s.id;
     const nmSpan = row.querySelector('.nm');
+    const selectThisRow = () => {
+      if (state.activeScreenId !== s.id) {
+        state.activeScreenId = s.id;
+        // Update the active marker in place instead of rebuilding the list —
+        // rebuilding would replace the name span between the two clicks of a
+        // double-click, so the browser would never fire dblclick on it.
+        document.querySelectorAll('#screen-tabs .scr-row').forEach(r => {
+          r.classList.toggle('on', parseInt(r.dataset.id) === s.id);
+        });
+        const chip = $('prop-screen-chip');
+        if (chip) chip.textContent = (s.label || `Screen ${s.id}`).toUpperCase();
+      }
+      syncScreenToUI();
+      renderGrid();
+      renderStats();
+      updateModeUI();
+      renderTileTypesList();
+      renderAdvancedCanvas();
+    };
+    const beginRename = () => {
+      const span = document.querySelector(`#screen-tabs .scr-row[data-id="${s.id}"] .nm`);
+      if (!span) return;
+      startInlineRename(span, s.label || '', (val) => {
+        if (val !== null) {
+          s.label = val;
+          syncScreenToUI();
+          scheduleRender();
+        }
+        renderScreenTabs();
+      });
+    };
     if (nmSpan) {
       nmSpan.title = T('rename_hint');
-      nmSpan.ondblclick = (e) => {
+      nmSpan.onclick = (e) => {
         e.stopPropagation();
-        startInlineRename(nmSpan, s.label || '', (val) => {
-          if (val !== null) {
-            s.label = val;
-            syncScreenToUI();
-            scheduleRender();
-          }
-          renderScreenTabs();
-        });
+        handleNameClick(`pm_${s.id}`, selectThisRow, beginRename);
       };
     }
     row.onclick = (e) => {
@@ -2659,14 +2721,8 @@ function renderScreenTabs() {
         }
         return;
       }
-      state.activeScreenId = s.id;
-      renderScreenTabs();
-      syncScreenToUI();
-      renderGrid();
-      renderStats();
-      updateModeUI();
-      renderTileTypesList();
-      renderAdvancedCanvas();
+      if (e.target.classList.contains('nm')) return; // handled by name's own click
+      selectThisRow();
     };
     container.appendChild(row);
   });
@@ -4829,8 +4885,19 @@ function escapeHtml(s) {
 let dragState = null; // { logoId, mode: 'move'|'resize', handle, startX, startY, origX, origY, origW, origH }
 let paintState = null; // { screen, newValue, painted: Set of "row,col" }
 let screenDragState = null; // { screen, startX, startY, origOffsetX, origOffsetY }
+let advTileDrag = null; // advanced mode on the main canvas: { screen, tileIdx, startX, startY, origX, origY }
 let screenSnapEnabled = true;
-let activeTool = 'pointer'; // 'pointer' (default: select/paint) | 'move' (drag screens)
+let activeTool = 'pointer'; // 'pointer' (default, no action) | 'move' (drag screens) | 'tile' (toggle tiles)
+
+// Select a tool and reflect it in the toolbar (radio behaviour)
+function selectToolGlobal(tool) {
+  activeTool = tool;
+  document.querySelectorAll('#tile-toolbar .tool-btn[data-tool]').forEach(b => {
+    b.classList.toggle('active', b.dataset.tool === tool);
+  });
+  const cv = $('canvas');
+  if (cv) cv.style.cursor = tool === 'move' ? 'grab' : 'default';
+}
 let activeSnapGuides = []; // [{type:'v'|'h', pos, from, to}] in logical coords, for preview render
 
 function getCanvasCoords(evt) {
@@ -5028,6 +5095,31 @@ function attachCanvasDragHandlers() {
     if (!hit) {
       // Tile painting only in the tile tool
       if (activeTool === 'tile') {
+        const as = activeScreen();
+        // Advanced mode: place / move free tiles directly on the main canvas
+        if (as && as.advancedMode) {
+          e.preventDefault();
+          const lx = x - as.offsetX, ly = y - as.offsetY;
+          const idx = findTileAt(as, lx, ly);
+          if (idx >= 0) {
+            const pt = as.placedTiles[idx];
+            advTileDrag = { screen: as, tileIdx: idx, startX: lx, startY: ly, origX: pt.x, origY: pt.y };
+            as.selectedTileTypeId = pt.typeId;
+            updateSelectedTypeIndicator();
+            renderTileTypesList();
+          } else {
+            ensureDefaultTileType(as);
+            const t = getTileType(as, as.selectedTileTypeId);
+            if (t) {
+              const sn = advSnapTilePos(as, lx - t.w / 2, ly - t.h / 2, t.w, t.h, -1);
+              as.placedTiles.push({ id: nextPlacedTileId(), x: sn.x, y: sn.y, typeId: as.selectedTileTypeId });
+              renderStats();
+              renderAdvancedCanvas();
+              renderNow();
+            }
+          }
+          return;
+        }
         const tileHit = findScreenTileAt(x, y);
         if (tileHit) {
           e.preventDefault();
@@ -5076,6 +5168,21 @@ function attachCanvasDragHandlers() {
   canvas.onmousemove = (e) => {
     const { x, y } = getCanvasCoords(e);
     updateViewMeta(x, y);
+    // Advanced free-tile dragging (main canvas)
+    if (advTileDrag) {
+      const s2 = advTileDrag.screen;
+      const pt = s2.placedTiles[advTileDrag.tileIdx];
+      if (!pt) { advTileDrag = null; return; }
+      const t = getTileType(s2, pt.typeId);
+      const lx = x - s2.offsetX, ly = y - s2.offsetY;
+      const propX = advTileDrag.origX + (lx - advTileDrag.startX);
+      const propY = advTileDrag.origY + (ly - advTileDrag.startY);
+      const sn = advSnapTilePos(s2, propX, propY, t ? t.w : 0, t ? t.h : 0, advTileDrag.tileIdx);
+      pt.x = sn.x; pt.y = sn.y;
+      activeSnapGuides = sn.guides;
+      renderNow();
+      return;
+    }
     // Screen dragging (move mode)
     if (screenDragState) {
       const s = screenDragState.screen;
@@ -5168,23 +5275,40 @@ function attachCanvasDragHandlers() {
           const h = hit.handle;
           canvas.style.cursor = (h === 'nw' || h === 'se') ? 'nwse-resize' : 'nesw-resize';
         }
-      } else if (activeTool === 'tile' && findScreenTileAt(x, y)) {
+      } else if (activeTool === 'tile' && (findScreenTileAt(x, y) || (activeScreen() && activeScreen().advancedMode))) {
         canvas.style.cursor = 'crosshair';
       } else {
         canvas.style.cursor = 'default';
       }
     }
   };
+  // Right-click on the main canvas removes an advanced free tile under the cursor
+  canvas.oncontextmenu = (e) => {
+    const as = activeScreen();
+    if (as && as.advancedMode && activeTool === 'tile') {
+      e.preventDefault();
+      const { x, y } = getCanvasCoords(e);
+      const idx = findTileAt(as, x - as.offsetX, y - as.offsetY);
+      if (idx >= 0) {
+        as.placedTiles.splice(idx, 1);
+        renderStats();
+        renderAdvancedCanvas();
+        renderNow();
+      }
+    }
+  };
   canvas.onmouseup = () => {
-    const wasDragging = dragState || screenDragState;
+    const wasDragging = dragState || screenDragState || advTileDrag;
     dragState = null; paintState = null;
     if (screenDragState) { screenDragState = null; activeSnapGuides = []; frozenCanvasBleed = null; renderStats(); canvas.style.cursor = 'default'; }
+    if (advTileDrag) { advTileDrag = null; activeSnapGuides = []; renderStats(); renderAdvancedCanvas(); }
     if (wasDragging) { renderLogoList(); scheduleRender(); }
   };
   canvas.onmouseleave = () => {
-    const wasDragging = dragState || screenDragState;
+    const wasDragging = dragState || screenDragState || advTileDrag;
     dragState = null; paintState = null;
     if (screenDragState) { screenDragState = null; activeSnapGuides = []; frozenCanvasBleed = null; renderStats(); canvas.style.cursor = 'default'; }
+    if (advTileDrag) { advTileDrag = null; activeSnapGuides = []; renderStats(); renderAdvancedCanvas(); }
     if (wasDragging) { renderLogoList(); scheduleRender(); }
     updateViewMeta(null, null);
   };
@@ -5810,13 +5934,58 @@ function handleImport(event) {
 // ADVANCED MODE UI (tile types panel + canvas editor)
 // ============================================================
 
+// Map free-placed (advanced) tiles back onto a regular grid, so work done in
+// advanced mode shows up when switching back to grid mode. Best effort: uses the
+// most-used tile type as the cell size and snaps each tile to the nearest cell.
+// Returns true if the grid was rebuilt.
+function convertAdvancedToGrid(s) {
+  if (!s.placedTiles || s.placedTiles.length === 0) return false;
+  // Dominant tile type decides the cell size
+  const counts = {};
+  s.placedTiles.forEach(pt => { counts[pt.typeId] = (counts[pt.typeId] || 0) + 1; });
+  const domId = Object.keys(counts).sort((a, b) => counts[b] - counts[a])[0];
+  const t = getTileType(s, domId);
+  if (!t || !t.w || !t.h) return false;
+  
+  const bb = getAdvancedBBox(s);
+  if (!(bb.w > 0 && bb.h > 0)) return false;
+  
+  const cols = Math.max(1, Math.round(bb.w / t.w));
+  const rows = Math.max(1, Math.round(bb.h / t.h));
+  // Guard against absurd grids from oddly-sized tiles
+  if (cols > 400 || rows > 400) return false;
+  
+  s.tileW = t.w;
+  s.tileH = t.h;
+  s.cols = cols;
+  s.rows = rows;
+  // Keep the layout in the same place on canvas: the grid starts where the tiles do
+  s.offsetX += bb.minX;
+  s.offsetY += bb.minY;
+  s.colorA = t.colorA || s.colorA;
+  s.colorB = t.colorB || s.colorB;
+  
+  s.active = Array.from({ length: rows }, () => Array.from({ length: cols }, () => false));
+  s.placedTiles.forEach(pt => {
+    const c = Math.round((pt.x - bb.minX) / t.w);
+    const r = Math.round((pt.y - bb.minY) / t.h);
+    if (r >= 0 && r < rows && c >= 0 && c < cols) s.active[r][c] = true;
+  });
+  return true;
+}
+
 function setMode(mode) {
   const s = activeScreen();
   if (!s) return;
   
   if (mode === 'advanced' && !s.advancedMode) {
-    if (s.active && s.active.some(row => row.some(v => v))) {
-      // Has existing grid content - confirm conversion
+    if (s.placedTiles && s.placedTiles.length > 0) {
+      // Coming back to advanced: keep the tiles that were already placed,
+      // otherwise a re-conversion from the grid would wipe that work.
+      ensureDefaultTileType(s);
+      s.advancedMode = true;
+    } else if (s.active && s.active.some(row => row.some(v => v))) {
+      // First time converting a screen that has grid content
       if (!confirm(T('convert_advanced_warning'))) {
         // Update tabs back
         document.querySelectorAll('.mode-tab').forEach(t => {
@@ -5830,7 +5999,23 @@ function setMode(mode) {
       s.advancedMode = true;
     }
   } else if (mode === 'grid' && s.advancedMode) {
+    // Grid mode has one tile size for the whole screen. If the advanced layout
+    // mixes sizes, converting necessarily approximates them — ask first.
+    const sizes = new Set((s.placedTiles || []).map(pt => {
+      const t = getTileType(s, pt.typeId);
+      return t ? `${t.w}x${t.h}` : '';
+    }));
+    sizes.delete('');
+    if (sizes.size > 1 && !confirm(T('mixed_tile_sizes_warning'))) {
+      document.querySelectorAll('.mode-tab').forEach(t => {
+        t.classList.toggle('active', t.dataset.mode === 'advanced');
+      });
+      return;
+    }
+    // Carry the advanced layout over into the grid so the work stays visible
+    convertAdvancedToGrid(s);
     s.advancedMode = false;
+    syncScreenToUI();
   }
   
   updateModeUI();
@@ -5856,9 +6041,15 @@ function updateModeUI() {
   $('screen-config').style.display = isAdv ? 'none' : '';
   $('advanced-config').style.display = isAdv ? '' : 'none';
   $('grid-edit-section').style.display = isAdv ? 'none' : '';
-  // Floating tile toolbar only useful in grid mode
+  // Tool toolbar stays available in both modes. The tile tool works in both:
+  // grid mode toggles tiles, advanced mode places/moves free tiles.
   const tt = $('tile-toolbar');
-  if (tt) tt.style.display = isAdv ? 'none' : '';
+  if (tt) tt.style.display = '';
+  const tileBtn = $('tt-tile');
+  if (tileBtn) {
+    tileBtn.style.display = '';
+    tileBtn.setAttribute('data-tip', isAdv ? T('tool_tile_adv') : T('tool_tile'));
+  }
   
   // Sync advanced inputs from state
   if (isAdv) {
@@ -5935,11 +6126,22 @@ function renderTileTypesList() {
       let val = el.value;
       if (el.type === 'number') val = parseInt(val) || 1;
       t[prop] = val;
-      renderTileTypesList();
+      // Update this row's header in place. Rebuilding the whole list here would
+      // destroy the field being typed in, so you could only enter one digit at a time.
+      const item = container.querySelector(`.tile-type-item[data-type-id="${id}"]`);
+      if (item) {
+        const nameEl = item.querySelector('.tile-type-name');
+        if (nameEl) nameEl.innerHTML = `${escapeHtml(t.name)} <span style="font-size: 11px; color: var(--text-muted); font-weight: 400;">(${t.w}×${t.h} px)</span>`;
+        const sw = item.querySelector('.tile-type-swatch');
+        if (sw) sw.style.background = t.colorA;
+      }
       updateSelectedTypeIndicator();
       renderAdvancedCanvas();
+      renderStats();
       scheduleRender();
     };
+    // Colour pickers settle on change as well
+    if (el.type === 'color') el.onchange = el.oninput;
   });
   
   container.querySelectorAll('button[data-act]').forEach(btn => {
@@ -6125,6 +6327,41 @@ function renderAdvancedCanvas() {
     ctx.fillText(`${bb.w} × ${bb.h} px`, bx + bb.w * scale / 2, by + bb.h * scale + 14);
     ctx.textAlign = 'left';
   }
+}
+
+// Snap a free-placed (advanced) tile against the edges of the other tiles in the
+// same screen, so tiles butt up cleanly. Falls back to the screen's grid snap.
+// Honours the toolbar snap toggle; with snap off the position is used as-is.
+function advSnapTilePos(s, propX, propY, w, h, skipIdx) {
+  if (!screenSnapEnabled) return { x: Math.round(propX), y: Math.round(propY), guides: [] };
+  const threshold = Math.max(6, Math.round(Math.min(w, h) * 0.35));
+  let bestX = null, bestDX = null, gx = null;
+  let bestY = null, bestDY = null, gy = null;
+  (s.placedTiles || []).forEach((pt, i) => {
+    if (i === skipIdx) return;
+    const tt = getTileType(s, pt.typeId);
+    if (!tt) return;
+    // Vertical lines: left/right edges of the other tile
+    [pt.x, pt.x + tt.w].forEach(line => {
+      // our left edge to it, or our right edge to it
+      let d = Math.abs(propX - line);
+      if (d <= threshold && (bestDX === null || d < bestDX)) { bestDX = d; bestX = line; gx = line; }
+      d = Math.abs(propX + w - line);
+      if (d <= threshold && (bestDX === null || d < bestDX)) { bestDX = d; bestX = line - w; gx = line; }
+    });
+    [pt.y, pt.y + tt.h].forEach(line => {
+      let d = Math.abs(propY - line);
+      if (d <= threshold && (bestDY === null || d < bestDY)) { bestDY = d; bestY = line; gy = line; }
+      d = Math.abs(propY + h - line);
+      if (d <= threshold && (bestDY === null || d < bestDY)) { bestDY = d; bestY = line - h; gy = line; }
+    });
+  });
+  const outX = bestX !== null ? bestX : snapValue(s, propX);
+  const outY = bestY !== null ? bestY : snapValue(s, propY);
+  const guides = [];
+  if (gx !== null) guides.push({ type: 'v', pos: s.offsetX + gx });
+  if (gy !== null) guides.push({ type: 'h', pos: s.offsetY + gy });
+  return { x: Math.round(outX), y: Math.round(outY), guides };
 }
 
 function advCanvasCoords(evt) {
@@ -6695,20 +6932,24 @@ function renderTpSessionList() {
         <button data-action="dl" title="${T('download_png')}">⬇</button>
       </span>
     `;
+    row.dataset.sessId = sess.id;
     const nmSpan = row.querySelector('.nm');
-    nmSpan.onclick = () => tpLoadSession(sess.id);
     nmSpan.title = T('rename_hint');
-    nmSpan.ondblclick = (e) => {
-      e.stopPropagation();
-      startInlineRename(nmSpan, sess.name || '', (val) => {
+    const doRename = () => {
+      const span = document.querySelector(`#tp-session-list .scr-row[data-sess-id="${sess.id}"] .nm`);
+      if (!span) return;
+      startInlineRename(span, sess.name || '', (val) => {
         if (val !== null) {
           sess.name = val || sess.name;
-          // Keep the underlying screen label in sync so it survives a re-sync
           const scr2 = state.screens.find(s => s.id === sess.screenId);
           if (scr2) { scr2.label = val; renderScreenTabs(); syncScreenToUI(); }
         }
         renderTpSessionList();
       });
+    };
+    nmSpan.onclick = (e) => {
+      e.stopPropagation();
+      handleNameClick(`tp_${sess.id}`, () => tpLoadSession(sess.id), doRename);
     };
     row.querySelector('.res').onclick = () => tpLoadSession(sess.id);
     row.querySelector('.scr-thumb').onclick = () => tpLoadSession(sess.id);
@@ -6745,14 +6986,22 @@ function renderTpOverview() {
     const fill = isActive ? accent : 'rgba(255,255,255,0.12)';
     const stroke = isActive ? accent : 'rgba(255,255,255,0.35)';
     const label = escapeHtml(s.label || `S${s.id}`);
-    rects += `<rect x="${rx.toFixed(1)}" y="${ry.toFixed(1)}" width="${Math.max(1,rw).toFixed(1)}" height="${Math.max(1,rh).toFixed(1)}" fill="${fill}" stroke="${stroke}" stroke-width="1" rx="1" opacity="${isActive?0.85:1}"/>`;
+    rects += `<rect class="ov-screen" data-screen-id="${s.id}" x="${rx.toFixed(1)}" y="${ry.toFixed(1)}" width="${Math.max(1,rw).toFixed(1)}" height="${Math.max(1,rh).toFixed(1)}" fill="${fill}" stroke="${stroke}" stroke-width="1" rx="1" opacity="${isActive?0.85:1}" style="cursor:pointer;"/>`;
     if (rw > 20 && rh > 12) {
-      rects += `<text x="${(rx+rw/2).toFixed(1)}" y="${(ry+rh/2+3).toFixed(1)}" text-anchor="middle" font-size="9" fill="${isActive?'#fff':'rgba(255,255,255,0.6)'}" font-family="sans-serif">${label}</text>`;
+      rects += `<text x="${(rx+rw/2).toFixed(1)}" y="${(ry+rh/2+3).toFixed(1)}" text-anchor="middle" font-size="9" fill="${isActive?'#fff':'rgba(255,255,255,0.6)'}" font-family="sans-serif" pointer-events="none">${label}</text>`;
     }
   });
   host.innerHTML = `<svg viewBox="0 0 ${boxW} ${boxH}" width="100%" xmlns="http://www.w3.org/2000/svg" style="display:block;">`
     + `<rect x="0.5" y="0.5" width="${boxW-1}" height="${boxH-1}" fill="none" stroke="var(--border-input)" stroke-width="1" stroke-dasharray="3 2"/>`
     + rects + `</svg>`;
+  // Click a screen in the overview to activate its test-pattern session
+  host.querySelectorAll('.ov-screen').forEach(r => {
+    r.onclick = () => {
+      const scrId = parseInt(r.getAttribute('data-screen-id'));
+      const sess = tpSessions.find(t => t.screenId === scrId);
+      if (sess) tpLoadSession(sess.id);
+    };
+  });
 }
 
 // Download one session's PNG at its own resolution (without switching the UI to it)
@@ -8519,6 +8768,164 @@ function updateFooterStats() {
 
 
 
+// ============================================================
+// RESIZABLE SIDE PANELS
+// Inserts a draggable seam between each side panel and the center viewport.
+// Widths are shared across both app containers (pixelmap + test pattern) and
+// persisted to localStorage.
+// ============================================================
+const PANEL_MIN = 150, PANEL_MAX = 560;
+function getStoredPanelWidth(side, fallback) {
+  const v = parseInt(localStorage.getItem(`genes_pixelmap_panel_${side}`));
+  return (v && v >= PANEL_MIN && v <= PANEL_MAX) ? v : fallback;
+}
+function applyPanelWidth(side, px) {
+  const w = Math.max(PANEL_MIN, Math.min(PANEL_MAX, Math.round(px)));
+  document.querySelectorAll(`.${side}-panel`).forEach(p => { p.style.width = `${w}px`; });
+  localStorage.setItem(`genes_pixelmap_panel_${side}`, String(w));
+  return w;
+}
+function setupPanelResizers() {
+  // Apply any stored widths first
+  applyPanelWidth('left', getStoredPanelWidth('left', 200));
+  applyPanelWidth('right', getStoredPanelWidth('right', 280));
+  
+  document.querySelectorAll('.app').forEach(app => {
+    const left = app.querySelector('.left-panel');
+    const right = app.querySelector('.right-panel');
+    const viewport = app.querySelector('.viewport');
+    if (left && viewport && !(left.nextElementSibling && left.nextElementSibling.classList.contains('panel-resizer'))) {
+      const rz = document.createElement('div');
+      rz.className = 'panel-resizer';
+      left.after(rz);
+      attachPanelResizer(rz, 'left');
+    }
+    if (right && viewport && !(right.previousElementSibling && right.previousElementSibling.classList.contains('panel-resizer'))) {
+      const rz = document.createElement('div');
+      rz.className = 'panel-resizer';
+      right.before(rz);
+      attachPanelResizer(rz, 'right');
+    }
+  });
+}
+function attachPanelResizer(handle, side) {
+  handle.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    const startX = e.clientX;
+    const panel = handle.parentElement.querySelector(`.${side}-panel`)
+      || (side === 'left' ? handle.previousElementSibling : handle.nextElementSibling);
+    const startW = panel.getBoundingClientRect().width;
+    handle.classList.add('dragging');
+    document.body.classList.add('resizing-panels');
+    const onMove = (ev) => {
+      const dx = ev.clientX - startX;
+      // Left panel grows when dragging right; right panel grows when dragging left
+      const newW = side === 'left' ? startW + dx : startW - dx;
+      applyPanelWidth(side, newW);
+    };
+    const onUp = () => {
+      handle.classList.remove('dragging');
+      document.body.classList.remove('resizing-panels');
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+      // Canvas may need to re-fit to the new viewport width
+      if (typeof setPreviewZoom === 'function' && previewZoom === 'fit') setPreviewZoom('fit');
+      if (typeof setTpPreviewZoom === 'function' && typeof tpPreviewZoom !== 'undefined' && tpPreviewZoom === 'fit') setTpPreviewZoom('fit');
+    };
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  });
+}
+
+// ============================================================
+// ARITHMETIC INPUT
+// Lets number fields accept simple expressions: "1000+420", "1920/2", "500*2-40".
+// The field temporarily becomes a text input while focused so operators can be
+// typed, then evaluates on Enter/blur and switches back (keeping the spinners).
+// ============================================================
+function evalNumericExpression(str) {
+  const s = String(str).trim();
+  if (s === '') return null;
+  // Only digits, operators, parentheses, dot, spaces — no identifiers, no calls
+  if (!/^[-+*/(). \d]+$/.test(s)) return null;
+  try {
+    // eslint-disable-next-line no-new-func
+    const val = Function(`"use strict"; return (${s});`)();
+    return (typeof val === 'number' && isFinite(val)) ? val : null;
+  } catch (e) { return null; }
+}
+
+function enableArithmetic(input) {
+  if (!input || input.dataset.arithBound) return;
+  input.dataset.arithBound = '1';
+  
+  // Switch into expression (text) mode, preserving what's already typed.
+  const enterExprMode = (append) => {
+    const current = input.value;
+    input.dataset.wasNumber = '1';
+    input.type = 'text';
+    input.value = append === undefined ? current : current + append;
+    try { input.setSelectionRange(input.value.length, input.value.length); } catch (err) {}
+  };
+  
+  const commit = () => {
+    if (input.dataset.wasNumber !== '1') return; // plain number entry — leave native behaviour
+    const raw = input.value;
+    const val = evalNumericExpression(raw);
+    input.type = 'number';
+    delete input.dataset.wasNumber;
+    if (val !== null) {
+      let v = Math.round(val);
+      const min = input.min !== '' ? parseFloat(input.min) : null;
+      const max = input.max !== '' ? parseFloat(input.max) : null;
+      if (min !== null && v < min) v = min;
+      if (max !== null && v > max) v = max;
+      input.value = v;
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+  };
+  
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); commit(); input.blur(); return; }
+    if (e.key === 'Escape') {
+      if (input.dataset.wasNumber === '1') { input.type = 'number'; delete input.dataset.wasNumber; }
+      input.blur();
+      return;
+    }
+    if (input.type !== 'number') return; // already in expression mode
+    // Only these keys trigger expression mode, so the native spinner arrows and
+    // normal number typing keep working exactly as before.
+    const isOperator = ['+', '*', '/', '(', ')'].includes(e.key)
+      // a minus only means "subtract" when there's already a value; on an empty
+      // field it's a negative number, which the number input handles itself
+      || (e.key === '-' && input.value !== '');
+    if (isOperator) {
+      e.preventDefault();
+      enterExprMode(e.key);
+    }
+  });
+  
+  input.addEventListener('paste', (e) => {
+    if (input.type !== 'number') return;
+    const txt = (e.clipboardData || window.clipboardData || {}).getData
+      ? (e.clipboardData || window.clipboardData).getData('text') : '';
+    if (txt && /[+*/()]/.test(txt)) {
+      e.preventDefault();
+      input.dataset.wasNumber = '1';
+      input.type = 'text';
+      input.value = txt;
+    }
+  });
+  
+  input.addEventListener('blur', commit);
+}
+
+// Apply to every numeric field that benefits from quick maths
+function enableArithmeticOnNumberInputs() {
+  document.querySelectorAll('input[type="number"]').forEach(enableArithmetic);
+}
+
 function init() {
   applyTheme(getStoredTheme());
   applyTranslations();
@@ -8533,6 +8940,8 @@ function init() {
   renderCanvas();
   wireUp();
   drawSelectionOverlayOnPreview();
+  setupPanelResizers();
+  enableArithmeticOnNumberInputs();
   if ($('tt-snap')) $('tt-snap').classList.add('active');
   // Advanced mode UI
   updateModeUI();
@@ -8576,17 +8985,9 @@ function init() {
     $('tt-snap').setAttribute('aria-pressed', screenSnapEnabled ? 'true' : 'false');
     $('tt-snap').setAttribute('data-tip', screenSnapEnabled ? T('snap_on') : T('snap_off'));
   };
-  // Tool selection (radio): pointer / move
-  function selectTool(tool) {
-    activeTool = tool;
-    document.querySelectorAll('#tile-toolbar .tool-btn[data-tool]').forEach(b => {
-      b.classList.toggle('active', b.dataset.tool === tool);
-    });
-    const cv = $('canvas');
-    if (cv) cv.style.cursor = tool === 'move' ? 'grab' : 'default';
-  }
+  // Tool selection (radio): pointer / move / tile
   document.querySelectorAll('#tile-toolbar .tool-btn[data-tool]').forEach(b => {
-    b.onclick = () => selectTool(b.dataset.tool);
+    b.onclick = () => selectToolGlobal(b.dataset.tool);
   });
   if ($('tt-pointer')) $('tt-pointer').setAttribute('data-tip', T('tool_pointer'));
   if ($('tt-move')) $('tt-move').setAttribute('data-tip', T('tool_move'));
