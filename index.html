@@ -1299,6 +1299,7 @@
         <label class="field"><span class="f-label" data-i18n="title_spec">Title + spec table</span><input type="checkbox" id="opt-show-info" checked /></label>
         <label class="field"><span class="f-label" data-i18n="screen_outline">Per-screen outline</span><input type="checkbox" id="opt-show-screen-outline" checked /></label>
         <label class="field"><span class="f-label" data-i18n="canvas_corners">Canvas corner coords</span><input type="checkbox" id="opt-show-canvas-corners" checked /></label>
+        <label class="field"><span class="f-label" data-i18n="screen_origin">Screen 0,0 position</span><input type="checkbox" id="opt-show-screen-origin" checked /></label>
         <label class="field"><span class="f-label" data-i18n="canvas_dims">Canvas dimension labels</span><input type="checkbox" id="opt-show-canvas-dims" checked /></label>
         <label class="field"><span class="f-label" data-i18n="show_center_text">Center text on screens</span><input type="checkbox" id="opt-show-center-text" /></label>
         <div class="field">
@@ -1701,6 +1702,7 @@ const I18N = {
     title_spec: 'Title + spec table',
     screen_outline: 'Per-screen outline (accent border)',
     canvas_corners: 'Canvas corner coords',
+    screen_origin: 'Screen 0,0 position',
     canvas_dims: 'Canvas width/height labels',
     show_center_text: 'Title + subtitle + resolution centered on screen',
     center_text_size: 'Center text size',
@@ -1955,6 +1957,7 @@ const I18N = {
     title_spec: 'Titel + spec tabel',
     screen_outline: 'Scherm omlijning (accent kleur)',
     canvas_corners: 'Canvas hoek coördinaten',
+    screen_origin: 'Scherm 0,0 positie',
     canvas_dims: 'Canvas breedte/hoogte labels',
     show_center_text: 'Titel + ondertitel + resolutie gecentreerd op scherm',
     center_text_size: 'Lettergrootte midden',
@@ -2110,6 +2113,7 @@ let state = {
     showInfo: true,
     showScreenOutline: true,
     showCanvasCorners: true,
+    showScreenOrigin: true,
     showCanvasDims: true,
     showScreenCenterText: false,
     centerTextSize: 28,
@@ -3005,6 +3009,7 @@ function syncDisplayFromUI() {
   state.display.showInfo = $('opt-show-info').checked;
   state.display.showScreenOutline = $('opt-show-screen-outline').checked;
   state.display.showCanvasCorners = $('opt-show-canvas-corners').checked;
+  state.display.showScreenOrigin = $('opt-show-screen-origin').checked;
   state.display.showCanvasDims = $('opt-show-canvas-dims').checked;
   state.display.showScreenCenterText = $('opt-show-center-text').checked;
   state.display.centerTextSize = parseInt($('opt-center-text-size').value) || 28;
@@ -3017,6 +3022,7 @@ function syncDisplayToUI() {
   $('opt-show-info').checked = state.display.showInfo;
   $('opt-show-screen-outline').checked = state.display.showScreenOutline;
   $('opt-show-canvas-corners').checked = state.display.showCanvasCorners;
+  $('opt-show-screen-origin').checked = state.display.showScreenOrigin;
   $('opt-show-canvas-dims').checked = state.display.showCanvasDims;
   $('opt-show-center-text').checked = state.display.showScreenCenterText || false;
   $('opt-center-text-size').value = state.display.centerTextSize || 28;
@@ -3399,6 +3405,30 @@ function showPage(n) {
   updatePageLabel();
 }
 
+// Draws the canvas-pixel coordinate of a screen's 0,0 point (its top-left corner)
+// as plain text next to that corner. Recomputed every render, so it tracks the
+// screen while it is moved.
+function drawScreenOrigin(ctx, bbX, bbY, cw, accent) {
+  const label = `(${Math.round(bbX)}, ${Math.round(bbY)})`;
+  const fs = Math.max(12, Math.round(cw / 130));
+  ctx.save();
+  ctx.font = `700 ${fs}px sans-serif`;
+  ctx.textAlign = 'left';
+  const gap = 6;
+  // Prefer just above the top-left corner; if there's no room, drop just inside.
+  if (bbY - gap - fs >= 2) ctx.textBaseline = 'bottom';
+  else ctx.textBaseline = 'top';
+  const ty = (bbY - gap - fs >= 2) ? (bbY - gap) : (bbY + gap);
+  // Dark halo for legibility over bright tiles, then the accent-coloured text.
+  ctx.lineWidth = Math.max(2, fs / 5);
+  ctx.strokeStyle = 'rgba(0,0,0,0.6)';
+  ctx.lineJoin = 'round';
+  ctx.strokeText(label, bbX, ty);
+  ctx.fillStyle = accent;
+  ctx.fillText(label, bbX, ty);
+  ctx.restore();
+}
+
 function drawScreen(ctx, s, cw, ch, accent) {
   // If screen is in advanced mode, use a different rendering pipeline
   if (s.advancedMode) {
@@ -3554,7 +3584,12 @@ function drawScreen(ctx, s, cw, ch, accent) {
     ctx.lineWidth = 3;
     ctx.strokeRect(bbX + 1.5, bbY + 1.5, bbW - 3, bbH - 3);
   }
-  
+
+  // ============ SCREEN ORIGIN (0,0) COORD ============
+  if (state.display.showScreenOrigin) {
+    drawScreenOrigin(ctx, bbX, bbY, cw, accent);
+  }
+
   // ============ TILE COORDINATES ============
   if (state.display.showCoords) {
     const fs = Math.max(8, Math.min(20, Math.floor(s.tileW / 4.5)));
@@ -3768,7 +3803,12 @@ function drawScreenAdvanced(ctx, s, cw, ch, accent) {
     ctx.lineWidth = 3;
     ctx.strokeRect(bbX + 1.5, bbY + 1.5, bbW - 3, bbH - 3);
   }
-  
+
+  // ============ SCREEN ORIGIN (0,0) COORD ============
+  if (state.display.showScreenOrigin) {
+    drawScreenOrigin(ctx, bbX, bbY, cw, accent);
+  }
+
   // ============ CENTER TEXT ============
   if (state.display.showScreenCenterText) {
     drawCenterText(ctx, accent, bbX, bbY, bbW, bbH);
@@ -6571,7 +6611,7 @@ function wireUp() {
   };
   
   // Display options
-  document.querySelectorAll('#opt-show-coords, #opt-show-grid-lines, #opt-show-rulers, #opt-show-info, #opt-show-screen-outline, #opt-show-canvas-corners, #opt-show-canvas-dims, #opt-show-center-text, #opt-show-edit-hints').forEach(el => {
+  document.querySelectorAll('#opt-show-coords, #opt-show-grid-lines, #opt-show-rulers, #opt-show-info, #opt-show-screen-outline, #opt-show-canvas-corners, #opt-show-screen-origin, #opt-show-canvas-dims, #opt-show-center-text, #opt-show-edit-hints').forEach(el => {
     el.onchange = () => { syncDisplayFromUI(); scheduleRender(); };
   });
   $('opt-center-text-size').oninput = () => { syncDisplayFromUI(); scheduleRender(); };
