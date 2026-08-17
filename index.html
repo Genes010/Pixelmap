@@ -8626,7 +8626,7 @@ function setTopMode(mode) {
 // NEW GUI: zoom, view-meta, accordions, footer
 // ============================================================
 // ============================================================
-// PREVIEW ZOOM (continuous, alt/ctrl+wheel, zoom-to-cursor)  — shared for both canvases
+// PREVIEW ZOOM (continuous mouse-wheel, zoom-to-cursor)  — shared for both canvases
 // ============================================================
 let previewZoom = 'fit';      // pixelmap: 'fit' or number
 let tpPreviewZoom = 'fit';    // test pattern: 'fit' or number
@@ -8679,14 +8679,12 @@ function effectiveZoom(canvas, mode) {
   return rect.width / canvas.width;
 }
 
-// Alt+wheel zoom handler factory (Ctrl/Cmd also work) — zooms toward the cursor,
-// mirroring the navigation in the rack-builder app.
+// Plain mouse-wheel zoom handler factory — zooms toward the cursor, no modifier key.
 function attachWheelZoom(canvas, mode) {
   if (!canvas) return;
   const wrap = canvas.closest('.canvas-wrap');
   const target = wrap || canvas;
   target.addEventListener('wheel', (e) => {
-    if (!e.altKey && !e.ctrlKey && !e.metaKey) return; // only zoom with alt/ctrl/cmd held
     e.preventDefault();
     const cur = effectiveZoom(canvas, mode);
     // Wheel up = zoom in
@@ -8988,7 +8986,7 @@ function init() {
     };
   });
   setTpPreviewZoom('fit');
-  // Alt (or Ctrl/Cmd) + wheel zoom-to-cursor, and middle-mouse pan, on both previews
+  // Mouse-wheel zoom-to-cursor, and middle-mouse pan, on both previews
   attachWheelZoom($('canvas'), 'pm');
   attachWheelZoom($('tp-canvas'), 'tp');
   attachMiddlePan($('canvas'));
