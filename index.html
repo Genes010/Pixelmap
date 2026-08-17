@@ -509,21 +509,34 @@
     padding: 11px 16px; border-bottom: 1px solid var(--border-input);
     font-size: 13px; color: var(--text-primary);
   }
-  .adv-modal-head button {
+  .adv-modal-head-right { display: flex; align-items: center; gap: 10px; }
+  .adv-modal-hint { font-size: 10.5px; color: var(--text-muted); }
+  .adv-modal-head #adv-enlarge-fit {
+    font-size: 11px; padding: 4px 10px; color: var(--text-secondary);
+    border: 1px solid var(--border-input); border-radius: 6px; background: var(--bg-chip);
+  }
+  .adv-modal-head #adv-enlarge-fit:hover { color: var(--text-primary); }
+  .adv-modal-head #adv-enlarge-close {
     background: transparent; border: none; color: var(--text-secondary);
     font-size: 18px; line-height: 1; cursor: pointer; padding: 2px 8px;
   }
-  .adv-modal-head button:hover { color: var(--text-primary); }
-  .adv-modal-body {
-    flex: 1; min-height: 0; padding: 12px; display: flex;
+  .adv-modal-head #adv-enlarge-close:hover { color: var(--text-primary); }
+  .adv-modal-content { flex: 1; min-height: 0; display: flex; }
+  .adv-modal-sidebar {
+    width: 240px; flex-shrink: 0; overflow-y: auto;
+    padding: 12px; border-right: 1px solid var(--border-input);
+    display: flex; flex-direction: column; gap: 8px;
   }
+  .adv-modal-canvas { flex: 1; min-width: 0; padding: 12px; display: flex; }
   .advanced-canvas-wrap.enlarged {
     max-height: none; width: 100%; height: 100%;
     display: flex; align-items: center; justify-content: center;
+    cursor: crosshair;
   }
   .advanced-canvas-wrap.enlarged canvas {
     width: 100%; height: 100%; object-fit: contain;
   }
+  body.adv-panning, body.adv-panning * { cursor: grabbing !important; }
   .modal-box {
     background: var(--bg-card);
     border: 1px solid var(--border-input);
@@ -1528,9 +1541,16 @@
   <div class="adv-modal-box" role="dialog" aria-modal="true">
     <div class="adv-modal-head">
       <span data-i18n="adv_enlarge_title">Tile editor</span>
-      <button id="adv-enlarge-close" title="Close" aria-label="Close">✕</button>
+      <span class="adv-modal-head-right">
+        <span class="adv-modal-hint" data-i18n="adv_zoompan_hint">Scroll = zoom · middle-mouse drag = pan</span>
+        <button id="adv-enlarge-fit" data-i18n="adv_fit_view" title="Reset zoom &amp; pan">Fit view</button>
+        <button id="adv-enlarge-close" title="Close" aria-label="Close">✕</button>
+      </span>
     </div>
-    <div class="adv-modal-body" id="adv-enlarge-body"></div>
+    <div class="adv-modal-content">
+      <div class="adv-modal-sidebar" id="adv-enlarge-sidebar"></div>
+      <div class="adv-modal-canvas" id="adv-enlarge-body"></div>
+    </div>
   </div>
 </div>
 
@@ -1614,6 +1634,8 @@ const I18N = {
     add_tile_type: '+ Add tile type',
     adv_enlarge: '⤢ Enlarge',
     adv_enlarge_title: 'Tile editor',
+    adv_zoompan_hint: 'Scroll = zoom · middle-mouse drag = pan',
+    adv_fit_view: 'Fit view',
     place_tiles: 'Place tiles',
     snap: 'Snap',
     snap_size: 'Snap size',
@@ -1874,6 +1896,8 @@ const I18N = {
     add_tile_type: '+ Tegel type toevoegen',
     adv_enlarge: '⤢ Vergroten',
     adv_enlarge_title: 'Tegel-editor',
+    adv_zoompan_hint: 'Scroll = zoom · middelste muisknop = pan',
+    adv_fit_view: 'Passend',
     place_tiles: 'Tegels plaatsen',
     snap: 'Uitlijnen',
     snap_size: 'Uitlijn raster',
@@ -6256,6 +6280,7 @@ function addTileType() {
 const ADV_CANVAS_W = 800;
 const ADV_CANVAS_H = 400;
 let advView = { scale: 1, panX: 0, panY: 0 };
+let advFreeView = false; // true while the enlarged editor is open: user controls zoom/pan (no auto-fit)
 let advDrag = null; // { tileIdx, mode: 'move' | 'place', startX, startY, origX, origY }
 let advHoverTile = null;
 
@@ -6287,11 +6312,16 @@ function renderAdvancedCanvas() {
   const margin = 60;
   const scaleX = (cw - margin * 2) / Math.max(bbW, 400);
   const scaleY = (ch - margin * 2) / Math.max(bbH, 200);
-  const scale = Math.min(scaleX, scaleY, 1);
-  advView.scale = scale;
-  advView.panX = (cw - bbW * scale) / 2 - originX * scale;
-  advView.panY = (ch - bbH * scale) / 2 - originY * scale;
-  
+  const fitScale = Math.min(scaleX, scaleY, 1);
+  // In free-view (enlarged editor) the user controls zoom/pan, so only auto-fit
+  // when NOT in free-view.
+  if (!advFreeView) {
+    advView.scale = fitScale;
+    advView.panX = (cw - bbW * fitScale) / 2 - originX * fitScale;
+    advView.panY = (ch - bbH * fitScale) / 2 - originY * fitScale;
+  }
+  const scale = advView.scale;
+
   // Helper to convert canvas-coord to screen-pixel
   function toScreen(x, y) {
     return [advView.panX + x * scale, advView.panY + y * scale];
@@ -6460,10 +6490,17 @@ function findTileAt(s, x, y) {
   return -1;
 }
 
-// Temporarily move the advanced tile-editor canvas into a large modal window.
-// The canvas element (with all its handlers) is relocated, its backing
-// resolution bumped to fill the modal, then restored on close.
+// Temporarily move the advanced tile-editor (its controls + canvas) into a large
+// modal window. The real elements (with all their handlers) are relocated, so
+// selecting tile types, snap, placing and dragging all keep working. The canvas
+// backing resolution is bumped to fill the modal, and free zoom/pan is enabled.
 let advEnlargeState = null;
+// Relocate an element into `slot`, remembering where it came from so it can be put back.
+function advMoveInto(el, slot, moved) {
+  if (!el) return;
+  moved.push({ el, parent: el.parentNode, next: el.nextSibling });
+  slot.appendChild(el);
+}
 function openAdvancedEnlarge() {
   const s = activeScreen();
   if (!s || !s.advancedMode || advEnlargeState) return;
@@ -6471,39 +6508,119 @@ function openAdvancedEnlarge() {
   const canvas = $('advanced-canvas');
   const modal = $('adv-enlarge-modal');
   const body = $('adv-enlarge-body');
-  if (!wrap || !canvas || !modal || !body) return;
-  advEnlargeState = { parent: wrap.parentNode, next: wrap.nextSibling, w: canvas.width, h: canvas.height };
-  body.appendChild(wrap);
+  const sidebar = $('adv-enlarge-sidebar');
+  if (!wrap || !canvas || !modal || !body || !sidebar) return;
+  const moved = [];
+  // Move the tile-type controls into the sidebar so you can pick tiles without leaving.
+  advMoveInto($('tile-types-list'), sidebar, moved);
+  const addRow = $('add-tile-type-btn') && $('add-tile-type-btn').closest('.btn-row');
+  advMoveInto(addRow, sidebar, moved);
+  advMoveInto(document.querySelector('#advanced-config .advanced-toolbar'), sidebar, moved);
+  // Move the canvas into the big canvas area.
+  advMoveInto(wrap, body, moved);
   wrap.classList.add('enlarged');
+  // Hide the (now-relocated) Enlarge button while we're already enlarged.
+  const enlargeBtn = $('adv-enlarge-btn');
+  const enlargeBtnDisplay = enlargeBtn ? enlargeBtn.style.display : '';
+  if (enlargeBtn) enlargeBtn.style.display = 'none';
+  advEnlargeState = { moved, w: canvas.width, h: canvas.height, enlargeBtn, enlargeBtnDisplay };
   modal.style.display = 'flex';
-  // Size the canvas backing resolution to the available space, then render crisp.
+  // Size the canvas backing resolution to the available space, fit once, then
+  // hand zoom/pan control to the user.
   requestAnimationFrame(() => {
     const r = body.getBoundingClientRect();
     canvas.width = Math.max(600, Math.round(r.width - 8));
     canvas.height = Math.max(300, Math.round(r.height - 8));
+    advFreeView = false;   // compute a fresh fit for the enlarged canvas
     renderAdvancedCanvas();
+    advFreeView = true;    // now the user controls zoom/pan
   });
 }
 function closeAdvancedEnlarge() {
   if (!advEnlargeState) return;
-  const wrap = document.querySelector('.advanced-canvas-wrap.enlarged');
   const canvas = $('advanced-canvas');
   const modal = $('adv-enlarge-modal');
+  const wrap = document.querySelector('.advanced-canvas-wrap.enlarged');
   if (wrap) wrap.classList.remove('enlarged');
   if (canvas) { canvas.width = advEnlargeState.w; canvas.height = advEnlargeState.h; }
-  if (wrap && advEnlargeState.parent) advEnlargeState.parent.insertBefore(wrap, advEnlargeState.next);
+  // Put every relocated element back exactly where it was (reverse order).
+  advEnlargeState.moved.slice().reverse().forEach(({ el, parent, next }) => {
+    if (parent) parent.insertBefore(el, next);
+  });
+  if (advEnlargeState.enlargeBtn) advEnlargeState.enlargeBtn.style.display = advEnlargeState.enlargeBtnDisplay;
   if (modal) modal.style.display = 'none';
   advEnlargeState = null;
+  advFreeView = false;   // back to auto-fit in the small panel
+  document.body.classList.remove('adv-panning');
   renderAdvancedCanvas();
+}
+// Re-fit the enlarged view to the content (Fit-view button).
+function fitAdvancedEnlarge() {
+  if (!advEnlargeState) return;
+  advFreeView = false;
+  renderAdvancedCanvas();
+  advFreeView = true;
+}
+// Zoom the enlarged advanced canvas toward the cursor.
+function advWheelZoom(e) {
+  if (!advFreeView) return;
+  e.preventDefault();
+  const canvas = $('advanced-canvas');
+  const rect = canvas.getBoundingClientRect();
+  const px = (e.clientX - rect.left) * (canvas.width / rect.width);
+  const py = (e.clientY - rect.top) * (canvas.height / rect.height);
+  const old = advView.scale;
+  const factor = e.deltaY < 0 ? 1.12 : 1 / 1.12;
+  const next = Math.max(0.05, Math.min(20, old * factor));
+  if (Math.abs(next - old) < 1e-4) return;
+  // Keep the model point under the cursor fixed.
+  const mx = (px - advView.panX) / old;
+  const my = (py - advView.panY) / old;
+  advView.scale = next;
+  advView.panX = px - mx * next;
+  advView.panY = py - my * next;
+  renderAdvancedCanvas();
+}
+// Middle-mouse pan for the enlarged advanced canvas.
+let advPan = null;
+function advPanStart(e) {
+  if (!advFreeView || e.button !== 1) return;
+  e.preventDefault();
+  e.stopPropagation();
+  const canvas = $('advanced-canvas');
+  const rect = canvas.getBoundingClientRect();
+  advPan = { x: e.clientX, y: e.clientY, panX: advView.panX, panY: advView.panY, sx: canvas.width / rect.width, sy: canvas.height / rect.height };
+  document.body.classList.add('adv-panning');
+  const move = (ev) => {
+    if (!advPan) return;
+    ev.preventDefault();
+    advView.panX = advPan.panX + (ev.clientX - advPan.x) * advPan.sx;
+    advView.panY = advPan.panY + (ev.clientY - advPan.y) * advPan.sy;
+    renderAdvancedCanvas();
+  };
+  const up = () => {
+    advPan = null;
+    document.body.classList.remove('adv-panning');
+    window.removeEventListener('mousemove', move);
+    window.removeEventListener('mouseup', up);
+  };
+  window.addEventListener('mousemove', move);
+  window.addEventListener('mouseup', up);
 }
 
 function attachAdvancedCanvasHandlers() {
   const canvas = $('advanced-canvas');
   if (!canvas) return;
-  
+
+  // Zoom (mouse wheel) and middle-mouse pan — active while the enlarged editor is open.
+  canvas.addEventListener('wheel', advWheelZoom, { passive: false });
+  canvas.addEventListener('mousedown', advPanStart, true);
+  canvas.addEventListener('auxclick', (e) => { if (e.button === 1) e.preventDefault(); });
+
   canvas.onmousedown = (e) => {
     const s = activeScreen();
     if (!s || !s.advancedMode) return;
+    if (e.button === 1) return; // middle button pans (handled separately)
     e.preventDefault();
     const { x, y } = advCanvasCoords(e);
     
@@ -6773,6 +6890,7 @@ function wireUp() {
   // Enlarge / restore the advanced tile editor in a big modal window
   if ($('adv-enlarge-btn')) $('adv-enlarge-btn').onclick = openAdvancedEnlarge;
   if ($('adv-enlarge-close')) $('adv-enlarge-close').onclick = closeAdvancedEnlarge;
+  if ($('adv-enlarge-fit')) $('adv-enlarge-fit').onclick = fitAdvancedEnlarge;
   if ($('adv-enlarge-modal')) $('adv-enlarge-modal').addEventListener('mousedown', (e) => {
     if (e.target === $('adv-enlarge-modal')) closeAdvancedEnlarge();
   });
