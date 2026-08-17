@@ -1293,7 +1293,7 @@
       <h3><span data-i18n="display_options">Display</span> <span class="car">▾</span></h3>
       <div class="card-body">
         <label class="field"><span class="f-label" data-i18n="tile_coords">Tile coordinates</span><input type="checkbox" id="opt-show-coords" checked /></label>
-        <label class="field"><span class="f-label" data-i18n="grid_lines">Grid lines between tiles</span><input type="checkbox" id="opt-show-grid-lines" /></label>
+        <label class="field"><span class="f-label" data-i18n="grid_lines">Grid lines between tiles</span><input type="checkbox" id="opt-show-grid-lines" checked /></label>
         <label class="field"><span class="f-label" data-i18n="edit_hints">Inactive tile hints</span><input type="checkbox" id="opt-show-edit-hints" checked /></label>
         <label class="field"><span class="f-label" data-i18n="dim_rulers">Dimension rulers</span><input type="checkbox" id="opt-show-rulers" checked /></label>
         <label class="field"><span class="f-label" data-i18n="title_spec">Title + spec table</span><input type="checkbox" id="opt-show-info" checked /></label>
@@ -2105,7 +2105,7 @@ let state = {
   activeScreenId: 1,
   display: {
     showCoords: true,
-    showGridLines: false,
+    showGridLines: true,
     showRulers: true,
     showInfo: true,
     showScreenOutline: true,
@@ -4064,11 +4064,7 @@ function drawRulers(ctx, s, bbX, bbY, bbW, bbH, ntilesH, ntilesV, cw, ch, accent
       ctx.font = `700 ${fs}px sans-serif`;
       ctx.textAlign = 'center';
       const labelY = hSide === 'bottom' ? (ry + 20 + fs) : (ry - 30 - fs);
-      const sublabelY = hSide === 'bottom' ? (ry + 40 + fs) : (ry - 14 - fs);
       ctx.fillText(`${bbW} px`, bbX + bbW / 2, labelY);
-      ctx.fillStyle = '#76767b';
-      ctx.font = `400 ${Math.round(fs * 0.7)}px sans-serif`;
-      ctx.fillText(`(${ntilesH} ${T('tiles')} × ${s.tileW} px)`, bbX + bbW / 2, sublabelY);
     }
     ctx.textAlign = 'left';
   }
@@ -4152,9 +4148,6 @@ function drawRulers(ctx, s, bbX, bbY, bbW, bbH, ntilesH, ntilesV, cw, ch, accent
       ctx.font = `700 ${fs}px sans-serif`;
       ctx.textAlign = 'center';
       ctx.fillText(`${bbH} px`, 0, 0);
-      ctx.fillStyle = '#76767b';
-      ctx.font = `400 ${Math.round(fs * 0.7)}px sans-serif`;
-      ctx.fillText(`(${ntilesV} ${T('tiles')} × ${s.tileH} px)`, 0, 24);
     }
     ctx.restore();
     ctx.textAlign = 'left';
