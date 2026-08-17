@@ -12,7 +12,7 @@
     --bg-card: #191d25;
     --bg-input: #12151b;
     --bg-chip: #1b1f27;
-    --bg-viewport: #0f1218;
+    --bg-viewport: #1a1e26;
     --bg-hover: #232834;
     --bg-tooltip: #2a2f3a;
     --bg-active-row: #1a2733;
@@ -334,7 +334,7 @@
   }
   .view-meta {
     position: absolute;
-    top: 12px; left: 14px;
+    top: 12px; right: 14px;
     font-family: var(--mono);
     font-size: 9px;
     color: var(--text-muted);
@@ -394,7 +394,7 @@
   }
   .tile-toolbar {
     position: absolute;
-    bottom: 14px;
+    top: 12px;
     left: 14px;
     display: flex;
     align-items: center;
@@ -472,6 +472,13 @@
     margin-right: 2px;
   }
   .tile-toolbar button.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+  /* Toolbar now sits at the top of the viewport — show its tooltips BELOW the buttons so they aren't clipped */
+  .tile-toolbar .tool-btn[data-tip]::after { bottom: auto; top: calc(100% + 8px); }
+  .tile-toolbar .tool-btn[data-tip]::before {
+    bottom: auto; top: calc(100% + 3px);
+    border-top-color: transparent;
+    border-bottom-color: var(--bg-tooltip, #000);
+  }
   /* Reusable modal dialog */
   .modal-backdrop {
     position: fixed; inset: 0; z-index: 1000;
