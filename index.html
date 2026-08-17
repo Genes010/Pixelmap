@@ -1080,6 +1080,51 @@
   <aside class="right-panel">
 
     <div class="card">
+      <h3><span data-i18n="project">Project</span> <span class="car">▾</span></h3>
+      <div class="card-body">
+        <div class="field">
+          <label data-i18n="title">Title</label>
+          <span class="f-inputs"><input type="text" id="proj-name" value="PROJECT" style="width: 130px;" /></span>
+        </div>
+        <div class="field">
+          <label data-i18n="subtitle">Subtitle</label>
+          <span class="f-inputs"><input type="text" id="proj-subtitle" value="LED Pixelmap Reference" style="width: 130px;" /></span>
+        </div>
+        <div class="field">
+          <label data-i18n="canvas_size">Canvas</label>
+          <span class="f-inputs">
+            <input type="number" id="canvas-w" value="1920" min="100" max="20000" />
+            <span class="sep">×</span>
+            <input type="number" id="canvas-h" value="1080" min="100" max="20000" />
+          </span>
+        </div>
+        <div class="field">
+          <label data-i18n="accent_color">Accent color</label>
+          <span class="f-inputs"><input type="color" id="color-accent" value="#2590ce" /></span>
+        </div>
+        <div class="field">
+          <label data-i18n="canvas_bg">Canvas background</label>
+          <span class="f-inputs">
+            <input type="color" id="color-canvas-bg" value="#e6e6e8" />
+            <button id="canvas-bg-white" style="padding:3px 7px;font-size:9px;">Wit</button>
+            <button id="canvas-bg-black" style="padding:3px 7px;font-size:9px;">Zwart</button>
+          </span>
+        </div>
+        <hr/>
+        <div class="info" data-i18n="projects_info">Save and switch between full shows. Stored in this browser — export to JSON to back up or move to another machine.</div>
+        <div id="project-list"></div>
+        <div class="btn-row">
+          <button id="save-new-project-btn" data-i18n="save_new_project">+ New project</button>
+          <button id="update-project-btn" data-i18n="update_project">Save</button>
+        </div>
+        <div class="btn-row">
+          <button id="import-project-btn" data-i18n="import_project_json">Import project JSON</button>
+          <input type="file" id="import-project-file" accept=".json" style="display: none;" />
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
       <h3><span data-i18n="screen_properties">Screen properties</span> <span class="chip" id="prop-screen-chip">SCREEN 1</span></h3>
       <div class="card-body">
         <div class="mode-tabs">
@@ -1145,11 +1190,6 @@
             </span>
           </div>
           <div class="btn-row">
-            <button id="fill-all" data-i18n="fill_all">Fill all</button>
-            <button id="clear-all" data-i18n="clear_all">Clear all</button>
-            <button id="invert" data-i18n="invert">Invert</button>
-          </div>
-          <div class="btn-row">
             <button id="rebuild-grid" data-i18n="rebuild_grid">Rebuild this screen's grid</button>
           </div>
         </div>
@@ -1191,12 +1231,8 @@
           <div class="stats" id="stats"></div>
         </div>
         <div id="grid" style="display: none;"></div>
-      </div>
-    </div>
 
-    <div class="card">
-      <h3><span data-i18n="per_screen_overlays">Per-screen overlays</span> <span class="car">▾</span></h3>
-      <div class="card-body">
+        <hr/>
         <div class="info" data-i18n="per_screen_overlays_info">Circle and cross overlays are on by default (white, 2px) for every screen. Toggle them off per screen here if needed.</div>
         <div class="field">
           <label data-i18n="overlay_circle">Circle</label>
@@ -1259,56 +1295,6 @@
         <div class="field">
           <label data-i18n="center_text_size">Center text size</label>
           <span class="f-inputs"><input type="number" id="opt-center-text-size" value="28" min="8" max="200" /></span>
-        </div>
-      </div>
-    </div>
-
-    <div class="card collapsed">
-      <h3><span data-i18n="project">Project</span> <span class="car">▾</span></h3>
-      <div class="card-body">
-        <div class="field">
-          <label data-i18n="title">Title</label>
-          <span class="f-inputs"><input type="text" id="proj-name" value="PROJECT" style="width: 130px;" /></span>
-        </div>
-        <div class="field">
-          <label data-i18n="subtitle">Subtitle</label>
-          <span class="f-inputs"><input type="text" id="proj-subtitle" value="LED Pixelmap Reference" style="width: 130px;" /></span>
-        </div>
-        <div class="field">
-          <label data-i18n="canvas_size">Canvas</label>
-          <span class="f-inputs">
-            <input type="number" id="canvas-w" value="1920" min="100" max="20000" />
-            <span class="sep">×</span>
-            <input type="number" id="canvas-h" value="1080" min="100" max="20000" />
-          </span>
-        </div>
-        <div class="field">
-          <label data-i18n="accent_color">Accent color</label>
-          <span class="f-inputs"><input type="color" id="color-accent" value="#2590ce" /></span>
-        </div>
-        <div class="field">
-          <label data-i18n="canvas_bg">Canvas background</label>
-          <span class="f-inputs">
-            <input type="color" id="color-canvas-bg" value="#e6e6e8" />
-            <button id="canvas-bg-white" style="padding:3px 7px;font-size:9px;">Wit</button>
-            <button id="canvas-bg-black" style="padding:3px 7px;font-size:9px;">Zwart</button>
-          </span>
-        </div>
-      </div>
-    </div>
-
-    <div class="card">
-      <h3><span data-i18n="projects">Projects</span> <span class="car">▾</span></h3>
-      <div class="card-body">
-        <div class="info" data-i18n="projects_info">Save and switch between full shows. Stored in this browser — export to JSON to back up or move to another machine.</div>
-        <div id="project-list"></div>
-        <div class="btn-row">
-          <button id="save-new-project-btn" data-i18n="save_new_project">+ New project</button>
-          <button id="update-project-btn" data-i18n="update_project">Save</button>
-        </div>
-        <div class="btn-row">
-          <button id="import-project-btn" data-i18n="import_project_json">Import project JSON</button>
-          <input type="file" id="import-project-file" accept=".json" style="display: none;" />
         </div>
       </div>
     </div>
@@ -2799,6 +2785,8 @@ function addScreen() {
   newScreen.active = makeActiveArray(newScreen.rows, newScreen.cols, true);
   state.screens.push(newScreen);
   state.activeScreenId = newId;
+  // New screens get the per-screen info overlay enabled by default
+  addScreenInfoItem(newScreen);
   renderScreenTabs();
   syncScreenToUI();
   renderGrid();
@@ -3643,24 +3631,6 @@ function drawScreen(ctx, s, cw, ch, accent) {
     ctx.textBaseline = 'alphabetic';
   }
   
-  // ============ SCREEN LABEL (on the screen) ============
-  // Force consistent text state regardless of previous render steps
-  ctx.textAlign = 'left';
-  ctx.textBaseline = 'alphabetic';
-  if (s.label) {
-    const fs = Math.max(20, Math.round(s.tileH / 4));
-    ctx.font = `700 ${fs}px sans-serif`;
-    const w = ctx.measureText(s.label).width;
-    const lx = bbX + bbW / 2 - w / 2;
-    const ly = bbY + bbH - fs - 30;
-    ctx.fillStyle = 'rgba(0,0,0,0.55)';
-    ctx.fillRect(lx - 14, ly - 8, w + 28, fs + 16);
-    ctx.fillStyle = 'white';
-    ctx.textBaseline = 'top';
-    ctx.fillText(s.label, lx, ly);
-    ctx.textBaseline = 'alphabetic';
-  }
-  
   // ============ RULERS ============
   if (state.display.showRulers) {
     drawRulers(ctx, s, bbX, bbY, bbW, bbH, maxC - minC + 1, maxR - minR + 1, cw, ch, accent);
@@ -3793,23 +3763,6 @@ function drawScreenAdvanced(ctx, s, cw, ch, accent) {
   // ============ CENTER TEXT ============
   if (state.display.showScreenCenterText) {
     drawCenterText(ctx, accent, bbX, bbY, bbW, bbH);
-  }
-  
-  // ============ SCREEN LABEL ============
-  ctx.textAlign = 'left';
-  ctx.textBaseline = 'alphabetic';
-  if (s.label) {
-    const fs = Math.max(20, Math.round(Math.min(bbW, bbH) / 12));
-    ctx.font = `700 ${fs}px sans-serif`;
-    const w = ctx.measureText(s.label).width;
-    const lx = bbX + bbW / 2 - w / 2;
-    const ly = bbY + bbH - fs - 30;
-    ctx.fillStyle = 'rgba(0,0,0,0.55)';
-    ctx.fillRect(lx - 14, ly - 8, w + 28, fs + 16);
-    ctx.fillStyle = 'white';
-    ctx.textBaseline = 'top';
-    ctx.fillText(s.label, lx, ly);
-    ctx.textBaseline = 'alphabetic';
   }
   
   // ============ RULERS ============
@@ -6498,9 +6451,9 @@ function attachAdvancedCanvasHandlers() {
 function wireUp() {
   $('add-screen-btn').onclick = () => { addScreen(); scheduleRender(); };
   $('rebuild-grid').onclick = () => { rebuildActiveGrid(); scheduleRender(); };
-  $('fill-all').onclick = () => { fillAll(); scheduleRender(); };
-  $('clear-all').onclick = () => { clearAll(); scheduleRender(); };
-  $('invert').onclick = () => { invertAll(); scheduleRender(); };
+  if ($('fill-all')) $('fill-all').onclick = () => { fillAll(); scheduleRender(); };
+  if ($('clear-all')) $('clear-all').onclick = () => { clearAll(); scheduleRender(); };
+  if ($('invert')) $('invert').onclick = () => { invertAll(); scheduleRender(); };
   // New canvas-based tile editing buttons
   if ($('fill-all-canvas')) $('fill-all-canvas').onclick = () => { fillAll(); scheduleRender(); };
   if ($('clear-all-canvas')) $('clear-all-canvas').onclick = () => { clearAll(); scheduleRender(); };
@@ -8929,6 +8882,9 @@ function enableArithmeticOnNumberInputs() {
 function init() {
   applyTheme(getStoredTheme());
   applyTranslations();
+  // A fresh project starts with the per-screen info overlay enabled on every screen
+  state.screens.forEach(s => addScreenInfoItem(s));
+  state.selectedOverlay = null;
   syncProjectToUI();
   syncScreenToUI();
   syncDisplayToUI();
