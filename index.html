@@ -488,6 +488,42 @@
     display: flex; align-items: center; justify-content: center;
     padding: 24px;
   }
+  /* Enlarged advanced tile editor (temporary big window) */
+  .adv-modal-backdrop {
+    position: fixed; inset: 0; z-index: 1100;
+    background: rgba(0,0,0,0.62);
+    display: none; align-items: center; justify-content: center;
+    padding: 24px;
+  }
+  .adv-modal-box {
+    background: var(--bg-card);
+    border: 1px solid var(--border-input);
+    border-radius: 10px;
+    width: 96vw; height: 92vh;
+    display: flex; flex-direction: column;
+    box-shadow: 0 16px 48px rgba(0,0,0,0.55);
+    overflow: hidden;
+  }
+  .adv-modal-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 11px 16px; border-bottom: 1px solid var(--border-input);
+    font-size: 13px; color: var(--text-primary);
+  }
+  .adv-modal-head button {
+    background: transparent; border: none; color: var(--text-secondary);
+    font-size: 18px; line-height: 1; cursor: pointer; padding: 2px 8px;
+  }
+  .adv-modal-head button:hover { color: var(--text-primary); }
+  .adv-modal-body {
+    flex: 1; min-height: 0; padding: 12px; display: flex;
+  }
+  .advanced-canvas-wrap.enlarged {
+    max-height: none; width: 100%; height: 100%;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .advanced-canvas-wrap.enlarged canvas {
+    width: 100%; height: 100%; object-fit: contain;
+  }
   .modal-box {
     background: var(--bg-card);
     border: 1px solid var(--border-input);
@@ -1229,6 +1265,7 @@
             <label><input type="checkbox" id="adv-snap-enabled" checked /> <span data-i18n="snap">Snap</span></label>
             <input type="number" id="adv-snap-size" value="8" min="1" max="200" />
             <button id="adv-clear-all" data-i18n="clear_all">Clear all</button>
+            <button id="adv-enlarge-btn" data-i18n="adv_enlarge" title="Open the tile editor in a larger window">⤢ Enlarge</button>
           </div>
           <div class="info" data-i18n="advanced_canvas_hint">Click to place. Click existing tile to select. Drag to move. Right-click or Delete key to remove.</div>
           <div class="advanced-canvas-wrap">
@@ -1486,6 +1523,17 @@
   <span class="fr">● READY</span>
 </div>
 
+<!-- ═══════════ ENLARGED ADVANCED TILE EDITOR ═══════════ -->
+<div class="adv-modal-backdrop" id="adv-enlarge-modal">
+  <div class="adv-modal-box" role="dialog" aria-modal="true">
+    <div class="adv-modal-head">
+      <span data-i18n="adv_enlarge_title">Tile editor</span>
+      <button id="adv-enlarge-close" title="Close" aria-label="Close">✕</button>
+    </div>
+    <div class="adv-modal-body" id="adv-enlarge-body"></div>
+  </div>
+</div>
+
 <script>
 'use strict';
 
@@ -1564,6 +1612,8 @@ const I18N = {
     tile_types: 'Tile types',
     tile_types_info: 'Define one or more tile types with their own dimensions and colors. Select a type, then click on the canvas below to place tiles.',
     add_tile_type: '+ Add tile type',
+    adv_enlarge: '⤢ Enlarge',
+    adv_enlarge_title: 'Tile editor',
     place_tiles: 'Place tiles',
     snap: 'Snap',
     snap_size: 'Snap size',
@@ -1822,6 +1872,8 @@ const I18N = {
     tile_types: 'Tegel types',
     tile_types_info: 'Definieer één of meer tegel types met eigen afmetingen en kleuren. Selecteer een type en klik op het canvas hieronder om tegels te plaatsen.',
     add_tile_type: '+ Tegel type toevoegen',
+    adv_enlarge: '⤢ Vergroten',
+    adv_enlarge_title: 'Tegel-editor',
     place_tiles: 'Tegels plaatsen',
     snap: 'Uitlijnen',
     snap_size: 'Uitlijn raster',
@@ -6408,6 +6460,43 @@ function findTileAt(s, x, y) {
   return -1;
 }
 
+// Temporarily move the advanced tile-editor canvas into a large modal window.
+// The canvas element (with all its handlers) is relocated, its backing
+// resolution bumped to fill the modal, then restored on close.
+let advEnlargeState = null;
+function openAdvancedEnlarge() {
+  const s = activeScreen();
+  if (!s || !s.advancedMode || advEnlargeState) return;
+  const wrap = document.querySelector('#advanced-config .advanced-canvas-wrap');
+  const canvas = $('advanced-canvas');
+  const modal = $('adv-enlarge-modal');
+  const body = $('adv-enlarge-body');
+  if (!wrap || !canvas || !modal || !body) return;
+  advEnlargeState = { parent: wrap.parentNode, next: wrap.nextSibling, w: canvas.width, h: canvas.height };
+  body.appendChild(wrap);
+  wrap.classList.add('enlarged');
+  modal.style.display = 'flex';
+  // Size the canvas backing resolution to the available space, then render crisp.
+  requestAnimationFrame(() => {
+    const r = body.getBoundingClientRect();
+    canvas.width = Math.max(600, Math.round(r.width - 8));
+    canvas.height = Math.max(300, Math.round(r.height - 8));
+    renderAdvancedCanvas();
+  });
+}
+function closeAdvancedEnlarge() {
+  if (!advEnlargeState) return;
+  const wrap = document.querySelector('.advanced-canvas-wrap.enlarged');
+  const canvas = $('advanced-canvas');
+  const modal = $('adv-enlarge-modal');
+  if (wrap) wrap.classList.remove('enlarged');
+  if (canvas) { canvas.width = advEnlargeState.w; canvas.height = advEnlargeState.h; }
+  if (wrap && advEnlargeState.parent) advEnlargeState.parent.insertBefore(wrap, advEnlargeState.next);
+  if (modal) modal.style.display = 'none';
+  advEnlargeState = null;
+  renderAdvancedCanvas();
+}
+
 function attachAdvancedCanvasHandlers() {
   const canvas = $('advanced-canvas');
   if (!canvas) return;
@@ -6681,9 +6770,19 @@ function wireUp() {
     scheduleRender();
   };
   
+  // Enlarge / restore the advanced tile editor in a big modal window
+  if ($('adv-enlarge-btn')) $('adv-enlarge-btn').onclick = openAdvancedEnlarge;
+  if ($('adv-enlarge-close')) $('adv-enlarge-close').onclick = closeAdvancedEnlarge;
+  if ($('adv-enlarge-modal')) $('adv-enlarge-modal').addEventListener('mousedown', (e) => {
+    if (e.target === $('adv-enlarge-modal')) closeAdvancedEnlarge();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && advEnlargeState) { e.preventDefault(); closeAdvancedEnlarge(); }
+  });
+
   // Advanced canvas interactions
   attachAdvancedCanvasHandlers();
-  
+
   // Context menu prevent on grid
   $('grid').oncontextmenu = e => e.preventDefault();
 }
