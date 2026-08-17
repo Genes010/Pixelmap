@@ -3406,26 +3406,25 @@ function showPage(n) {
 }
 
 // Draws the canvas-pixel coordinate of a screen's 0,0 point (its top-left corner)
-// as plain text next to that corner. Recomputed every render, so it tracks the
-// screen while it is moved.
+// as plain text, always just inside that top-left corner. Recomputed every render,
+// so it tracks the screen while it is moved. White text with a strong dark halo
+// keeps it readable on any tile colour.
 function drawScreenOrigin(ctx, bbX, bbY, cw, accent) {
   const label = `(${Math.round(bbX)}, ${Math.round(bbY)})`;
-  const fs = Math.max(12, Math.round(cw / 130));
+  const fs = Math.max(15, Math.round(cw / 95));
+  const pad = Math.round(fs * 0.45);
   ctx.save();
   ctx.font = `700 ${fs}px sans-serif`;
   ctx.textAlign = 'left';
-  const gap = 6;
-  // Prefer just above the top-left corner; if there's no room, drop just inside.
-  if (bbY - gap - fs >= 2) ctx.textBaseline = 'bottom';
-  else ctx.textBaseline = 'top';
-  const ty = (bbY - gap - fs >= 2) ? (bbY - gap) : (bbY + gap);
-  // Dark halo for legibility over bright tiles, then the accent-coloured text.
-  ctx.lineWidth = Math.max(2, fs / 5);
-  ctx.strokeStyle = 'rgba(0,0,0,0.6)';
+  ctx.textBaseline = 'top';
+  // Strong dark halo behind bright white text = high contrast on red/blue/any tile.
+  ctx.lineWidth = Math.max(3, Math.round(fs / 4));
+  ctx.strokeStyle = 'rgba(0,0,0,0.85)';
   ctx.lineJoin = 'round';
-  ctx.strokeText(label, bbX, ty);
-  ctx.fillStyle = accent;
-  ctx.fillText(label, bbX, ty);
+  ctx.miterLimit = 2;
+  ctx.strokeText(label, bbX + pad, bbY + pad);
+  ctx.fillStyle = '#ffffff';
+  ctx.fillText(label, bbX + pad, bbY + pad);
   ctx.restore();
 }
 
