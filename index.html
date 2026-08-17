@@ -5037,7 +5037,14 @@ function attachCanvasDragHandlers() {
       const sc = findScreenAt(x, y);
       if (sc) {
         e.preventDefault();
-        screenDragState = { screen: sc, startX: x, startY: y, origOffsetX: sc.offsetX, origOffsetY: sc.offsetY };
+        screenDragState = {
+          screen: sc, startX: x, startY: y, origOffsetX: sc.offsetX, origOffsetY: sc.offsetY,
+          // Screen-info overlays are pinned to this screen — capture their start
+          // positions so they can move along with the screen while dragging.
+          linkedItems: state.placedItems
+            .filter(it => it.type === 'screeninfo' && it.screenId === sc.id)
+            .map(it => ({ item: it, origX: it.x, origY: it.y })),
+        };
         state.activeScreenId = sc.id;
         renderScreenTabs();
         syncScreenToUI();
@@ -5159,6 +5166,16 @@ function attachCanvasDragHandlers() {
         s.offsetX = Math.round(propX);
         s.offsetY = Math.round(propY);
         activeSnapGuides = [];
+      }
+      // Move any screen-info overlay pinned to this screen by the same delta,
+      // so it stays in place relative to the screen while it is dragged.
+      if (screenDragState.linkedItems && screenDragState.linkedItems.length) {
+        const dX = s.offsetX - screenDragState.origOffsetX;
+        const dY = s.offsetY - screenDragState.origOffsetY;
+        screenDragState.linkedItems.forEach(li => {
+          li.item.x = Math.round(li.origX + dX);
+          li.item.y = Math.round(li.origY + dY);
+        });
       }
       // Keep the offset inputs in sync — otherwise the next renderCanvas() calls
       // syncScreenFromUI() and overwrites the new offset with the stale field value.
