@@ -363,6 +363,8 @@
   /* When zoomed beyond fit, canvas can exceed wrap and scroll */
   .canvas-wrap.zoomed { place-items: start; }
   .canvas-wrap.zoomed canvas { max-width: none; }
+  /* While middle-mouse panning, force a grabbing cursor everywhere */
+  body.panning, body.panning * { cursor: grabbing !important; }
   .page-nav {
     position: absolute;
     top: 12px;
@@ -8624,7 +8626,7 @@ function setTopMode(mode) {
 // NEW GUI: zoom, view-meta, accordions, footer
 // ============================================================
 // ============================================================
-// PREVIEW ZOOM (continuous, ctrl+wheel)  — shared for both canvases
+// PREVIEW ZOOM (continuous, alt/ctrl+wheel, zoom-to-cursor)  — shared for both canvases
 // ============================================================
 let previewZoom = 'fit';      // pixelmap: 'fit' or number
 let tpPreviewZoom = 'fit';    // test pattern: 'fit' or number
@@ -8677,22 +8679,73 @@ function effectiveZoom(canvas, mode) {
   return rect.width / canvas.width;
 }
 
-// Ctrl+wheel zoom handler factory
+// Alt+wheel zoom handler factory (Ctrl/Cmd also work) — zooms toward the cursor,
+// mirroring the navigation in the rack-builder app.
 function attachWheelZoom(canvas, mode) {
   if (!canvas) return;
   const wrap = canvas.closest('.canvas-wrap');
   const target = wrap || canvas;
   target.addEventListener('wheel', (e) => {
-    if (!e.ctrlKey && !e.metaKey) return; // only zoom with ctrl/cmd held
+    if (!e.altKey && !e.ctrlKey && !e.metaKey) return; // only zoom with alt/ctrl/cmd held
     e.preventDefault();
     const cur = effectiveZoom(canvas, mode);
     // Wheel up = zoom in
     const factor = e.deltaY < 0 ? 1.12 : 1 / 1.12;
     let next = cur * factor;
     next = Math.max(0.05, Math.min(8, next));
-    if (mode === 'tp') setTpPreviewZoom(next);
-    else setPreviewZoom(next);
+    if (Math.abs(next - cur) < 1e-4) return;
+    zoomToPointer(canvas, wrap, mode, next, e.clientX, e.clientY);
   }, { passive: false });
+}
+
+// Applies a new zoom level while keeping the point under (clientX, clientY) fixed
+// on screen, by nudging the scroll container after the resize.
+function zoomToPointer(canvas, wrap, mode, next, clientX, clientY) {
+  const before = canvas.getBoundingClientRect();
+  const fx = before.width ? (clientX - before.left) / before.width : 0.5;
+  const fy = before.height ? (clientY - before.top) / before.height : 0.5;
+  if (mode === 'tp') setTpPreviewZoom(next);
+  else setPreviewZoom(next);
+  if (!wrap) return;
+  // After the canvas has been resized, shift the scroll so the same fraction of
+  // the canvas sits back under the cursor.
+  const after = canvas.getBoundingClientRect();
+  const pointX = after.left + fx * after.width;
+  const pointY = after.top + fy * after.height;
+  wrap.scrollLeft += (pointX - clientX);
+  wrap.scrollTop += (pointY - clientY);
+}
+
+// Middle-mouse-button drag pans the zoomed canvas (grab/pan), like the rack builder.
+function attachMiddlePan(canvas) {
+  if (!canvas) return;
+  const wrap = canvas.closest('.canvas-wrap');
+  if (!wrap) return;
+  let pan = null;
+  // Capture phase so this runs before the canvas's own mousedown (tile paint / screen move).
+  wrap.addEventListener('mousedown', (e) => {
+    if (e.button !== 1) return; // middle button only
+    e.preventDefault();
+    e.stopPropagation();
+    pan = { x: e.clientX, y: e.clientY, left: wrap.scrollLeft, top: wrap.scrollTop };
+    document.body.classList.add('panning');
+    const move = (ev) => {
+      if (!pan) return;
+      ev.preventDefault();
+      wrap.scrollLeft = pan.left - (ev.clientX - pan.x);
+      wrap.scrollTop = pan.top - (ev.clientY - pan.y);
+    };
+    const up = () => {
+      pan = null;
+      document.body.classList.remove('panning');
+      window.removeEventListener('mousemove', move);
+      window.removeEventListener('mouseup', up);
+    };
+    window.addEventListener('mousemove', move);
+    window.addEventListener('mouseup', up);
+  }, true);
+  // Suppress the browser's middle-click autoscroll.
+  wrap.addEventListener('auxclick', (e) => { if (e.button === 1) e.preventDefault(); });
 }
 
 function updateViewMeta(x, y) {
@@ -8935,9 +8988,11 @@ function init() {
     };
   });
   setTpPreviewZoom('fit');
-  // Ctrl/Cmd + wheel zoom on both previews
+  // Alt (or Ctrl/Cmd) + wheel zoom-to-cursor, and middle-mouse pan, on both previews
   attachWheelZoom($('canvas'), 'pm');
   attachWheelZoom($('tp-canvas'), 'tp');
+  attachMiddlePan($('canvas'));
+  attachMiddlePan($('tp-canvas'));
   // Page navigation
   if ($('page-prev')) $('page-prev').onclick = () => { if (currentPage === 2) showPage(1); };
   if ($('page-next')) $('page-next').onclick = () => { if (currentPage === 1 && state.infoFitsOnPage1 === false) showPage(2); };
