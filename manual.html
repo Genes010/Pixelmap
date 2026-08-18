@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Pixelmap — Manual</title>
+<style>
+  :root {
+    --bg-app: #101216;
+    --bg-panel: #14171d;
+    --bg-card: #191d25;
+    --text-primary: #e6e8ee;
+    --text-secondary: #9aa0ad;
+    --text-muted: #6a6e77;
+    --border: #262b36;
+    --accent: #2590ce;
+    --accent-soft: #5fb5e6;
+    --code-bg: #0f1218;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg-app: #eef0f3;
+      --bg-panel: #ffffff;
+      --bg-card: #ffffff;
+      --text-primary: #1c1e24;
+      --text-secondary: #555962;
+      --text-muted: #858994;
+      --border: #d5d8df;
+      --code-bg: #f2f3f6;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, sans-serif;
+    background: var(--bg-app);
+    color: var(--text-primary);
+    line-height: 1.6;
+    font-size: 15px;
+  }
+  a { color: var(--accent-soft); }
+  header {
+    position: sticky; top: 0; z-index: 10;
+    display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+    padding: 14px 22px;
+    background: var(--bg-panel);
+    border-bottom: 1px solid var(--border);
+  }
+  .logo { font-weight: 800; letter-spacing: 0.5px; font-size: 17px; }
+  .logo .slash { color: var(--accent); }
+  .sub { color: var(--text-muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em; }
+  header .spacer { flex: 1; }
+  .back-btn {
+    text-decoration: none; color: var(--text-primary);
+    border: 1px solid var(--border); border-radius: 8px;
+    padding: 7px 14px; font-size: 13px; background: var(--bg-card);
+    white-space: nowrap;
+  }
+  .back-btn:hover { border-color: var(--accent); }
+  main { max-width: 860px; margin: 0 auto; padding: 32px 22px 80px; }
+  h1 { font-size: 28px; margin: 0 0 6px; }
+  .lead { color: var(--text-secondary); margin: 0 0 26px; }
+  h2 {
+    font-size: 20px; margin: 38px 0 12px; padding-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+  }
+  h3 { font-size: 15.5px; margin: 22px 0 8px; color: var(--accent-soft); }
+  p { margin: 10px 0; }
+  ul { margin: 10px 0; padding-left: 22px; }
+  li { margin: 5px 0; }
+  strong { color: var(--text-primary); }
+  code {
+    background: var(--code-bg); border: 1px solid var(--border);
+    border-radius: 5px; padding: 1px 6px; font-size: 13px;
+    font-family: 'SF Mono', 'Cascadia Code', Menlo, Consolas, monospace;
+  }
+  .toc {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: 10px; padding: 16px 20px; margin: 0 0 30px;
+  }
+  .toc h2 { border: none; margin: 0 0 10px; font-size: 15px; }
+  .toc ul { columns: 2; column-gap: 28px; padding-left: 18px; }
+  @media (max-width: 560px) { .toc ul { columns: 1; } }
+  .note {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-left: 3px solid var(--accent); border-radius: 8px;
+    padding: 12px 16px; margin: 16px 0;
+  }
+  table { border-collapse: collapse; width: 100%; margin: 14px 0; font-size: 14px; }
+  th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--border); }
+  th { color: var(--text-secondary); font-weight: 600; }
+  kbd {
+    background: var(--code-bg); border: 1px solid var(--border);
+    border-bottom-width: 2px; border-radius: 5px; padding: 1px 7px;
+    font-size: 12.5px; font-family: inherit;
+  }
+  footer { color: var(--text-muted); font-size: 12.5px; margin-top: 50px; text-align: center; }
+</style>
+</head>
+<body>
+<header>
+  <span class="logo">GENES<span class="slash">//</span>MEDIA</span>
+  <span class="sub">LED Pixelmap Generator</span>
+  <span class="spacer"></span>
+  <a class="back-btn" href="./">← Back to app</a>
+</header>
+
+<main>
+  <h1>Pixelmap — Manual</h1>
+  <p class="lead">Lay out, document and export LED screens (pixelmaps) and test patterns.
+  Everything runs locally in your browser — no server required, and your data stays on your own machine.</p>
+
+  <nav class="toc">
+    <h2>Contents</h2>
+    <ul>
+      <li><a href="#quick-start">Quick start</a></li>
+      <li><a href="#two-modes">Two modes</a></li>
+      <li><a href="#navigation">Canvas navigation</a></li>
+      <li><a href="#screens">Managing screens</a></li>
+      <li><a href="#screen-properties">Screen properties</a></li>
+      <li><a href="#enlarged-editor">Enlarged tile editor</a></li>
+      <li><a href="#per-screen-overlays">Per-screen overlays</a></li>
+      <li><a href="#project">Project &amp; Projects</a></li>
+      <li><a href="#overlays">Overlays</a></li>
+      <li><a href="#display">Display options</a></li>
+      <li><a href="#presets">Presets</a></li>
+      <li><a href="#export">Exporting</a></li>
+      <li><a href="#test-patterns">Test patterns</a></li>
+      <li><a href="#shortcuts">Shortcuts</a></li>
+      <li><a href="#storage">Storage &amp; back-up</a></li>
+    </ul>
+  </nav>
+
+  <h2 id="quick-start">Quick start</h2>
+  <ul>
+    <li>Your <strong>screens</strong> are on the left, the <strong>canvas</strong> (preview) in the middle, and the <strong>settings</strong> on the right.</li>
+    <li>Set the canvas size and title under <strong>Project</strong> (top right).</li>
+    <li>Select a screen on the left and configure it under <strong>Screen properties</strong>.</li>
+    <li>Done? Click <strong>Download PNG</strong> (top right).</li>
+  </ul>
+  <p>Switch language with <strong>EN / NL</strong> (top right); toggle light/dark with the sun/moon icon.</p>
+
+  <h2 id="two-modes">Two modes</h2>
+  <p>Switch at the top between:</p>
+  <ul>
+    <li><strong>Pixelmap</strong> — arrange your LED screens on a canvas (the main mode).</li>
+    <li><strong>Test patterns</strong> — generate test images (colour bars, grayscale ramps, grids, etc.) at a chosen resolution.</li>
+  </ul>
+
+  <h2 id="navigation">Canvas navigation</h2>
+  <p>In both the pixelmap and the test-pattern preview:</p>
+  <ul>
+    <li><strong>Zoom in/out:</strong> scroll the mouse wheel — it zooms toward the <strong>cursor position</strong>.</li>
+    <li><strong>Pan:</strong> hold the <strong>middle mouse button</strong> and drag.</li>
+    <li><strong>Zoom level:</strong> the <strong>Fit / 50% / 100% / 200%</strong> buttons below the preview.</li>
+    <li>Live <strong>VIEW / CURSOR / TILE</strong> info sits in the bottom-left corner.</li>
+  </ul>
+
+  <h2 id="screens">Managing screens</h2>
+  <ul>
+    <li><strong>+</strong> (top of the Screens column) adds a screen.</li>
+    <li>Click a screen to select and edit it.</li>
+    <li><strong>Double-click</strong> the name to rename it.</li>
+    <li><strong>×</strong> removes a screen.</li>
+  </ul>
+  <p>On the canvas each screen shows its <strong>0,0 position</strong> in the top-left corner (the canvas pixel coordinate of that corner). The value updates live while you drag a screen, and can be toggled off under <em>Display options → Screen 0,0 position</em>.</p>
+
+  <h2 id="screen-properties">Screen properties</h2>
+  <p>At the top of this panel you choose <strong>Grid mode</strong> or <strong>Advanced</strong> per screen.</p>
+
+  <h3>Grid mode</h3>
+  <p>A regular grid of identical tiles:</p>
+  <ul>
+    <li><strong>Tile pixels</strong> — width × height of one tile (in pixels).</li>
+    <li><strong>Grid (cols × rows)</strong> — number of columns and rows.</li>
+    <li><strong>Offset</strong> — the screen's position on the canvas (x, y).</li>
+    <li><strong>Colors</strong> — colour A and B (checker/gradient).</li>
+    <li><strong>Gradient</strong> — Checker (A+B), gradient per tile, or gradient across the whole screen, with a direction.</li>
+    <li><strong>Rebuild this screen's grid</strong> — rebuilds the grid.</li>
+  </ul>
+  <p>Turn individual tiles on/off with the <strong>tile tool</strong> (click/drag on the canvas).</p>
+
+  <h3>Advanced mode (free tile placement)</h3>
+  <p>For irregular walls: define one or more <strong>tile types</strong> (each with its own size and colours) and place them freely:</p>
+  <ul>
+    <li><strong>+ Add tile type</strong> — a new tile type.</li>
+    <li>Select a type, click the editor canvas to place; drag to move; <strong>right-click</strong> or <kbd>Delete</kbd> to remove.</li>
+    <li><strong>Snap</strong> — place on a grid (adjustable step size).</li>
+    <li><strong>Clear all</strong> — remove all placed tiles.</li>
+  </ul>
+
+  <h2 id="enlarged-editor">Enlarged tile editor</h2>
+  <p>The advanced editor canvas is small; click <strong>⤢ Enlarge</strong> to open it temporarily in a large window. In that window:</p>
+  <ul>
+    <li><strong>Zoom</strong> with the mouse wheel (toward the cursor) and <strong>pan</strong> with the middle mouse button.</li>
+    <li><strong>Fit view</strong> (top right) resets the view to fit.</li>
+    <li>The <strong>tile-type picker, snap and Clear all</strong> live in the left sidebar, so you can pick/add tiles without closing.</li>
+    <li>Close with <strong>✕</strong>, <kbd>Escape</kbd>, or a click outside the window. Everything returns to the side panel.</li>
+  </ul>
+
+  <h2 id="per-screen-overlays">Per-screen overlays</h2>
+  <p>At the bottom of Screen properties, per screen:</p>
+  <ul>
+    <li><strong>Circle</strong> and <strong>Cross</strong> — circle and diagonal-cross overlays (on by default, white, 2px).</li>
+    <li><strong>Color</strong> and <strong>Line width</strong> — colour and line width of those overlays.</li>
+    <li><strong>Screen info overlay</strong> — a draggable/resizable info box with the screen name, project name and resolution. On by default for a new project, and it moves along when you drag the screen.</li>
+  </ul>
+
+  <h2 id="project">Project &amp; Projects</h2>
+  <p>The <strong>Project</strong> card (top right) contains:</p>
+  <ul>
+    <li><strong>Title / Subtitle</strong> — title and subtitle (also used by the "Project info" overlay).</li>
+    <li><strong>Canvas</strong> — the total canvas size in pixels.</li>
+    <li><strong>Accent color</strong> — colour for outlines, overlays and labels.</li>
+    <li><strong>Canvas background</strong> — background colour (with White/Black shortcuts).</li>
+  </ul>
+  <p>Below it (<strong>Projects</strong>) you manage whole shows:</p>
+  <ul>
+    <li><strong>+ New project</strong> — save the current setup as a new project.</li>
+    <li><strong>Save</strong> — update the active project.</li>
+    <li><strong>Import project JSON</strong> — load a previously exported project.</li>
+  </ul>
+
+  <h2 id="overlays">Overlays</h2>
+  <p>Add items that sit on top of the canvas (drag to place, drag the corners to resize):</p>
+  <ul>
+    <li><strong>+ Color bar</strong> — a colour bar.</li>
+    <li><strong>+ Grayscale</strong> — a grayscale ramp.</li>
+    <li><strong>+ Project info</strong> — title + subtitle + resolution.</li>
+    <li><strong>+ Add logo</strong> — your own image (PNG/JPG/GIF/SVG/WebP).</li>
+  </ul>
+
+  <h2 id="display">Display options</h2>
+  <p>Toggles for what is drawn on the canvas, including:</p>
+  <ul>
+    <li><strong>Tile coordinates</strong> — per-tile coordinates.</li>
+    <li><strong>Grid lines between tiles</strong> — grid lines between tiles (on by default).</li>
+    <li><strong>Inactive tile hints</strong> — hints for inactive tiles.</li>
+    <li><strong>Dimension rulers</strong> — rulers showing the total size in px.</li>
+    <li><strong>Title + spec table</strong> — title block with a specification table.</li>
+    <li><strong>Per-screen outline</strong> — accent border around each screen.</li>
+    <li><strong>Canvas corner coords</strong> — the canvas corner coordinates.</li>
+    <li><strong>Screen 0,0 position</strong> — the canvas pixel position of each screen's 0,0 corner.</li>
+    <li><strong>Canvas dimension labels</strong> — canvas size labels.</li>
+    <li><strong>Center text on screens</strong> — text in the centre of screens (with adjustable size).</li>
+  </ul>
+
+  <h2 id="presets">Presets</h2>
+  <ul>
+    <li>Built-in presets plus your own <strong>Save current</strong>.</li>
+    <li><strong>Export JSON / Import JSON</strong> for exchange.</li>
+  </ul>
+
+  <h2 id="export">Exporting</h2>
+  <ul>
+    <li><strong>Download PNG</strong> (top right) exports the canvas as an image.</li>
+    <li>If the title + spec table don't fit on one page, the message <em>"Info doesn't fit on page 1"</em> appears at the top and a <strong>second page</strong> is added on download. Use <strong>◀ 1 / 2 ▶</strong> to page through the preview.</li>
+  </ul>
+
+  <h2 id="test-patterns">Test patterns</h2>
+  <ul>
+    <li>Pick a <strong>pattern</strong> on the left (colour bars, grayscale, grid, crosshatch, …).</li>
+    <li>Set the <strong>resolution</strong> on the right (presets or custom) and the pattern options.</li>
+    <li><strong>Render</strong> and export.</li>
+  </ul>
+  <p>Use <strong>↻ From pixelmap</strong> to take over the screen layout from the pixelmap mode.</p>
+
+  <h2 id="shortcuts">Keyboard &amp; mouse shortcuts</h2>
+  <table>
+    <thead><tr><th>Action</th><th>Shortcut</th></tr></thead>
+    <tbody>
+      <tr><td>Zoom in/out (toward cursor)</td><td>Mouse wheel</td></tr>
+      <tr><td>Pan</td><td>Middle-mouse drag</td></tr>
+      <tr><td>Move a screen</td><td><kbd>Alt</kbd> + click drag (or the move/grab tool)</td></tr>
+      <tr><td>Delete a tile (advanced)</td><td>Right-click or <kbd>Delete</kbd></td></tr>
+      <tr><td>Close the enlarged editor</td><td><kbd>Escape</kbd></td></tr>
+    </tbody>
+  </table>
+
+  <h2 id="storage">Storage &amp; back-up</h2>
+  <p>Projects, presets and settings are saved in your <strong>browser's localStorage</strong>. That means:</p>
+  <ul>
+    <li>They are tied to this browser on this device.</li>
+    <li>Clearing your browser data removes them.</li>
+  </ul>
+  <div class="note">👉 So export important projects to <strong>JSON</strong> as a back-up, or to use them on another device.</div>
+
+  <footer>GENES//MEDIA — LED Pixelmap Generator · <a href="./">Back to app</a></footer>
+</main>
+</body>
+</html>
