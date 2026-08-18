@@ -2942,6 +2942,7 @@ function removeScreen(id) {
   renderGrid();
   renderStats();
   renderLogoList();
+  scheduleRender(); // re-render the canvas so the removed screen disappears immediately
 }
 
 function rebuildActiveGrid() {
@@ -3877,7 +3878,27 @@ function drawScreenAdvanced(ctx, s, cw, ch, accent) {
     }
     ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
   });
-  
+
+  // ============ TILE COORDINATES ============
+  // Number each placed tile by its column/row position (relative to the
+  // bounding box + its own tile size), just like grid mode does.
+  if (state.display.showCoords) {
+    ctx.fillStyle = 'rgba(255,255,255,0.92)';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    s.placedTiles.forEach(pt => {
+      const t = getTileType(s, pt.typeId);
+      if (!t) return;
+      const col = Math.round((pt.x - bb.minX) / t.w) + 1;
+      const row = Math.round((pt.y - bb.minY) / t.h) + 1;
+      const fs = Math.max(8, Math.min(20, Math.floor(t.w / 4.5)));
+      ctx.font = `500 ${fs}px sans-serif`;
+      ctx.fillText(`${col},${row}`, s.offsetX + pt.x + t.w / 2, s.offsetY + pt.y + t.h / 2);
+    });
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'alphabetic';
+  }
+
   // ============ OVERLAY (clipped to placed tiles) ============
   const _oCircleA = resolveOverlayCircle(s);
   const _oCrossA = resolveOverlayCross(s);
