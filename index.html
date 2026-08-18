@@ -705,6 +705,22 @@
     text-overflow: ellipsis;
     white-space: nowrap;
   }
+  .card > h3 .screen-select {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    color: var(--accent-soft);
+    background: rgba(37,144,206,0.14);
+    border: 1px solid var(--border-pill-info, rgba(37,144,206,0.4));
+    padding: 4px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    max-width: 170px;
+    text-overflow: ellipsis;
+  }
+  .card > h3 .screen-select:hover { background: rgba(37,144,206,0.22); }
+  .card > h3 .screen-select:focus { outline: none; border-color: var(--accent); }
   .card > h3 .car { color: var(--text-muted); font-size: 10px; transition: transform 0.15s; }
   .card.collapsed > h3 .car { transform: rotate(-90deg); }
   .card.collapsed > *:not(h3) { display: none !important; }
@@ -1191,7 +1207,7 @@
     </div>
 
     <div class="card">
-      <h3><span data-i18n="screen_properties">Screen properties</span> <span class="chip" id="prop-screen-chip">SCREEN 1</span></h3>
+      <h3><span data-i18n="screen_properties">Screen properties</span> <select class="screen-select" id="prop-screen-select" title="Select screen"></select></h3>
       <div class="card-body">
         <div class="mode-tabs">
           <button class="mode-tab active" data-mode="grid" data-i18n="mode_grid">Grid mode</button>
@@ -2770,8 +2786,7 @@ function renderScreenTabs() {
         document.querySelectorAll('#screen-tabs .scr-row').forEach(r => {
           r.classList.toggle('on', parseInt(r.dataset.id) === s.id);
         });
-        const chip = $('prop-screen-chip');
-        if (chip) chip.textContent = (s.label || `Screen ${s.id}`).toUpperCase();
+        renderScreenSelector();
       }
       syncScreenToUI();
       renderGrid();
@@ -2811,12 +2826,32 @@ function renderScreenTabs() {
     };
     container.appendChild(row);
   });
-  // Update the Screen properties card chip
-  const chip = $('prop-screen-chip');
-  if (chip) {
-    const a = activeScreen();
-    if (a) chip.textContent = (a.label || `Screen ${a.id}`).toUpperCase();
-  }
+  // Update the Screen properties card screen selector
+  renderScreenSelector();
+}
+
+// Populates the Screen-properties dropdown with every screen; selected = active.
+function renderScreenSelector() {
+  const sel = $('prop-screen-select');
+  if (!sel) return;
+  sel.innerHTML = state.screens.map(s => {
+    const name = (s.label || `Screen ${s.id}`).toUpperCase();
+    return `<option value="${s.id}"${s.id === state.activeScreenId ? ' selected' : ''}>${escapeHtml(name)}</option>`;
+  }).join('');
+}
+
+// Selects a screen (from the dropdown or a click on the canvas) and opens its
+// properties, refreshing the whole UI to match.
+function selectScreen(id) {
+  state.activeScreenId = id;
+  renderScreenTabs();
+  syncScreenToUI();
+  renderGrid();
+  renderStats();
+  updateModeUI();
+  renderTileTypesList();
+  renderAdvancedCanvas();
+  scheduleRender();
 }
 
 function syncScreenFromUI() {
@@ -5225,11 +5260,19 @@ function attachCanvasDragHandlers() {
         }
         return;
       }
-      // Pointer (or any non-tile tool): just deselect overlays
+      // Pointer (or any non-tile tool): deselect overlays and select the screen
+      // under the cursor so its properties open.
+      let deselected = false;
       if (state.selectedLogoId !== null || state.selectedOverlay !== null) {
         state.selectedLogoId = null;
         state.selectedOverlay = null;
         renderLogoList();
+        deselected = true;
+      }
+      const scHit = findScreenAt(x, y);
+      if (scHit && scHit.id !== state.activeScreenId) {
+        selectScreen(scHit.id);
+      } else if (deselected) {
         scheduleRender();
       }
       return;
@@ -5249,6 +5292,21 @@ function attachCanvasDragHandlers() {
       origW: hit.obj.w,
       origH: hit.obj.h,
     };
+    // A screen-info box belongs to a screen — clicking it also opens that
+    // screen's properties.
+    if (hit.kind === 'item') {
+      const it = state.placedItems.find(i => i.id === hit.obj.id);
+      if (it && it.type === 'screeninfo' && it.screenId != null && it.screenId !== state.activeScreenId) {
+        state.activeScreenId = it.screenId;
+        renderScreenTabs();
+        syncScreenToUI();
+        renderGrid();
+        renderStats();
+        updateModeUI();
+        renderTileTypesList();
+        renderAdvancedCanvas();
+      }
+    }
     renderLogoList();
     scheduleRender();
   };
@@ -6724,6 +6782,14 @@ function attachAdvancedCanvasHandlers() {
 
 function wireUp() {
   $('add-screen-btn').onclick = () => { addScreen(); scheduleRender(); };
+  // Screen-properties dropdown: switch the active screen (stopPropagation so
+  // clicking it doesn't collapse the card via the h3 toggle).
+  const screenSel = $('prop-screen-select');
+  if (screenSel) {
+    screenSel.addEventListener('mousedown', (e) => e.stopPropagation());
+    screenSel.addEventListener('click', (e) => e.stopPropagation());
+    screenSel.onchange = (e) => { e.stopPropagation(); selectScreen(parseInt(e.target.value)); };
+  }
   $('rebuild-grid').onclick = () => { rebuildActiveGrid(); scheduleRender(); };
   if ($('fill-all')) $('fill-all').onclick = () => { fillAll(); scheduleRender(); };
   if ($('clear-all')) $('clear-all').onclick = () => { clearAll(); scheduleRender(); };
