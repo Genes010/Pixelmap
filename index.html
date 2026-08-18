@@ -3214,6 +3214,35 @@ function getScreenBBoxCanvas(s) {
   };
 }
 
+// Keeps each screen-info overlay anchored to its screen: when the screen's
+// bounding box moves or resizes (offset, tile pixels, grid size…), the linked
+// overlay is repositioned and scaled proportionally within that box. Runs every
+// render; a per-screen anchor box (_infoBB) tracks the last box it was fitted to,
+// so it only remaps on an actual change (and user drags of the overlay itself
+// are preserved between changes).
+function reflowScreenInfoItems() {
+  state.screens.forEach(s => {
+    const items = state.placedItems.filter(it => it.type === 'screeninfo' && it.screenId === s.id);
+    if (!items.length) { s._infoBB = null; return; }
+    const bb = getScreenBBoxCanvas(s);
+    if (!bb || bb.w <= 0 || bb.h <= 0) return;
+    const prev = s._infoBB;
+    if (!prev) { s._infoBB = { x: bb.x, y: bb.y, w: bb.w, h: bb.h }; return; }
+    if (Math.abs(prev.x - bb.x) < 0.5 && Math.abs(prev.y - bb.y) < 0.5 &&
+        Math.abs(prev.w - bb.w) < 0.5 && Math.abs(prev.h - bb.h) < 0.5) return;
+    const sx = bb.w / prev.w, sy = bb.h / prev.h;
+    items.forEach(it => {
+      const relX = (it.x - prev.x) / prev.w;
+      const relY = (it.y - prev.y) / prev.h;
+      it.x = Math.round(bb.x + relX * bb.w);
+      it.y = Math.round(bb.y + relY * bb.h);
+      it.w = Math.max(20, Math.round(it.w * sx));
+      it.h = Math.max(20, Math.round(it.h * sy));
+    });
+    s._infoBB = { x: bb.x, y: bb.y, w: bb.w, h: bb.h };
+  });
+}
+
 // Screen info overlay is a draggable/resizable placedItem (type: 'screeninfo', linked via screenId)
 function hasScreenInfo(s) { return state.placedItems.some(it => it.type === 'screeninfo' && it.screenId === s.id); }
 function addScreenInfoItem(s) {
@@ -3287,7 +3316,9 @@ function renderCanvas() {
   syncProjectFromUI();
   syncScreenFromUI();
   syncDisplayFromUI();
-  
+  // Keep screen-info overlays anchored/scaled to their screens after any change.
+  reflowScreenInfoItems();
+
   const { canvasW: cw, canvasH: ch, accent, name, subtitle } = {
     canvasW: state.project.canvasW,
     canvasH: state.project.canvasH,
@@ -5227,11 +5258,6 @@ function attachCanvasDragHandlers() {
         e.preventDefault();
         screenDragState = {
           screen: sc, startX: x, startY: y, origOffsetX: sc.offsetX, origOffsetY: sc.offsetY,
-          // Screen-info overlays are pinned to this screen — capture their start
-          // positions so they can move along with the screen while dragging.
-          linkedItems: state.placedItems
-            .filter(it => it.type === 'screeninfo' && it.screenId === sc.id)
-            .map(it => ({ item: it, origX: it.x, origY: it.y })),
         };
         state.activeScreenId = sc.id;
         renderScreenTabs();
@@ -5378,16 +5404,7 @@ function attachCanvasDragHandlers() {
         s.offsetY = Math.round(propY);
         activeSnapGuides = [];
       }
-      // Move any screen-info overlay pinned to this screen by the same delta,
-      // so it stays in place relative to the screen while it is dragged.
-      if (screenDragState.linkedItems && screenDragState.linkedItems.length) {
-        const dX = s.offsetX - screenDragState.origOffsetX;
-        const dY = s.offsetY - screenDragState.origOffsetY;
-        screenDragState.linkedItems.forEach(li => {
-          li.item.x = Math.round(li.origX + dX);
-          li.item.y = Math.round(li.origY + dY);
-        });
-      }
+      // (Screen-info overlays follow the screen via reflowScreenInfoItems().)
       // Keep the offset inputs in sync — otherwise the next renderCanvas() calls
       // syncScreenFromUI() and overwrites the new offset with the stale field value.
       if (s.id === state.activeScreenId) {
