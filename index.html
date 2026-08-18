@@ -3880,18 +3880,32 @@ function drawScreenAdvanced(ctx, s, cw, ch, accent) {
   });
 
   // ============ TILE COORDINATES ============
-  // Number each placed tile by its column/row position (relative to the
-  // bounding box + its own tile size), just like grid mode does.
+  // Number each placed tile by its column/row on ONE consistent reference grid
+  // (the most common tile size), so a differing tile type doesn't restart or
+  // double the numbering — the columns/rows keep running through.
   if (state.display.showCoords) {
+    // Reference cell = the most frequently used placed-tile size.
+    const sizeCounts = {};
+    let refW = 0, refH = 0, bestN = 0;
+    s.placedTiles.forEach(pt => {
+      const t = getTileType(s, pt.typeId);
+      if (!t) return;
+      const key = t.w + 'x' + t.h;
+      sizeCounts[key] = (sizeCounts[key] || 0) + 1;
+      if (sizeCounts[key] > bestN) { bestN = sizeCounts[key]; refW = t.w; refH = t.h; }
+    });
+    if (!refW) { refW = s.tileW || 56; refH = s.tileH || 112; }
     ctx.fillStyle = 'rgba(255,255,255,0.92)';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     s.placedTiles.forEach(pt => {
       const t = getTileType(s, pt.typeId);
       if (!t) return;
-      const col = Math.round((pt.x - bb.minX) / t.w) + 1;
-      const row = Math.round((pt.y - bb.minY) / t.h) + 1;
-      const fs = Math.max(8, Math.min(20, Math.floor(t.w / 4.5)));
+      // Assign each tile to the reference cell its centre falls in, so columns
+      // and rows stay consistent regardless of the tile's own size.
+      const col = Math.floor((pt.x + t.w / 2 - bb.minX) / refW) + 1;
+      const row = Math.floor((pt.y + t.h / 2 - bb.minY) / refH) + 1;
+      const fs = Math.max(8, Math.min(20, Math.floor(refW / 4.5)));
       ctx.font = `500 ${fs}px sans-serif`;
       ctx.fillText(`${col},${row}`, s.offsetX + pt.x + t.w / 2, s.offsetY + pt.y + t.h / 2);
     });
