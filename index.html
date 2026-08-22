@@ -120,25 +120,25 @@
     align-items: center;
     gap: 9px;
     padding: 5px 13px;
-    border: 1px solid var(--border);
-    background: var(--bg-chip);
+    border: 1px solid rgba(37,144,206,0.5);
+    background: rgba(37,144,206,0.10);
     border-radius: 8px;
     font-size: 12.5px;
     font-weight: 700;
-    color: var(--text-secondary);
+    color: var(--accent-soft);
     cursor: pointer;
     font-family: inherit;
   }
   .top-mode-btn .tm-ic {
     width: 26px; height: 26px;
     border-radius: 6px;
-    background: var(--bg-hover);
-    color: var(--text-muted);
+    background: rgba(37,144,206,0.18);
+    color: var(--accent-soft);
     display: flex; align-items: center; justify-content: center;
     flex-shrink: 0;
   }
   .top-mode-btn .tm-ic svg { width: 15px; height: 15px; display: block; }
-  .top-mode-btn:hover { border-color: var(--text-muted); color: var(--text-primary); }
+  .top-mode-btn:not(.active):hover { background: rgba(37,144,206,0.18); border-color: var(--accent); }
   /* Active page: light-green outline so it's obvious which page you're on */
   .top-mode-btn.active {
     color: var(--text-primary);
