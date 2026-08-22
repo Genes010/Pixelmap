@@ -305,6 +305,14 @@
   }
   .scr-row:hover .close { display: inline; }
   .scr-row .close:hover { color: var(--danger); }
+  .scr-row .dup {
+    display: none;
+    color: var(--text-muted);
+    font-size: 13px;
+    padding: 0 2px;
+  }
+  .scr-row:hover .dup { display: inline; }
+  .scr-row .dup:hover { color: var(--accent-soft); }
   .scr-row .row-actions { display: none; gap: 6px; align-items: center; flex-shrink: 0; }
   .scr-row:hover .row-actions { display: flex; }
   .scr-row .row-actions button {
@@ -1212,8 +1220,8 @@
           <label data-i18n="canvas_bg">Canvas background</label>
           <span class="f-inputs">
             <input type="color" id="color-canvas-bg" value="#e6e6e8" />
-            <button id="canvas-bg-white" style="padding:3px 7px;font-size:9px;">Wit</button>
-            <button id="canvas-bg-black" style="padding:3px 7px;font-size:9px;">Zwart</button>
+            <button id="canvas-bg-white" style="padding:3px 7px;font-size:9px;" data-i18n="bg_white">White</button>
+            <button id="canvas-bg-black" style="padding:3px 7px;font-size:9px;" data-i18n="bg_black">Black</button>
           </span>
         </div>
         <hr/>
@@ -1632,6 +1640,10 @@ const I18N = {
     canvas_size: 'Canvas',
     accent_color: 'Accent color',
     canvas_bg: 'Canvas background',
+    bg_white: 'White',
+    bg_black: 'Black',
+    preset_overwrite_q: 'Load this preset? It replaces the whole project (screens, canvas, overlays). Continue?',
+    dup_screen: 'Duplicate screen',
     tiles_label: 'Tiles',
     accent_help: 'Used for outlines, overlays, labels',
     // Presets
@@ -1897,6 +1909,10 @@ const I18N = {
     canvas_size: 'Canvas',
     accent_color: 'Accent kleur',
     canvas_bg: 'Canvas achtergrond',
+    bg_white: 'Wit',
+    bg_black: 'Zwart',
+    preset_overwrite_q: 'Deze preset laden? Dit vervangt het hele project (schermen, canvas, overlays). Doorgaan?',
+    dup_screen: 'Scherm dupliceren',
     tiles_label: 'Tegels',
     accent_help: 'Gebruikt voor omlijning, overlays, labels',
     presets_info: 'Klik om te laden. Ingebouwde presets bovenaan, je opgeslagen presets daaronder.',
@@ -2778,7 +2794,7 @@ function renderScreenTabs() {
   state.screens.forEach(s => {
     const row = document.createElement('div');
     row.className = 'scr-row' + (s.id === state.activeScreenId ? ' on' : '');
-    const name = s.label || `Screen ${s.id}`;
+    const name = screenDisplayName(s);
     // Compute per-screen resolution for the list
     let res = '—';
     if (s.advancedMode) {
@@ -2798,6 +2814,7 @@ function renderScreenTabs() {
     row.innerHTML = `<span class="scr-thumb">${screenThumbSVG(s, 34, 26)}</span>`
       + `<span class="nm">${escapeHtml(name)}</span>`
       + `<span class="res">${res}</span>`
+      + `<span class="dup" data-id="${s.id}" title="${T('dup_screen')}">⧉</span>`
       + (state.screens.length > 1 ? `<span class="close" data-id="${s.id}" title="Remove">×</span>` : '');
     row.dataset.id = s.id;
     const nmSpan = row.querySelector('.nm');
@@ -2839,6 +2856,11 @@ function renderScreenTabs() {
       };
     }
     row.onclick = (e) => {
+      if (e.target.classList.contains('dup')) {
+        e.stopPropagation();
+        duplicateScreen(s.id);
+        return;
+      }
       if (e.target.classList.contains('close')) {
         if (confirm(T('remove_screen_q'))) {
           removeScreen(s.id);
@@ -2859,7 +2881,7 @@ function renderScreenSelector() {
   const sel = $('prop-screen-select');
   if (!sel) return;
   sel.innerHTML = state.screens.map(s => {
-    const name = (s.label || `Screen ${s.id}`).toUpperCase();
+    const name = screenDisplayName(s).toUpperCase();
     return `<option value="${s.id}"${s.id === state.activeScreenId ? ' selected' : ''}>${escapeHtml(name)}</option>`;
   }).join('');
 }
@@ -2921,10 +2943,51 @@ function syncScreenToUI() {
 }
 
 
+// A rotating palette so each new screen gets its own colour (red, green, blue, …).
+const SCREEN_COLORS = [
+  { colorA: '#d23c3c', colorB: '#781414' }, // red
+  { colorA: '#2fae5a', colorB: '#14612f' }, // green
+  { colorA: '#3c5adc', colorB: '#0a1482' }, // blue
+  { colorA: '#e0a63c', colorB: '#7a5410' }, // amber
+  { colorA: '#a24fd0', colorB: '#4a1b66' }, // purple
+  { colorA: '#2fb6c0', colorB: '#0f5a60' }, // teal
+  { colorA: '#e05fa0', colorB: '#7a1f50' }, // pink
+];
+let screenColorCounter = 1; // screen 1 (the default) already uses index 0 (red)
+function nextScreenColor() {
+  const c = SCREEN_COLORS[screenColorCounter % SCREEN_COLORS.length];
+  screenColorCounter++;
+  return c;
+}
+// Unique id for a new screen (ids stay unique; the shown number is positional).
+function nextScreenId() {
+  return Math.max(0, ...state.screens.map(s => s.id)) + 1;
+}
+// Right edge of the widest-reaching screen, so a new screen lands on the first
+// free spot to the right of everything (recomputed, so deletions free up space).
+function nextScreenOffset() {
+  let maxRight = 0;
+  state.screens.forEach(s => {
+    let w;
+    if (s.advancedMode) { const bb = getAdvancedBBox(s); w = bb.maxX; }
+    else w = s.cols * s.tileW;
+    maxRight = Math.max(maxRight, s.offsetX + w);
+  });
+  return { x: maxRight, y: 0 };
+}
+// Shown screen name: the custom label, else its positional number (1..N), so
+// numbers stay compact even after screens are deleted.
+function screenDisplayName(s) {
+  if (s.label) return s.label;
+  const i = state.screens.indexOf(s);
+  return `Screen ${i >= 0 ? i + 1 : s.id}`;
+}
+
 function addScreen() {
-  const newId = Math.max(...state.screens.map(s => s.id), 0) + 1;
-  // Use prev screen's tile size + place to the right
+  const newId = nextScreenId();
   const prev = state.screens[state.screens.length - 1];
+  const col = nextScreenColor();
+  const pos = nextScreenOffset();
   const newScreen = {
     id: newId,
     label: '',
@@ -2932,10 +2995,10 @@ function addScreen() {
     tileH: prev ? prev.tileH : 144,
     cols: prev ? prev.cols : 20,
     rows: prev ? prev.rows : 10,
-    offsetX: prev ? prev.offsetX + (prev.cols * prev.tileW) : 0,
-    offsetY: prev ? prev.offsetY : 0,
-    colorA: '#3c5adc',
-    colorB: '#0a1482',
+    offsetX: pos.x,
+    offsetY: pos.y,
+    colorA: col.colorA,
+    colorB: col.colorB,
     gradientMode: prev ? (prev.gradientMode || 'checker') : 'checker',
     gradientDir: prev ? (prev.gradientDir || 'horizontal') : 'horizontal',
     active: null,
@@ -2949,6 +3012,31 @@ function addScreen() {
   syncScreenToUI();
   renderGrid();
   renderStats();
+  scheduleRender();
+}
+
+// Duplicate an existing screen (with its tiles/colours) onto the next free spot.
+function duplicateScreen(id) {
+  const src = state.screens.find(s => s.id === id);
+  if (!src) return;
+  const copy = JSON.parse(JSON.stringify(src));
+  copy.id = nextScreenId();
+  copy.label = src.label ? src.label + ' copy' : '';
+  const pos = nextScreenOffset();
+  copy.offsetX = pos.x;
+  copy.offsetY = pos.y;
+  delete copy._infoBB;
+  state.screens.push(copy);
+  state.activeScreenId = copy.id;
+  // Give the copy its own screen-info overlay if the original had one.
+  if (state.placedItems.some(it => it.type === 'screeninfo' && it.screenId === src.id)) {
+    addScreenInfoItem(copy);
+  }
+  renderScreenTabs();
+  syncScreenToUI();
+  renderGrid();
+  renderStats();
+  scheduleRender();
 }
 
 function removeScreen(id) {
@@ -4058,7 +4146,7 @@ function drawPmScreenInfoItem(ctx, item) {
   const subFs = Math.round(titleFs * 0.55);
   const resFs = Math.round(titleFs * 0.7);
   const lineGap = Math.round(titleFs * 0.18);
-  const line1 = s.label || `Screen ${s.id}`;
+  const line1 = screenDisplayName(s);
   const line2 = state.project.name;
   const line3 = resText;
   const totalH = titleFs + lineGap + subFs + lineGap + resFs;
@@ -5706,7 +5794,7 @@ function openScreenExportModal() {
     const res = tpScreenResolution(s);
     return {
       id: s.id,
-      name: s.label || `Screen ${s.id}`,
+      name: screenDisplayName(s),
       res: res ? `${res.w}×${res.h}` : '—',
       thumb: screenThumbSVG(s, 30, 22),
     };
@@ -5786,7 +5874,7 @@ function openDownloadModal() {
     const res = tpScreenResolution(s);
     return {
       id: s.id,
-      name: s.label || `Screen ${s.id}`,
+      name: screenDisplayName(s),
       res: res ? `${res.w}×${res.h}` : '—',
       thumb: screenThumbSVG(s, 30, 22),
     };
@@ -6004,7 +6092,7 @@ function renderPresets() {
     const card = document.createElement('div');
     card.className = 'preset-card';
     card.innerHTML = `<strong>${p.name}</strong><span class="desc">${p.desc}</span>`;
-    card.onclick = () => loadPreset(p.config);
+    card.onclick = () => { if (confirm(T('preset_overwrite_q'))) loadPreset(p.config); };
     builtin.appendChild(card);
   });
   
@@ -6032,7 +6120,7 @@ function renderPresets() {
         }
         return;
       }
-      loadPreset(p.config);
+      if (confirm(T('preset_overwrite_q'))) loadPreset(p.config);
     };
     user.appendChild(card);
   });
@@ -7233,7 +7321,7 @@ function tpSyncFromScreens() {
     if (!res) return;
     const w = Math.max(16, res.w);
     const h = Math.max(16, res.h);
-    const name = s.label || `Screen ${s.id}`;
+    const name = screenDisplayName(s);
     seen.add(s.id);
     let sess = tpSessions.find(t => t.screenId === s.id);
     if (sess) {
