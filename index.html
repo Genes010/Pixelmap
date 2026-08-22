@@ -246,6 +246,7 @@
     align-items: center;
     flex-shrink: 0;
   }
+  .panel-h-actions { display: flex; align-items: center; gap: 9px; }
   .panel-h .add-btn {
     background: none;
     border: none;
@@ -254,7 +255,9 @@
     cursor: pointer;
     padding: 0 2px;
     line-height: 1;
+    display: inline-flex; align-items: center;
   }
+  .panel-h .add-btn.clear:hover { color: var(--danger); }
   .panel-h .add-btn:hover { color: var(--accent-soft); }
   .scr-row {
     display: flex;
@@ -1125,7 +1128,7 @@
 
   <!-- LEFT: screens -->
   <aside class="left-panel">
-    <div class="panel-h"><span data-i18n="screens">Screens</span><button class="add-btn" id="add-screen-btn" title="Add screen">＋</button></div>
+    <div class="panel-h"><span data-i18n="screens">Screens</span><span class="panel-h-actions"><button class="add-btn clear" id="clear-all-screens-btn" data-i18n-title="clear_all_title" title="Clear all"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg></button><button class="add-btn" id="add-screen-btn" title="Add screen">＋</button></span></div>
     <div id="screen-tabs"></div>
   </aside>
 
@@ -1644,6 +1647,8 @@ const I18N = {
     bg_black: 'Black',
     preset_overwrite_q: 'Load this preset? It replaces the whole project (screens, canvas, overlays). Continue?',
     dup_screen: 'Duplicate screen',
+    clear_all_title: 'Clear all screens',
+    clear_all_q: 'Clear everything? This removes all screens, overlays and logos (empty canvas). This cannot be undone.',
     tiles_label: 'Tiles',
     accent_help: 'Used for outlines, overlays, labels',
     // Presets
@@ -1913,6 +1918,8 @@ const I18N = {
     bg_black: 'Zwart',
     preset_overwrite_q: 'Deze preset laden? Dit vervangt het hele project (schermen, canvas, overlays). Doorgaan?',
     dup_screen: 'Scherm dupliceren',
+    clear_all_title: 'Alle schermen wissen',
+    clear_all_q: 'Alles wissen? Dit verwijdert alle schermen, overlays en logo\'s (leeg canvas). Dit kan niet ongedaan gemaakt worden.',
     tiles_label: 'Tegels',
     accent_help: 'Gebruikt voor omlijning, overlays, labels',
     presets_info: 'Klik om te laden. Ingebouwde presets bovenaan, je opgeslagen presets daaronder.',
@@ -2815,7 +2822,7 @@ function renderScreenTabs() {
       + `<span class="nm">${escapeHtml(name)}</span>`
       + `<span class="res">${res}</span>`
       + `<span class="dup" data-id="${s.id}" title="${T('dup_screen')}">⧉</span>`
-      + (state.screens.length > 1 ? `<span class="close" data-id="${s.id}" title="Remove">×</span>` : '');
+      + `<span class="close" data-id="${s.id}" title="Remove">×</span>`;
     row.dataset.id = s.id;
     const nmSpan = row.querySelector('.nm');
     const selectThisRow = () => {
@@ -3040,9 +3047,12 @@ function duplicateScreen(id) {
 }
 
 function removeScreen(id) {
-  if (state.screens.length <= 1) return;
   state.screens = state.screens.filter(s => s.id !== id);
-  if (state.activeScreenId === id) state.activeScreenId = state.screens[0].id;
+  // Allow removing the last screen too (empty canvas). Pick a new active screen,
+  // or null when none are left.
+  if (state.activeScreenId === id) {
+    state.activeScreenId = state.screens.length ? state.screens[0].id : null;
+  }
   // Clean up any screen-info overlay item that belonged to the removed screen
   const orphanedIds = state.placedItems.filter(it => it.type === 'screeninfo' && it.screenId === id).map(it => it.id);
   state.placedItems = state.placedItems.filter(it => !(it.type === 'screeninfo' && it.screenId === id));
@@ -3055,6 +3065,29 @@ function removeScreen(id) {
   renderStats();
   renderLogoList();
   scheduleRender(); // re-render the canvas so the removed screen disappears immediately
+}
+
+// Wipe the working project back to an empty canvas: all screens, their overlays
+// and logos. Asks for confirmation first.
+function clearAllScreens() {
+  if (state.screens.length === 0 && state.placedItems.length === 0 && state.logos.length === 0) return;
+  if (!confirm(T('clear_all_q'))) return;
+  state.screens = [];
+  state.activeScreenId = null;
+  state.placedItems = [];
+  state.logos = [];
+  state.selectedLogoId = null;
+  state.selectedOverlay = null;
+  renderScreenTabs();
+  syncScreenToUI();
+  renderGrid();
+  renderStats();
+  renderLogoList();
+  updateModeUI();
+  renderTileTypesList();
+  renderAdvancedCanvas();
+  updateFooterStats();
+  scheduleRender();
 }
 
 function rebuildActiveGrid() {
@@ -3196,7 +3229,7 @@ function invertAll() { const s=activeScreen(); for(let r=0;r<s.rows;r++)for(let 
 
 function renderStats() {
   const s = activeScreen();
-  if (!s) return;
+  if (!s) { const st = $('stats'); if (st) st.innerHTML = ''; updateFooterStats(); return; }
   if (s.advancedMode) {
     ensureDefaultTileType(s);
     const bb = getAdvancedBBox(s);
@@ -6956,6 +6989,7 @@ function attachAdvancedCanvasHandlers() {
 
 function wireUp() {
   $('add-screen-btn').onclick = () => { addScreen(); scheduleRender(); };
+  if ($('clear-all-screens-btn')) $('clear-all-screens-btn').onclick = clearAllScreens;
   // Screen-properties dropdown: switch the active screen (stopPropagation so
   // clicking it doesn't collapse the card via the h3 toggle).
   const screenSel = $('prop-screen-select');
