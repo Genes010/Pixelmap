@@ -316,6 +316,28 @@
   }
   .scr-row:hover .dup { display: inline; }
   .scr-row .dup:hover { color: var(--accent-soft); }
+  /* Canvas list rows (multi-canvas) */
+  .cnv-row {
+    display: flex; align-items: center; gap: 8px;
+    padding: 9px 12px;
+    border-bottom: 1px solid var(--border-field);
+    color: var(--text-secondary);
+    cursor: pointer;
+    position: relative;
+  }
+  .cnv-row:hover { background: var(--bg-hover); }
+  .cnv-row.on {
+    background: var(--bg-active-row);
+    box-shadow: inset 3px 0 0 var(--green, #86e0a6);
+    color: var(--text-primary);
+  }
+  .cnv-row .cnv-nm { flex: 1; font-size: 11.5px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cnv-row .cnv-res { font-family: var(--mono); font-size: 8.5px; color: var(--text-muted); }
+  .cnv-row .dup, .cnv-row .close { display: none; color: var(--text-muted); font-size: 13px; padding: 0 2px; }
+  .cnv-row:hover .dup, .cnv-row:hover .close { display: inline; }
+  .cnv-row .dup:hover { color: var(--accent-soft); }
+  .cnv-row .close:hover { color: var(--danger); }
+  #canvas-list { border-bottom: 1px solid var(--border-field); }
   .scr-row .row-actions { display: none; gap: 6px; align-items: center; flex-shrink: 0; }
   .scr-row:hover .row-actions { display: flex; }
   .scr-row .row-actions button {
@@ -1126,8 +1148,10 @@
 <!-- ═══════════ PIXELMAP MODE ═══════════ -->
 <div class="app" id="container-pixelmap">
 
-  <!-- LEFT: screens -->
+  <!-- LEFT: canvases + screens -->
   <aside class="left-panel">
+    <div class="panel-h"><span data-i18n="canvases">Canvases</span><span class="panel-h-actions"><button class="add-btn" id="add-canvas-btn" data-i18n-title="add_canvas" title="Add canvas">＋</button></span></div>
+    <div id="canvas-list"></div>
     <div class="panel-h"><span data-i18n="screens">Screens</span><span class="panel-h-actions"><button class="add-btn clear" id="clear-all-screens-btn" data-i18n-title="clear_all_title" title="Clear all"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg></button><button class="add-btn" id="add-screen-btn" title="Add screen">＋</button></span></div>
     <div id="screen-tabs"></div>
   </aside>
@@ -1649,6 +1673,11 @@ const I18N = {
     dup_screen: 'Duplicate screen',
     clear_all_title: 'Clear all screens',
     clear_all_q: 'Clear everything? This removes all screens, overlays and logos (empty canvas). This cannot be undone.',
+    canvases: 'Canvases',
+    add_canvas: 'Add canvas',
+    dup_canvas: 'Duplicate canvas',
+    rename_canvas: 'Canvas name:',
+    remove_canvas_q: 'Remove this canvas and all its screens?',
     tiles_label: 'Tiles',
     accent_help: 'Used for outlines, overlays, labels',
     // Presets
@@ -1920,6 +1949,11 @@ const I18N = {
     dup_screen: 'Scherm dupliceren',
     clear_all_title: 'Alle schermen wissen',
     clear_all_q: 'Alles wissen? Dit verwijdert alle schermen, overlays en logo\'s (leeg canvas). Dit kan niet ongedaan gemaakt worden.',
+    canvases: 'Canvassen',
+    add_canvas: 'Canvas toevoegen',
+    dup_canvas: 'Canvas dupliceren',
+    rename_canvas: 'Canvasnaam:',
+    remove_canvas_q: 'Dit canvas en al zijn schermen verwijderen?',
     tiles_label: 'Tegels',
     accent_help: 'Gebruikt voor omlijning, overlays, labels',
     presets_info: 'Klik om te laden. Ingebouwde presets bovenaan, je opgeslagen presets daaronder.',
@@ -2273,6 +2307,8 @@ let state = {
   placedItems: [], // {id, type: 'colorbar'|'grayscale'|'projectinfo', x, y, w, h}
   selectedOverlay: null, // {kind: 'logo'|'item', id}
   autoRender: true,
+  canvases: [],          // multi-canvas: [{id,name,canvasW,canvasH,canvasBg,screens,activeScreenId,placedItems,logos,...}]
+  activeCanvasId: null,  // the canvas currently loaded into the working fields above
 };
 
 let pmItemIdCounter = 0;
@@ -3088,6 +3124,170 @@ function clearAllScreens() {
   renderAdvancedCanvas();
   updateFooterStats();
   scheduleRender();
+}
+
+// ============================================================
+// MULTI-CANVAS
+// A project holds several canvases (e.g. one per mediaserver output), each with
+// its own resolution, screens, overlays and logos. To avoid rewriting the whole
+// app, the ACTIVE canvas keeps living in the existing working fields
+// (state.screens, state.placedItems, state.logos, state.project.canvas*). When
+// you switch canvas we save the working fields into the current slot and load
+// the target slot back into them.
+// ============================================================
+function nextCanvasId() { return Math.max(0, ...state.canvases.map(c => c.id)) + 1; }
+function canvasDisplayName(c) {
+  if (c.name) return c.name;
+  const i = state.canvases.indexOf(c);
+  return `Canvas ${i >= 0 ? i + 1 : c.id}`;
+}
+function rebuildLogoObj(lc) {
+  const { image, ...rest } = lc;
+  const nl = JSON.parse(JSON.stringify(rest));
+  if (nl.dataUrl) { const img = new Image(); img.onload = () => scheduleRender(); img.src = nl.dataUrl; nl.image = img; }
+  return nl;
+}
+// Save the working fields into the active canvas slot.
+function captureActiveCanvas() {
+  const c = state.canvases.find(c => c.id === state.activeCanvasId);
+  if (!c) return;
+  syncProjectFromUI();
+  syncScreenFromUI();
+  syncDisplayFromUI();
+  c.canvasW = state.project.canvasW;
+  c.canvasH = state.project.canvasH;
+  c.canvasBg = state.project.canvasBg;
+  c.screens = state.screens;
+  c.activeScreenId = state.activeScreenId;
+  c.placedItems = state.placedItems;
+  c.logos = state.logos;
+  c.selectedLogoId = state.selectedLogoId;
+  c.selectedOverlay = state.selectedOverlay;
+}
+// Point the working fields at a canvas slot.
+function loadCanvasIntoWorking(c) {
+  state.project.canvasW = c.canvasW;
+  state.project.canvasH = c.canvasH;
+  state.project.canvasBg = c.canvasBg;
+  state.screens = c.screens;
+  state.activeScreenId = c.activeScreenId;
+  state.placedItems = c.placedItems;
+  state.logos = c.logos;
+  state.selectedLogoId = c.selectedLogoId;
+  state.selectedOverlay = c.selectedOverlay;
+}
+function refreshAfterCanvasChange() {
+  syncProjectToUI();
+  syncDisplayToUI();
+  renderCanvasList();
+  renderScreenTabs();
+  syncScreenToUI();
+  renderGrid();
+  renderStats();
+  updateModeUI();
+  renderTileTypesList();
+  renderAdvancedCanvas();
+  renderLogoList();
+  updateFooterStats();
+  scheduleRender();
+}
+// Ensure the canvas model exists (wraps the initial single-canvas state).
+function initCanvases() {
+  if (state.canvases && state.canvases.length) return;
+  state.canvases = [{
+    id: 1, name: '',
+    canvasW: state.project.canvasW, canvasH: state.project.canvasH, canvasBg: state.project.canvasBg,
+    screens: state.screens, activeScreenId: state.activeScreenId,
+    placedItems: state.placedItems, logos: state.logos,
+    selectedLogoId: state.selectedLogoId, selectedOverlay: state.selectedOverlay,
+  }];
+  state.activeCanvasId = 1;
+}
+function switchCanvas(id) {
+  if (id === state.activeCanvasId) return;
+  captureActiveCanvas();
+  const c = state.canvases.find(c => c.id === id);
+  if (!c) return;
+  state.activeCanvasId = id;
+  loadCanvasIntoWorking(c);
+  refreshAfterCanvasChange();
+}
+function addCanvas() {
+  captureActiveCanvas();
+  const c = {
+    id: nextCanvasId(), name: '',
+    canvasW: 1920, canvasH: 1080, canvasBg: '#e6e6e8',
+    screens: [], activeScreenId: null, placedItems: [], logos: [],
+    selectedLogoId: null, selectedOverlay: null,
+  };
+  state.canvases.push(c);
+  state.activeCanvasId = c.id;
+  loadCanvasIntoWorking(c);
+  addScreen(); // gives the fresh canvas one default screen
+  refreshAfterCanvasChange();
+}
+function duplicateCanvas(id) {
+  captureActiveCanvas();
+  const src = state.canvases.find(c => c.id === id);
+  if (!src) return;
+  const copy = {
+    id: nextCanvasId(),
+    name: canvasDisplayName(src) + ' copy',
+    canvasW: src.canvasW, canvasH: src.canvasH, canvasBg: src.canvasBg,
+    screens: JSON.parse(JSON.stringify(src.screens)),
+    activeScreenId: src.activeScreenId,
+    placedItems: JSON.parse(JSON.stringify(src.placedItems)),
+    logos: (src.logos || []).map(rebuildLogoObj),
+    selectedLogoId: null, selectedOverlay: null,
+  };
+  state.canvases.push(copy);
+  state.activeCanvasId = copy.id;
+  loadCanvasIntoWorking(copy);
+  refreshAfterCanvasChange();
+}
+function removeCanvas(id) {
+  if (state.canvases.length <= 1) return; // always keep at least one canvas
+  if (!confirm(T('remove_canvas_q'))) return;
+  const wasActive = id === state.activeCanvasId;
+  if (!wasActive) captureActiveCanvas();
+  state.canvases = state.canvases.filter(c => c.id !== id);
+  if (wasActive) {
+    state.activeCanvasId = state.canvases[0].id;
+    loadCanvasIntoWorking(state.canvases[0]);
+  }
+  refreshAfterCanvasChange();
+}
+function renameCanvas(id) {
+  const c = state.canvases.find(c => c.id === id);
+  if (!c) return;
+  const v = prompt(T('rename_canvas'), c.name || canvasDisplayName(c));
+  if (v === null) return;
+  c.name = v.trim();
+  renderCanvasList();
+}
+function renderCanvasList() {
+  const cont = $('canvas-list');
+  if (!cont) return;
+  cont.innerHTML = '';
+  state.canvases.forEach((c, idx) => {
+    const isActive = c.id === state.activeCanvasId;
+    const w = isActive ? state.project.canvasW : c.canvasW;
+    const h = isActive ? state.project.canvasH : c.canvasH;
+    const row = document.createElement('div');
+    row.className = 'cnv-row' + (isActive ? ' on' : '');
+    row.innerHTML = `<span class="cnv-nm">${escapeHtml(canvasDisplayName(c))}</span>`
+      + `<span class="cnv-res">${w}×${h}</span>`
+      + `<span class="dup" title="${T('dup_canvas')}">⧉</span>`
+      + (state.canvases.length > 1 ? `<span class="close" title="Remove">×</span>` : '');
+    row.onclick = (e) => {
+      if (e.target.classList.contains('dup')) { e.stopPropagation(); duplicateCanvas(c.id); return; }
+      if (e.target.classList.contains('close')) { e.stopPropagation(); removeCanvas(c.id); return; }
+      switchCanvas(c.id);
+    };
+    const nm = row.querySelector('.cnv-nm');
+    nm.ondblclick = (e) => { e.stopPropagation(); renameCanvas(c.id); };
+    cont.appendChild(row);
+  });
 }
 
 function rebuildActiveGrid() {
@@ -6160,80 +6360,78 @@ function renderPresets() {
 }
 
 function loadPreset(config) {
-  // Deep clone to avoid mutating preset (note: images can't be cloned, handle separately)
-  const cloned = JSON.parse(JSON.stringify({
-    project: config.project,
-    screens: config.screens,
-    activeScreenId: config.activeScreenId,
-    display: config.display,
-    logos: (config.logos || []).map(l => ({
-      ...l,
-      image: null, // reload from dataUrl
-    })),
-    placedItems: config.placedItems || [],
-  }));
-  state.project = cloned.project;
-  state.screens = cloned.screens;
-  state.activeScreenId = cloned.activeScreenId;
-  if (cloned.display) {
-    state.display = cloned.display;
-    syncDisplayToUI();
+  // Shared project-level fields (name/subtitle/accent + canvas defaults for legacy).
+  if (config.project) state.project = JSON.parse(JSON.stringify(config.project));
+  if (config.display) state.display = JSON.parse(JSON.stringify(config.display));
+
+  // Build the canvas list. New format has config.canvases; older single-canvas
+  // presets/projects are wrapped into one canvas.
+  if (Array.isArray(config.canvases) && config.canvases.length) {
+    state.canvases = config.canvases.map(c => ({
+      id: c.id, name: c.name || '',
+      canvasW: c.canvasW, canvasH: c.canvasH, canvasBg: c.canvasBg,
+      screens: JSON.parse(JSON.stringify(c.screens || [])),
+      activeScreenId: (c.activeScreenId != null) ? c.activeScreenId : ((c.screens && c.screens[0]) ? c.screens[0].id : null),
+      placedItems: JSON.parse(JSON.stringify(c.placedItems || [])),
+      logos: (c.logos || []).map(rebuildLogoObj),
+      selectedLogoId: null, selectedOverlay: null,
+    }));
+    state.activeCanvasId = (config.activeCanvasId != null) ? config.activeCanvasId : state.canvases[0].id;
+  } else {
+    const p = config.project || {};
+    state.canvases = [{
+      id: 1, name: '',
+      canvasW: p.canvasW || 1920, canvasH: p.canvasH || 1080, canvasBg: p.canvasBg || '#e6e6e8',
+      screens: JSON.parse(JSON.stringify(config.screens || [])),
+      activeScreenId: config.activeScreenId,
+      placedItems: JSON.parse(JSON.stringify(config.placedItems || [])),
+      logos: (config.logos || []).map(rebuildLogoObj),
+      selectedLogoId: null, selectedOverlay: null,
+    }];
+    state.activeCanvasId = 1;
   }
-  
-  // Restore placed items
-  state.placedItems = cloned.placedItems;
+  if (!state.canvases.some(c => c.id === state.activeCanvasId)) state.activeCanvasId = state.canvases[0].id;
+
+  // Bump id counters so future ids don't collide with loaded ones.
+  let maxLogo = 0, maxItem = 0;
+  state.canvases.forEach(c => {
+    (c.logos || []).forEach(l => { if ((l.id || 0) > maxLogo) maxLogo = l.id; });
+    (c.placedItems || []).forEach(it => { const n = parseInt(String(it.id).replace(/\D/g, '')) || 0; if (n > maxItem) maxItem = n; });
+  });
+  if (maxLogo > logoIdCounter) logoIdCounter = maxLogo;
+  if (maxItem > pmItemIdCounter) pmItemIdCounter = maxItem;
+
+  // Load the active canvas into the working fields and refresh everything.
+  loadCanvasIntoWorking(state.canvases.find(c => c.id === state.activeCanvasId));
   state.selectedOverlay = null;
-  
-  // Restore logos by recreating Image objects
-  state.logos = [];
   state.selectedLogoId = null;
-  const logoConfigs = cloned.logos || [];
-  if (logoConfigs.length > 0) {
-    let loaded = 0;
-    logoConfigs.forEach(lc => {
-      const img = new Image();
-      img.onload = () => {
-        loaded++;
-        if (loaded === logoConfigs.length) {
-          renderLogoList();
-          scheduleRender();
-        }
-      };
-      img.src = lc.dataUrl;
-      lc.image = img;
-      state.logos.push(lc);
-    });
-    // Update counter to avoid id collisions
-    const maxId = Math.max(0, ...logoConfigs.map(l => l.id || 0));
-    if (maxId > logoIdCounter) logoIdCounter = maxId;
-  }
-  
-  syncProjectToUI();
-  renderScreenTabs();
-  syncScreenToUI();
-  renderGrid();
-  renderStats();
-  renderLogoList();
-  scheduleRender();
+  refreshAfterCanvasChange();
 }
 
 // Builds a plain, serializable snapshot of the current pixelmap state.
 // Shared by presets, JSON export, and the Projects feature (Blok 4).
+function stripLogos(logos) {
+  return (logos || []).map(l => { const { image, ...rest } = l; return rest; });
+}
 function buildCurrentConfig() {
-  syncProjectFromUI();
-  syncScreenFromUI();
-  // Strip non-serializable parts of logos (image object)
-  const logosForExport = state.logos.map(l => {
-    const { image, ...rest } = l;
-    return rest;
-  });
+  captureActiveCanvas();
+  const canvases = state.canvases.map(c => ({
+    id: c.id, name: c.name || '',
+    canvasW: c.canvasW, canvasH: c.canvasH, canvasBg: c.canvasBg,
+    screens: c.screens, activeScreenId: c.activeScreenId,
+    placedItems: c.placedItems, logos: stripLogos(c.logos),
+  }));
   return {
+    // Shared project-level fields (name/subtitle/accent)
     project: state.project,
+    display: state.display,
+    canvases,
+    activeCanvasId: state.activeCanvasId,
+    // Legacy single-canvas mirror (active canvas) so older loaders/presets still work
     screens: state.screens,
     activeScreenId: state.activeScreenId,
-    display: state.display,
-    logos: logosForExport,
     placedItems: state.placedItems,
+    logos: stripLogos(state.logos),
   };
 }
 
@@ -6988,8 +7186,9 @@ function attachAdvancedCanvasHandlers() {
 }
 
 function wireUp() {
-  $('add-screen-btn').onclick = () => { addScreen(); scheduleRender(); };
-  if ($('clear-all-screens-btn')) $('clear-all-screens-btn').onclick = clearAllScreens;
+  $('add-screen-btn').onclick = () => { addScreen(); renderCanvasList(); scheduleRender(); };
+  if ($('clear-all-screens-btn')) $('clear-all-screens-btn').onclick = () => { clearAllScreens(); renderCanvasList(); };
+  if ($('add-canvas-btn')) $('add-canvas-btn').onclick = addCanvas;
   // Screen-properties dropdown: switch the active screen (stopPropagation so
   // clicking it doesn't collapse the card via the h3 toggle).
   const screenSel = $('prop-screen-select');
@@ -7090,7 +7289,11 @@ function wireUp() {
   
   // Project inputs
   ['proj-name','proj-subtitle','canvas-w','canvas-h','color-accent','color-canvas-bg'].forEach(id => {
-    if ($(id)) $(id).oninput = () => { syncProjectFromUI(); scheduleRender(); };
+    if ($(id)) $(id).oninput = () => {
+      syncProjectFromUI();
+      if (id === 'canvas-w' || id === 'canvas-h') renderCanvasList(); // keep the canvas list's resolution in sync
+      scheduleRender();
+    };
   });
   if ($('canvas-bg-white')) $('canvas-bg-white').onclick = () => {
     state.project.canvasBg = '#ffffff'; $('color-canvas-bg').value = '#ffffff'; scheduleRender();
@@ -9493,9 +9696,11 @@ function init() {
   // A fresh project starts with the per-screen info overlay enabled on every screen
   state.screens.forEach(s => addScreenInfoItem(s));
   state.selectedOverlay = null;
+  initCanvases(); // wrap the initial single-canvas state into the canvas model
   syncProjectToUI();
   syncScreenToUI();
   syncDisplayToUI();
+  renderCanvasList();
   renderScreenTabs();
   renderGrid();
   renderStats();
