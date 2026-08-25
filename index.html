@@ -3335,11 +3335,8 @@ function updateViewModeToggle() {
   wrap.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.view === state.viewMode));
 }
 // Draws every canvas in a 2-column grid onto the main canvas element.
-function renderOverview() {
-  const canvas = $('canvas');
-  const ctx = canvas.getContext('2d');
-  const accent = state.project.accent || '#2590ce';
-  captureActiveCanvas(); // make the active slot current before we swap through them
+let overviewCache = null; // offscreen snapshot of the static overview, reused while dragging
+function computeOverviewLayout() {
   const list = state.canvases;
   const rows = Math.ceil(list.length / OV_COLS);
   const gap = 150, labelH = 90;
@@ -3354,27 +3351,23 @@ function renderOverview() {
   const rowY = []; { let y = gap; for (let r = 0; r < rows; r++) { rowY[r] = y; y += labelH + rowH[r] + gap; } }
   const totalW = colX[OV_COLS - 1] + colW[OV_COLS - 1] + gap;
   const totalH = rowY[rows - 1] + labelH + rowH[rows - 1] + gap;
-
-  canvas.width = Math.max(100, Math.round(totalW));
-  canvas.height = Math.max(100, Math.round(totalH));
-  state.canvasBleed = { left: 0, top: 0, right: 0, bottom: 0, elW: canvas.width, elH: canvas.height, offX: 0, offY: 0 };
-  applyZoomToCanvas(canvas, previewZoom);
-
+  return { list, rows, gap, labelH, colW, rowH, colX, rowY, totalW, totalH };
+}
+// Heavy part: draws every canvas body/label/frame into ctx and (re)builds overviewLayout.
+function drawOverviewStatic(ctx, L) {
+  const accent = state.project.accent || '#2590ce';
   ctx.fillStyle = '#0f1218';
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-
+  ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
   overviewLayout = [];
-  list.forEach((c, i) => {
+  L.list.forEach((c, i) => {
     const col = i % OV_COLS, row = Math.floor(i / OV_COLS);
-    const cellX = colX[col];
-    const cellY = rowY[row] + labelH;
+    const cellX = L.colX[col];
+    const cellY = L.rowY[row] + L.labelH;
     const isActive = c.id === state.activeCanvasId;
-    const isTarget = overviewDrag && overviewDrag.targetId === c.id && overviewDrag.srcId !== c.id;
 
-    // label above the canvas
     ctx.save();
     ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
-    const lblFs = Math.max(26, Math.round(colW[col] / 48));
+    const lblFs = Math.max(26, Math.round(L.colW[col] / 48));
     ctx.font = `700 ${lblFs}px sans-serif`;
     ctx.fillStyle = isActive ? '#86e0a6' : '#c7ccd6';
     ctx.fillText(canvasDisplayName(c), cellX, cellY - 34);
@@ -3383,7 +3376,6 @@ function renderOverview() {
     ctx.fillText(`${c.canvasW} × ${c.canvasH}`, cellX, cellY - 10);
     ctx.restore();
 
-    // canvas body (reuse the normal drawing code with the working fields pointed at c)
     ctx.save();
     ctx.translate(cellX, cellY);
     loadCanvasIntoWorking(c);
@@ -3393,34 +3385,122 @@ function renderOverview() {
       if (overviewDrag && overviewDrag.srcId === c.id && overviewDrag.screenId === s.id) return; // hide the dragged one
       drawScreen(ctx, s, c.canvasW, c.canvasH, accent);
     });
+    // Also hide the dragged screen's linked info overlay while dragging.
+    let savedItems = null;
+    if (overviewDrag && overviewDrag.srcId === c.id) {
+      savedItems = state.placedItems;
+      state.placedItems = savedItems.filter(it => !(it.type === 'screeninfo' && it.screenId === overviewDrag.screenId));
+    }
     drawLogos(ctx, c.canvasW, c.canvasH);
+    if (savedItems) state.placedItems = savedItems;
     ctx.restore();
 
-    // frame
     ctx.save();
-    ctx.lineWidth = (isActive || isTarget) ? Math.max(5, colW[col] / 300) : Math.max(2, colW[col] / 600);
-    ctx.strokeStyle = isTarget ? accent : (isActive ? '#86e0a6' : '#3a4150');
+    ctx.lineWidth = isActive ? Math.max(5, L.colW[col] / 300) : Math.max(2, L.colW[col] / 600);
+    ctx.strokeStyle = isActive ? '#86e0a6' : '#3a4150';
     ctx.strokeRect(cellX, cellY, c.canvasW, c.canvasH);
     ctx.restore();
 
     overviewLayout.push({ id: c.id, x: cellX, y: cellY, w: c.canvasW, h: c.canvasH });
   });
-
   loadCanvasIntoWorking(state.canvases.find(c => c.id === state.activeCanvasId));
-
-  // ghost of the screen being dragged
-  if (overviewDrag) {
-    const gx = overviewDrag.curX - overviewDrag.grabX;
-    const gy = overviewDrag.curY - overviewDrag.grabY;
+}
+// Snapped world top-left of the dragged screen + guide lines. Reused by render and drop.
+function overviewGhostPos() {
+  let gx = overviewDrag.curX - overviewDrag.grabX;
+  let gy = overviewDrag.curY - overviewDrag.grabY;
+  const guides = [];
+  const cell = overviewLayout.find(c => c.id === overviewDrag.targetId);
+  if (cell && screenSnapEnabled) {
+    const cv = $('canvas');
+    const rect = cv.getBoundingClientRect();
+    const scale = rect.width && cv.width ? rect.width / cv.width : 1;
+    const T = 12 / (scale || 1); // ~12 screen px snap zone, in world units
+    const sw = overviewDrag.sw, sh = overviewDrag.sh;
+    const dst = state.canvases.find(c => c.id === cell.id);
+    const xs = [cell.x, cell.x + cell.w];
+    const ys = [cell.y, cell.y + cell.h];
+    if (dst) dst.screens.forEach(s => {
+      if (overviewDrag.srcId === cell.id && s.id === overviewDrag.screenId) return;
+      const r = screenRect(s);
+      xs.push(cell.x + r.x, cell.x + r.x + r.w);
+      ys.push(cell.y + r.y, cell.y + r.y + r.h);
+    });
+    let bestDX = null;
+    xs.forEach(xv => { [gx, gx + sw].forEach(edge => { const d = xv - edge; if (Math.abs(d) <= T && (bestDX === null || Math.abs(d) < Math.abs(bestDX.d))) bestDX = { d, at: xv }; }); });
+    if (bestDX) { gx += bestDX.d; guides.push({ vertical: true, at: bestDX.at, a: cell.y, b: cell.y + cell.h }); }
+    let bestDY = null;
+    ys.forEach(yv => { [gy, gy + sh].forEach(edge => { const d = yv - edge; if (Math.abs(d) <= T && (bestDY === null || Math.abs(d) < Math.abs(bestDY.d))) bestDY = { d, at: yv }; }); });
+    if (bestDY) { gy += bestDY.d; guides.push({ vertical: false, at: bestDY.at, a: cell.x, b: cell.x + cell.w }); }
+  }
+  return { gx, gy, guides, cell };
+}
+// Light per-frame overlay: target highlight, snap guides, dashed ghost.
+function drawOverviewDragOverlay(ctx) {
+  if (!overviewDrag) return;
+  const accent = state.project.accent || '#2590ce';
+  const tcell = overviewLayout.find(c => c.id === overviewDrag.targetId);
+  if (tcell && overviewDrag.targetId !== overviewDrag.srcId) {
     ctx.save();
-    ctx.setLineDash([12, 8]);
-    ctx.lineWidth = 4;
+    ctx.lineWidth = Math.max(5, tcell.w / 300);
     ctx.strokeStyle = accent;
-    ctx.fillStyle = 'rgba(37,144,206,0.18)';
-    ctx.fillRect(gx, gy, overviewDrag.sw, overviewDrag.sh);
-    ctx.strokeRect(gx, gy, overviewDrag.sw, overviewDrag.sh);
+    ctx.strokeRect(tcell.x, tcell.y, tcell.w, tcell.h);
     ctx.restore();
   }
+  const g = overviewGhostPos();
+  if (g.guides.length) {
+    ctx.save();
+    ctx.strokeStyle = '#ff3b6b';
+    ctx.lineWidth = Math.max(1.5, (tcell ? tcell.w : 1000) / 1000);
+    ctx.setLineDash([8, 5]);
+    g.guides.forEach(ln => {
+      ctx.beginPath();
+      if (ln.vertical) { ctx.moveTo(ln.at, ln.a); ctx.lineTo(ln.at, ln.b); }
+      else { ctx.moveTo(ln.a, ln.at); ctx.lineTo(ln.b, ln.at); }
+      ctx.stroke();
+    });
+    ctx.restore();
+  }
+  ctx.save();
+  ctx.setLineDash([12, 8]);
+  ctx.lineWidth = 4;
+  ctx.strokeStyle = accent;
+  ctx.fillStyle = 'rgba(37,144,206,0.18)';
+  ctx.fillRect(g.gx, g.gy, overviewDrag.sw, overviewDrag.sh);
+  ctx.strokeRect(g.gx, g.gy, overviewDrag.sw, overviewDrag.sh);
+  ctx.restore();
+}
+function renderOverview() {
+  const canvas = $('canvas');
+  const ctx = canvas.getContext('2d');
+  captureActiveCanvas(); // make the active slot current before we swap through them
+  const L = computeOverviewLayout();
+  canvas.width = Math.max(100, Math.round(L.totalW));
+  canvas.height = Math.max(100, Math.round(L.totalH));
+  state.canvasBleed = { left: 0, top: 0, right: 0, bottom: 0, elW: canvas.width, elH: canvas.height, offX: 0, offY: 0 };
+  applyZoomToCanvas(canvas, previewZoom);
+  drawOverviewStatic(ctx, L);
+  overviewCache = null; // canvas was resized/redrawn; any drag cache is stale
+  if (overviewDrag) drawOverviewDragOverlay(ctx);
+}
+// Fast path during a drag: blit the cached static overview, then the light overlay.
+function overviewDragRender() {
+  const canvas = $('canvas');
+  const ctx = canvas.getContext('2d');
+  if (!overviewCache || overviewCache.width !== canvas.width || overviewCache.height !== canvas.height) {
+    const off = document.createElement('canvas');
+    off.width = canvas.width; off.height = canvas.height;
+    drawOverviewStatic(off.getContext('2d'), computeOverviewLayout());
+    overviewCache = off;
+  }
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.drawImage(overviewCache, 0, 0);
+  drawOverviewDragOverlay(ctx);
+}
+let overviewRAF = null;
+function overviewDragRenderRAF() {
+  if (overviewRAF) return;
+  overviewRAF = requestAnimationFrame(() => { overviewRAF = null; overviewDragRender(); });
 }
 function overviewCellAt(x, y) {
   for (const cell of overviewLayout) {
@@ -3469,7 +3549,7 @@ function overviewMove(e) {
   if (Math.abs(x - overviewDrag.startX) > 6 || Math.abs(y - overviewDrag.startY) > 6) overviewDrag.moved = true;
   const cell = overviewCellAt(x, y);
   overviewDrag.targetId = cell ? cell.id : overviewDrag.srcId;
-  scheduleRender();
+  overviewDragRenderRAF();
 }
 function overviewUp() {
   window.removeEventListener('mousemove', overviewMove);
@@ -3489,12 +3569,13 @@ function overviewUp() {
     } else { scheduleRender(); }
     return;
   }
-  const cell = overviewLayout.find(c => c.id === d.targetId) || overviewLayout.find(c => c.id === d.srcId);
+  // Use the snapped ghost position so the drop matches the on-screen preview exactly.
+  overviewDrag = d; // overviewGhostPos reads the module-level drag
+  const g = overviewGhostPos();
+  overviewDrag = null;
+  const cell = g.cell || overviewLayout.find(c => c.id === d.srcId);
   if (!cell) { scheduleRender(); return; }
-  // Screen world origin at drop = cursor - grab; convert to target-canvas local coords.
-  const localX = (d.curX - d.grabX) - cell.x;
-  const localY = (d.curY - d.grabY) - cell.y;
-  moveScreenToCanvas(d.screenId, d.srcId, d.targetId, Math.round(localX), Math.round(localY));
+  moveScreenToCanvas(d.screenId, d.srcId, cell.id, Math.round(g.gx - cell.x), Math.round(g.gy - cell.y));
 }
 // Move a screen (with its info overlay) to a position, optionally onto another canvas.
 function moveScreenToCanvas(screenId, srcId, dstId, offX, offY) {
