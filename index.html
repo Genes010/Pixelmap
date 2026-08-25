@@ -331,13 +331,38 @@
     box-shadow: inset 3px 0 0 var(--green, #86e0a6);
     color: var(--text-primary);
   }
-  .cnv-row .cnv-nm { flex: 1; font-size: 11.5px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .cnv-row .cnv-res { font-family: var(--mono); font-size: 8.5px; color: var(--text-muted); }
-  .cnv-row .dup, .cnv-row .close { display: none; color: var(--text-muted); font-size: 13px; padding: 0 2px; }
-  .cnv-row:hover .dup, .cnv-row:hover .close { display: inline; }
-  .cnv-row .dup:hover { color: var(--accent-soft); }
+  /* Output rows are the tree headers — bigger, bolder, slightly raised background. */
+  .cnv-row { padding: 11px 12px; background: var(--bg-panel); }
+  .cnv-row .cnv-nm { flex: 1; font-size: 13.5px; font-weight: 700; letter-spacing: .01em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cnv-row .cnv-res { font-family: var(--mono); font-size: 9px; color: var(--text-muted); }
+  .cnv-row .dup, .cnv-row .close, .cnv-row .clear-scr { display: none; color: var(--text-muted); font-size: 13px; padding: 0 2px; }
+  .cnv-row:hover .dup, .cnv-row:hover .close, .cnv-row:hover .clear-scr { display: inline; }
+  .cnv-row .dup:hover, .cnv-row .clear-scr:hover { color: var(--accent-soft); }
   .cnv-row .close:hover { color: var(--danger); }
   #canvas-list { border-bottom: 1px solid var(--border-field); }
+  /* Screens nested under their output: indented, a touch smaller, subtle guide line. */
+  #canvas-list .scr-row { padding-left: 30px; }
+  #canvas-list .scr-row::before {
+    content: ""; position: absolute; left: 16px; top: 0; bottom: 0;
+    border-left: 1px solid var(--border-field);
+  }
+  #canvas-list .scr-row .nm { font-size: 11px; }
+  #canvas-list .scr-row.ro { cursor: pointer; opacity: .78; }
+  #canvas-list .scr-row.ro:hover { opacity: 1; }
+  #canvas-list .scr-add {
+    padding: 7px 12px 9px 30px; font-size: 10.5px; font-weight: 600;
+    color: var(--text-muted); cursor: pointer; position: relative;
+    border-bottom: 1px solid var(--border-field);
+  }
+  #canvas-list .scr-add::before {
+    content: ""; position: absolute; left: 16px; top: 0; height: 50%;
+    border-left: 1px solid var(--border-field);
+  }
+  #canvas-list .scr-add:hover { color: var(--accent-soft); }
+  #canvas-list .scr-empty {
+    padding: 7px 12px 8px 30px; font-size: 10px; font-style: italic;
+    color: var(--text-muted); border-bottom: 1px solid var(--border-field);
+  }
   .scr-row .row-actions { display: none; gap: 6px; align-items: center; flex-shrink: 0; }
   .scr-row:hover .row-actions { display: flex; }
   .scr-row .row-actions button {
@@ -1164,8 +1189,6 @@
   <aside class="left-panel">
     <div class="panel-h"><span data-i18n="canvases">Outputs</span><span class="panel-h-actions"><button class="add-btn" id="add-canvas-btn" data-i18n-title="add_canvas" title="Add output">＋</button></span></div>
     <div id="canvas-list"></div>
-    <div class="panel-h"><span data-i18n="screens">Screens</span><span class="panel-h-actions"><button class="add-btn clear" id="clear-all-screens-btn" data-i18n-title="clear_all_title" title="Clear all"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg></button><button class="add-btn" id="add-screen-btn" title="Add screen">＋</button></span></div>
-    <div id="screen-tabs"></div>
   </aside>
 
   <!-- CENTER: viewport -->
@@ -1687,6 +1710,8 @@ const I18N = {
     bg_black: 'Black',
     preset_overwrite_q: 'Load this preset? It replaces the whole project (screens, canvas, overlays). Continue?',
     dup_screen: 'Duplicate screen',
+    add_screen: 'Add screen',
+    no_screens: 'No screens yet',
     clear_all_title: 'Clear all screens',
     clear_all_q: 'Clear everything? This removes all screens, overlays and logos (empty canvas). This cannot be undone.',
     canvases: 'Outputs',
@@ -1965,6 +1990,8 @@ const I18N = {
     bg_black: 'Zwart',
     preset_overwrite_q: 'Deze preset laden? Dit vervangt het hele project (schermen, canvas, overlays). Doorgaan?',
     dup_screen: 'Scherm dupliceren',
+    add_screen: 'Scherm toevoegen',
+    no_screens: 'Nog geen schermen',
     clear_all_title: 'Alle schermen wissen',
     clear_all_q: 'Alles wissen? Dit verwijdert alle schermen, overlays en logo\'s (leeg canvas). Dit kan niet ongedaan gemaakt worden.',
     canvases: 'Outputs',
@@ -2854,91 +2881,125 @@ function startInlineRename(span, currentName, onCommit) {
   input.select();
 }
 
+// Resolution text for a screen row (active grid extent or advanced bbox).
+function screenResText(s) {
+  if (s.advancedMode) {
+    ensureDefaultTileType(s);
+    const bb = getAdvancedBBox(s);
+    return bb.w > 0 ? `${bb.w}×${bb.h}` : '—';
+  }
+  if (s.active) {
+    let minR = s.rows, maxR = -1, minC = s.cols, maxC = -1;
+    for (let r = 0; r < s.rows; r++) for (let c = 0; c < s.cols; c++) {
+      if (s.active[r][c]) {
+        if (r < minR) minR = r; if (r > maxR) maxR = r;
+        if (c < minC) minC = c; if (c > maxC) maxC = c;
+      }
+    }
+    if (maxR >= 0) return `${(maxC - minC + 1) * s.tileW}×${(maxR - minR + 1) * s.tileH}`;
+  }
+  return '—';
+}
+// Pick a screen (possibly on another output): switch to its output, then select it.
+function onScreenPick(canvasId, screenId) {
+  if (canvasId !== state.activeCanvasId) switchCanvas(canvasId);
+  state.activeScreenId = screenId;
+  syncScreenToUI();
+  renderGrid();
+  renderStats();
+  updateModeUI();
+  renderTileTypesList();
+  renderAdvancedCanvas();
+  renderScreenTabs();
+  scheduleRender();
+}
+// A fully-editable screen row for the active output.
+function buildActiveScreenRow(s) {
+  const row = document.createElement('div');
+  row.className = 'scr-row' + (s.id === state.activeScreenId ? ' on' : '');
+  row.dataset.id = s.id;
+  row.innerHTML = `<span class="scr-thumb">${screenThumbSVG(s, 34, 26)}</span>`
+    + `<span class="nm">${escapeHtml(screenDisplayName(s))}</span>`
+    + `<span class="res">${screenResText(s)}</span>`
+    + `<span class="dup" data-id="${s.id}" title="${T('dup_screen')}">⧉</span>`
+    + `<span class="close" data-id="${s.id}" title="Remove">×</span>`;
+  const nmSpan = row.querySelector('.nm');
+  const beginRename = () => {
+    const span = document.querySelector(`#canvas-list .scr-row[data-id="${s.id}"] .nm`);
+    if (!span) return;
+    startInlineRename(span, s.label || '', (val) => {
+      if (val !== null) { s.label = val; syncScreenToUI(); scheduleRender(); }
+      renderScreenTabs();
+    });
+  };
+  if (nmSpan) {
+    nmSpan.title = T('rename_hint');
+    nmSpan.onclick = (e) => {
+      e.stopPropagation();
+      handleNameClick(`pm_${s.id}`, () => onScreenPick(state.activeCanvasId, s.id), beginRename);
+    };
+  }
+  row.onclick = (e) => {
+    if (e.target.classList.contains('dup')) { e.stopPropagation(); duplicateScreen(s.id); return; }
+    if (e.target.classList.contains('close')) { if (confirm(T('remove_screen_q'))) removeScreen(s.id); return; }
+    if (e.target.classList.contains('nm')) return; // handled by name's own click
+    onScreenPick(state.activeCanvasId, s.id);
+  };
+  return row;
+}
+// A read-only screen row for a non-active output — clicking switches to that output.
+function buildReadonlyScreenRow(s, c) {
+  const row = document.createElement('div');
+  row.className = 'scr-row ro';
+  row.innerHTML = `<span class="scr-thumb">${screenThumbSVG(s, 34, 26)}</span>`
+    + `<span class="nm">${escapeHtml(screenDisplayName(s))}</span>`
+    + `<span class="res">${screenResText(s)}</span>`;
+  row.onclick = (e) => { e.stopPropagation(); onScreenPick(c.id, s.id); };
+  return row;
+}
+// The left-panel tree: every output with its own screens nested beneath it.
 function renderScreenTabs() {
-  const container = $('screen-tabs');
-  container.innerHTML = '';
-  state.screens.forEach(s => {
-    const row = document.createElement('div');
-    row.className = 'scr-row' + (s.id === state.activeScreenId ? ' on' : '');
-    const name = screenDisplayName(s);
-    // Compute per-screen resolution for the list
-    let res = '—';
-    if (s.advancedMode) {
-      ensureDefaultTileType(s);
-      const bb = getAdvancedBBox(s);
-      if (bb.w > 0) res = `${bb.w}×${bb.h}`;
-    } else if (s.active) {
-      let minR=s.rows, maxR=-1, minC=s.cols, maxC=-1;
-      for (let r=0;r<s.rows;r++) for (let c=0;c<s.cols;c++) {
-        if (s.active[r][c]) {
-          if (r<minR) minR=r; if (r>maxR) maxR=r;
-          if (c<minC) minC=c; if (c>maxC) maxC=c;
-        }
+  const cont = $('canvas-list');
+  if (!cont) return;
+  cont.innerHTML = '';
+  state.canvases.forEach(c => {
+    const isActiveCanvas = c.id === state.activeCanvasId;
+    const w = isActiveCanvas ? state.project.canvasW : c.canvasW;
+    const h = isActiveCanvas ? state.project.canvasH : c.canvasH;
+    const screens = c.screens || [];
+    const orow = document.createElement('div');
+    orow.className = 'cnv-row' + (isActiveCanvas ? ' on' : '');
+    orow.innerHTML = `<span class="cnv-nm">${escapeHtml(canvasDisplayName(c))}</span>`
+      + `<span class="cnv-res">${w}×${h}</span>`
+      + (isActiveCanvas && screens.length ? `<span class="clear-scr" title="${T('clear_all_title')}">🗑</span>` : '')
+      + `<span class="dup" title="${T('dup_canvas')}">⧉</span>`
+      + (state.canvases.length > 1 ? `<span class="close" title="Remove">×</span>` : '');
+    orow.onclick = (e) => {
+      if (e.target.classList.contains('clear-scr')) { e.stopPropagation(); clearAllScreens(); return; }
+      if (e.target.classList.contains('dup')) { e.stopPropagation(); duplicateCanvas(c.id); return; }
+      if (e.target.classList.contains('close')) { e.stopPropagation(); removeCanvas(c.id); return; }
+      switchCanvas(c.id);
+    };
+    orow.querySelector('.cnv-nm').ondblclick = (e) => { e.stopPropagation(); renameCanvas(c.id); };
+    cont.appendChild(orow);
+
+    if (isActiveCanvas) {
+      screens.forEach(s => cont.appendChild(buildActiveScreenRow(s)));
+      const addRow = document.createElement('div');
+      addRow.className = 'scr-add';
+      addRow.textContent = '＋ ' + T('add_screen');
+      addRow.onclick = (e) => { e.stopPropagation(); addScreen(); };
+      cont.appendChild(addRow);
+    } else {
+      if (screens.length) screens.forEach(s => cont.appendChild(buildReadonlyScreenRow(s, c)));
+      else {
+        const empty = document.createElement('div');
+        empty.className = 'scr-empty';
+        empty.textContent = T('no_screens');
+        cont.appendChild(empty);
       }
-      if (maxR >= 0) res = `${(maxC-minC+1)*s.tileW}×${(maxR-minR+1)*s.tileH}`;
     }
-    row.innerHTML = `<span class="scr-thumb">${screenThumbSVG(s, 34, 26)}</span>`
-      + `<span class="nm">${escapeHtml(name)}</span>`
-      + `<span class="res">${res}</span>`
-      + `<span class="dup" data-id="${s.id}" title="${T('dup_screen')}">⧉</span>`
-      + `<span class="close" data-id="${s.id}" title="Remove">×</span>`;
-    row.dataset.id = s.id;
-    const nmSpan = row.querySelector('.nm');
-    const selectThisRow = () => {
-      if (state.activeScreenId !== s.id) {
-        state.activeScreenId = s.id;
-        // Update the active marker in place instead of rebuilding the list —
-        // rebuilding would replace the name span between the two clicks of a
-        // double-click, so the browser would never fire dblclick on it.
-        document.querySelectorAll('#screen-tabs .scr-row').forEach(r => {
-          r.classList.toggle('on', parseInt(r.dataset.id) === s.id);
-        });
-        renderScreenSelector();
-      }
-      syncScreenToUI();
-      renderGrid();
-      renderStats();
-      updateModeUI();
-      renderTileTypesList();
-      renderAdvancedCanvas();
-    };
-    const beginRename = () => {
-      const span = document.querySelector(`#screen-tabs .scr-row[data-id="${s.id}"] .nm`);
-      if (!span) return;
-      startInlineRename(span, s.label || '', (val) => {
-        if (val !== null) {
-          s.label = val;
-          syncScreenToUI();
-          scheduleRender();
-        }
-        renderScreenTabs();
-      });
-    };
-    if (nmSpan) {
-      nmSpan.title = T('rename_hint');
-      nmSpan.onclick = (e) => {
-        e.stopPropagation();
-        handleNameClick(`pm_${s.id}`, selectThisRow, beginRename);
-      };
-    }
-    row.onclick = (e) => {
-      if (e.target.classList.contains('dup')) {
-        e.stopPropagation();
-        duplicateScreen(s.id);
-        return;
-      }
-      if (e.target.classList.contains('close')) {
-        if (confirm(T('remove_screen_q'))) {
-          removeScreen(s.id);
-        }
-        return;
-      }
-      if (e.target.classList.contains('nm')) return; // handled by name's own click
-      selectThisRow();
-    };
-    container.appendChild(row);
   });
-  // Update the Screen properties card screen selector
   renderScreenSelector();
 }
 
@@ -3293,29 +3354,10 @@ function renameCanvas(id) {
   c.name = v.trim();
   renderCanvasList();
 }
+// The outputs + screens tree is rendered by renderScreenTabs(); keep this name as
+// an alias so existing call sites refresh the same tree.
 function renderCanvasList() {
-  const cont = $('canvas-list');
-  if (!cont) return;
-  cont.innerHTML = '';
-  state.canvases.forEach((c, idx) => {
-    const isActive = c.id === state.activeCanvasId;
-    const w = isActive ? state.project.canvasW : c.canvasW;
-    const h = isActive ? state.project.canvasH : c.canvasH;
-    const row = document.createElement('div');
-    row.className = 'cnv-row' + (isActive ? ' on' : '');
-    row.innerHTML = `<span class="cnv-nm">${escapeHtml(canvasDisplayName(c))}</span>`
-      + `<span class="cnv-res">${w}×${h}</span>`
-      + `<span class="dup" title="${T('dup_canvas')}">⧉</span>`
-      + (state.canvases.length > 1 ? `<span class="close" title="Remove">×</span>` : '');
-    row.onclick = (e) => {
-      if (e.target.classList.contains('dup')) { e.stopPropagation(); duplicateCanvas(c.id); return; }
-      if (e.target.classList.contains('close')) { e.stopPropagation(); removeCanvas(c.id); return; }
-      switchCanvas(c.id);
-    };
-    const nm = row.querySelector('.cnv-nm');
-    nm.ondblclick = (e) => { e.stopPropagation(); renameCanvas(c.id); };
-    cont.appendChild(row);
-  });
+  renderScreenTabs();
 }
 
 // ============================================================
@@ -7522,7 +7564,8 @@ function attachAdvancedCanvasHandlers() {
 }
 
 function wireUp() {
-  $('add-screen-btn').onclick = () => { addScreen(); renderCanvasList(); scheduleRender(); };
+  // Add-screen and clear-screens live inline in the outputs tree (per output) now.
+  if ($('add-screen-btn')) $('add-screen-btn').onclick = () => { addScreen(); renderCanvasList(); scheduleRender(); };
   if ($('clear-all-screens-btn')) $('clear-all-screens-btn').onclick = () => { clearAllScreens(); renderCanvasList(); };
   if ($('add-canvas-btn')) $('add-canvas-btn').onclick = addCanvas;
   document.querySelectorAll('#view-mode-toggle button').forEach(b => b.onclick = () => setViewMode(b.dataset.view));
