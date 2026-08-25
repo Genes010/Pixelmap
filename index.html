@@ -3448,8 +3448,11 @@ function handleOverviewMouseDown(e) {
   const { x, y } = getCanvasCoords(e); // world coords (bleed is 0 in overview)
   const hit = overviewHitTest(x, y);
   if (hit && hit.screen) {
+    const srcCell = overviewLayout.find(c => c.id === hit.canvasId);
     const r = hit.rect;
-    overviewDrag = { srcId: hit.canvasId, screenId: hit.screen.id, grabX: x - r.x, grabY: y - r.y, sw: r.w, sh: r.h, curX: x, curY: y, targetId: hit.canvasId };
+    // Screen's world origin = cell origin + local screen rect. Store grab relative to that.
+    const swX = srcCell.x + r.x, swY = srcCell.y + r.y;
+    overviewDrag = { srcId: hit.canvasId, screenId: hit.screen.id, grabX: x - swX, grabY: y - swY, sw: r.w, sh: r.h, startX: x, startY: y, curX: x, curY: y, targetId: hit.canvasId, moved: false };
     $('canvas').style.cursor = 'grabbing';
     window.addEventListener('mousemove', overviewMove);
     window.addEventListener('mouseup', overviewUp);
@@ -3463,6 +3466,7 @@ function overviewMove(e) {
   if (!overviewDrag) return;
   const { x, y } = getCanvasCoords(e);
   overviewDrag.curX = x; overviewDrag.curY = y;
+  if (Math.abs(x - overviewDrag.startX) > 6 || Math.abs(y - overviewDrag.startY) > 6) overviewDrag.moved = true;
   const cell = overviewCellAt(x, y);
   overviewDrag.targetId = cell ? cell.id : overviewDrag.srcId;
   scheduleRender();
@@ -3473,9 +3477,24 @@ function overviewUp() {
   $('canvas').style.cursor = 'default';
   const d = overviewDrag; overviewDrag = null;
   if (!d) return;
+  // A plain click (no real drag) selects the screen and activates its canvas — it does not move it.
+  if (!d.moved) {
+    const src = state.canvases.find(c => c.id === d.srcId);
+    if (src) {
+      if (d.srcId !== state.activeCanvasId) { switchCanvas(d.srcId); }
+      const cur = state.canvases.find(c => c.id === state.activeCanvasId);
+      if (cur) { cur.activeScreenId = d.screenId; }
+      state.activeScreenId = d.screenId;
+      refreshAfterCanvasChange();
+    } else { scheduleRender(); }
+    return;
+  }
   const cell = overviewLayout.find(c => c.id === d.targetId) || overviewLayout.find(c => c.id === d.srcId);
   if (!cell) { scheduleRender(); return; }
-  moveScreenToCanvas(d.screenId, d.srcId, d.targetId, Math.round(d.curX - d.grabX - cell.x), Math.round(d.curY - d.grabY - cell.y));
+  // Screen world origin at drop = cursor - grab; convert to target-canvas local coords.
+  const localX = (d.curX - d.grabX) - cell.x;
+  const localY = (d.curY - d.grabY) - cell.y;
+  moveScreenToCanvas(d.screenId, d.srcId, d.targetId, Math.round(localX), Math.round(localY));
 }
 // Move a screen (with its info overlay) to a position, optionally onto another canvas.
 function moveScreenToCanvas(screenId, srcId, dstId, offX, offY) {
@@ -4088,6 +4107,8 @@ function updatePageIndicator() {
     if (hasPage2) {
       ind.style.display = '';
       ind.textContent = T('info_overflow');
+      // Drop below the Single / All-canvases toggle when that is also showing.
+      ind.style.top = (state.canvases.length > 1) ? '54px' : '12px';
     } else {
       ind.style.display = 'none';
     }
