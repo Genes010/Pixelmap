@@ -1936,6 +1936,9 @@ const I18N = {
     export_screens_title: 'Export screens',
     dl_full_canvas: 'Full canvas (all screens composited)',
     dl_per_screen: 'Individual screens (one PNG each)',
+    dl_all_outputs: 'All outputs (one PNG each)',
+    dl_sel_outputs: 'Selected outputs',
+    select_outputs_info: 'Choose which outputs to export. Each downloads at its own resolution.',
     no_radar_screens: 'No screens have a radar pulse yet. Add a radar pulse overlay to a screen first.',
     rendering: 'Rendering frame',
     zipping: 'Zipping...',
@@ -2209,6 +2212,9 @@ const I18N = {
     export_screens_title: 'Schermen exporteren',
     dl_full_canvas: 'Volledig canvas (alle schermen samengesteld)',
     dl_per_screen: 'Losse schermen (elk een eigen PNG)',
+    dl_all_outputs: 'Alle outputs (elk een eigen PNG)',
+    dl_sel_outputs: 'Geselecteerde outputs',
+    select_outputs_info: 'Kies welke outputs je wilt exporteren. Elke download op zijn eigen resolutie.',
     no_radar_screens: 'Nog geen schermen met een radar puls. Voeg eerst een radar puls overlay toe aan een scherm.',
     rendering: 'Frame renderen',
     zipping: 'Zippen...',
@@ -4028,10 +4034,13 @@ function getCanvasBleed(cw, ch) {
   };
 }
 
+let skipUiSyncOnRender = false; // set while exporting other outputs, whose UI inputs aren't loaded
 function renderCanvas() {
-  syncProjectFromUI();
-  syncScreenFromUI();
-  syncDisplayFromUI();
+  if (!skipUiSyncOnRender) {
+    syncProjectFromUI();
+    syncScreenFromUI();
+    syncDisplayFromUI();
+  }
   // Keep screen-info overlays anchored/scaled to their screens after any change.
   reflowScreenInfoItems();
 
@@ -6374,9 +6383,9 @@ function openModal({ title, bodyHTML, primaryLabel, onPrimary, footExtraHTML }) 
 }
 
 // Screen selection checkbox list (shared markup for both dialogs)
-function screenCheckListHTML(items) {
+function screenCheckListHTML(items, infoText) {
   // items: [{ id, name, res, thumb }]
-  return `<div class="modal-sub">${T('select_screens_info')}</div>`
+  return `<div class="modal-sub">${infoText || T('select_screens_info')}</div>`
     + `<div style="margin-bottom:8px;">
         <label class="modal-check" style="font-weight:600;">
           <input type="checkbox" data-check-all checked />
@@ -6482,32 +6491,31 @@ function drawSingleScreenToCanvas(ctx, s, w, h) {
   s.offsetY = savedOY;
 }
 
-// Pixelmap download chooser: full composited canvas, or individual screens.
+// Pixelmap download chooser: all outputs, or a selected subset of outputs.
+// (Individual screens are exported from the Test patterns tab.)
 function openDownloadModal() {
-  const items = state.screens.map(s => {
-    const res = tpScreenResolution(s);
-    return {
-      id: s.id,
-      name: screenDisplayName(s),
-      res: res ? `${res.w}×${res.h}` : '—',
-      thumb: screenThumbSVG(s, 30, 22),
-    };
-  });
+  captureActiveCanvas(); // so the active output's dimensions are current in the list
+  const items = state.canvases.map(c => ({
+    id: c.id,
+    name: canvasDisplayName(c),
+    res: `${c.canvasW}×${c.canvasH}`,
+    thumb: '',
+  }));
   const bodyHTML = `
     <div class="modal-row" style="margin-top:0;">
       <label class="modal-check" style="flex:1;">
-        <input type="radio" name="dlmode" value="full" checked />
-        <span class="mc-name">${T('dl_full_canvas')}</span>
+        <input type="radio" name="dlmode" value="all" checked />
+        <span class="mc-name">${T('dl_all_outputs')}</span>
       </label>
     </div>
     <div class="modal-row" style="margin-top:2px;">
       <label class="modal-check" style="flex:1;">
-        <input type="radio" name="dlmode" value="screens" />
-        <span class="mc-name">${T('dl_per_screen')}</span>
+        <input type="radio" name="dlmode" value="selected" />
+        <span class="mc-name">${T('dl_sel_outputs')}</span>
       </label>
     </div>
-    <div id="dl-screen-list" style="display:none; border-top:1px solid var(--border-input); margin-top:8px; padding-top:10px;">
-      ${screenCheckListHTML(items)}
+    <div id="dl-output-list" style="display:none; border-top:1px solid var(--border-input); margin-top:8px; padding-top:10px;">
+      ${screenCheckListHTML(items, T('select_outputs_info'))}
     </div>`;
   openModal({
     title: T('download_png'),
@@ -6515,21 +6523,79 @@ function openDownloadModal() {
     primaryLabel: T('download_png'),
     onPrimary: (root) => {
       const mode = root.querySelector('input[name="dlmode"]:checked').value;
-      if (mode === 'full') {
-        downloadPng();
+      let ids;
+      if (mode === 'all') {
+        ids = state.canvases.map(c => c.id);
       } else {
-        const ids = Array.from(root.querySelectorAll('.mc-screen:checked')).map(b => parseInt(b.value));
+        ids = Array.from(root.querySelectorAll('.mc-screen:checked')).map(b => parseInt(b.value));
         if (ids.length === 0) return false;
-        exportScreensAsPng(ids);
       }
+      exportOutputs(ids);
     },
   });
   const root = document.querySelector('.modal-backdrop');
-  const list = root.querySelector('#dl-screen-list');
+  const list = root.querySelector('#dl-output-list');
   root.querySelectorAll('input[name="dlmode"]').forEach(r => {
-    r.onchange = () => { list.style.display = root.querySelector('input[name="dlmode"]:checked').value === 'screens' ? '' : 'none'; };
+    r.onchange = () => { list.style.display = root.querySelector('input[name="dlmode"]:checked').value === 'selected' ? '' : 'none'; };
   });
   wireCheckAll(root);
+}
+
+// Render each selected output at its exact canvas size and download.
+// One PNG when a single page/output; a zip when several files are produced.
+async function exportOutputs(ids) {
+  captureActiveCanvas();
+  const savedActiveId = state.activeCanvasId;
+  const savedView = state.viewMode;
+  const savedSel = state.selectedLogoId;
+  state.viewMode = 'single';
+  state.selectedLogoId = null;
+  suppressCanvasBleed = true;
+  skipUiSyncOnRender = true; // swapped outputs' inputs aren't in the DOM — render from their stored state
+  const name = state.project.name.replace(/[^\w]+/g, '_') || 'pixelmap';
+  const files = []; // { filename, blob }
+  for (const id of ids) {
+    const c = state.canvases.find(cc => cc.id === id);
+    if (!c) continue;
+    loadCanvasIntoWorking(c);
+    renderCanvas();
+    const canvas = $('canvas');
+    const cw = canvas.width, ch = canvas.height;
+    const oname = canvasDisplayName(c).replace(/[^\w]+/g, '_');
+    if (state.infoFitsOnPage1 === false) {
+      const page2Canvas = document.createElement('canvas');
+      renderInfoPage(page2Canvas);
+      files.push({ filename: `${oname}_${cw}x${ch}_page1.png`, blob: await canvasToBlob(canvas) });
+      files.push({ filename: `${oname}_${cw}x${ch}_page2.png`, blob: await canvasToBlob(page2Canvas) });
+    } else {
+      files.push({ filename: `${oname}_${cw}x${ch}.png`, blob: await canvasToBlob(canvas) });
+    }
+  }
+  // Restore the working state to the output that was active before exporting.
+  loadCanvasIntoWorking(state.canvases.find(c => c.id === savedActiveId));
+  state.activeCanvasId = savedActiveId;
+  state.viewMode = savedView;
+  state.selectedLogoId = savedSel;
+  suppressCanvasBleed = false;
+  skipUiSyncOnRender = false;
+
+  if (files.length === 1) {
+    const url = URL.createObjectURL(files[0].blob);
+    const link = document.createElement('a');
+    link.download = `${name}_${files[0].filename}`;
+    link.href = url; link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 100);
+  } else if (files.length > 1) {
+    const zipFiles = [];
+    for (const f of files) zipFiles.push({ filename: f.filename, data: new Uint8Array(await f.blob.arrayBuffer()) });
+    const zipBlob = createZip(zipFiles);
+    const url = URL.createObjectURL(zipBlob);
+    const link = document.createElement('a');
+    link.download = `${name}_outputs.zip`;
+    link.href = url; link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 100);
+  }
+  scheduleRender();
 }
 
 async function downloadPng() {
