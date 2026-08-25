@@ -2761,9 +2761,9 @@ function syncProjectToUI() {
 // ============================================================
 // The largest screen extent across all screens (used to scale thumbnails proportionally,
 // so a small screen shows a small thumbnail relative to a big one).
-function maxScreenExtent() {
+function maxScreenExtent(screens) {
   let m = 1;
-  state.screens.forEach(s => {
+  (screens || state.screens).forEach(s => {
     let gw, gh;
     if (s.advancedMode) { const bb = getAdvancedBBox(s); gw = bb.w; gh = bb.h; }
     else { gw = s.cols * s.tileW; gh = s.rows * s.tileH; }
@@ -2914,11 +2914,11 @@ function onScreenPick(canvasId, screenId) {
   scheduleRender();
 }
 // A fully-editable screen row for the active output.
-function buildActiveScreenRow(s) {
+function buildActiveScreenRow(s, ref) {
   const row = document.createElement('div');
   row.className = 'scr-row' + (s.id === state.activeScreenId ? ' on' : '');
   row.dataset.id = s.id;
-  row.innerHTML = `<span class="scr-thumb">${screenThumbSVG(s, 34, 26)}</span>`
+  row.innerHTML = `<span class="scr-thumb">${screenThumbSVG(s, 34, 26, ref)}</span>`
     + `<span class="nm">${escapeHtml(screenDisplayName(s))}</span>`
     + `<span class="res">${screenResText(s)}</span>`
     + `<span class="dup" data-id="${s.id}" title="${T('dup_screen')}">⧉</span>`
@@ -2948,10 +2948,10 @@ function buildActiveScreenRow(s) {
   return row;
 }
 // A read-only screen row for a non-active output — clicking switches to that output.
-function buildReadonlyScreenRow(s, c) {
+function buildReadonlyScreenRow(s, c, ref) {
   const row = document.createElement('div');
   row.className = 'scr-row ro';
-  row.innerHTML = `<span class="scr-thumb">${screenThumbSVG(s, 34, 26)}</span>`
+  row.innerHTML = `<span class="scr-thumb">${screenThumbSVG(s, 34, 26, ref)}</span>`
     + `<span class="nm">${escapeHtml(screenDisplayName(s))}</span>`
     + `<span class="res">${screenResText(s)}</span>`;
   row.onclick = (e) => { e.stopPropagation(); onScreenPick(c.id, s.id); };
@@ -2983,15 +2983,18 @@ function renderScreenTabs() {
     orow.querySelector('.cnv-nm').ondblclick = (e) => { e.stopPropagation(); renameCanvas(c.id); };
     cont.appendChild(orow);
 
+    // Scale this output's thumbnails against its own largest screen, so a small
+    // screen on another output isn't shrunk to nothing by output 1's big screen.
+    const ref = maxScreenExtent(screens);
     if (isActiveCanvas) {
-      screens.forEach(s => cont.appendChild(buildActiveScreenRow(s)));
+      screens.forEach(s => cont.appendChild(buildActiveScreenRow(s, ref)));
       const addRow = document.createElement('div');
       addRow.className = 'scr-add';
       addRow.textContent = '＋ ' + T('add_screen');
       addRow.onclick = (e) => { e.stopPropagation(); addScreen(); };
       cont.appendChild(addRow);
     } else {
-      if (screens.length) screens.forEach(s => cont.appendChild(buildReadonlyScreenRow(s, c)));
+      if (screens.length) screens.forEach(s => cont.appendChild(buildReadonlyScreenRow(s, c, ref)));
       else {
         const empty = document.createElement('div');
         empty.className = 'scr-empty';
