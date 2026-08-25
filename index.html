@@ -2330,6 +2330,8 @@ let state = {
   canvases: [],          // multi-canvas: [{id,name,canvasW,canvasH,canvasBg,screens,activeScreenId,placedItems,logos,...}]
   activeCanvasId: null,  // the canvas currently loaded into the working fields above
   viewMode: 'single',    // 'single' = edit one canvas; 'all' = overview of every canvas
+  lastTileW: 72,         // remembered tile size so a new screen matches the last one used
+  lastTileH: 144,
 };
 
 let pmItemIdCounter = 0;
@@ -2973,6 +2975,9 @@ function syncScreenFromUI() {
     if (inp.type === 'number') val = parseInt(val) || 0;
     s[key] = val;
   });
+  // Remember the tile size so the next new screen inherits it (also across empty outputs).
+  if (s.tileW > 0) state.lastTileW = s.tileW;
+  if (s.tileH > 0) state.lastTileH = s.tileH;
   // Per-screen overlay controls (default: on, white, 2px — see resolveOverlay* fallbacks)
   const oc = $('scr-overlay-circle');
   if (oc) s.overlayCircle = oc.checked;
@@ -3055,10 +3060,11 @@ function addScreen() {
   const newScreen = {
     id: newId,
     label: '',
-    tileW: prev ? prev.tileW : 72,
-    tileH: prev ? prev.tileH : 144,
-    cols: prev ? prev.cols : 20,
-    rows: prev ? prev.rows : 10,
+    // Match the last-used tile size (works across empty outputs too); default to a 6×3 grid.
+    tileW: prev ? prev.tileW : (state.lastTileW || 72),
+    tileH: prev ? prev.tileH : (state.lastTileH || 144),
+    cols: 6,
+    rows: 3,
     offsetX: pos.x,
     offsetY: pos.y,
     colorA: col.colorA,
@@ -6237,6 +6243,10 @@ function renderNow() {
 }
 
 function drawSelectionOverlayOnPreview() {
+  // These overlays are drawn in the active output's coordinate space at the canvas
+  // origin. In the all-outputs overview that origin is Output 1's corner, so they'd
+  // bleed onto the wrong output — skip them entirely there.
+  if (state.viewMode === 'all' && state.canvases.length > 1) return;
   // After base render, add preview-only overlays on the visible canvas
   const ctx = $('canvas').getContext('2d');
   const bleed = state.canvasBleed;
