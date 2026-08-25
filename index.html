@@ -1162,7 +1162,7 @@
 
   <!-- LEFT: canvases + screens -->
   <aside class="left-panel">
-    <div class="panel-h"><span data-i18n="canvases">Canvases</span><span class="panel-h-actions"><button class="add-btn" id="add-canvas-btn" data-i18n-title="add_canvas" title="Add canvas">＋</button></span></div>
+    <div class="panel-h"><span data-i18n="canvases">Outputs</span><span class="panel-h-actions"><button class="add-btn" id="add-canvas-btn" data-i18n-title="add_canvas" title="Add output">＋</button></span></div>
     <div id="canvas-list"></div>
     <div class="panel-h"><span data-i18n="screens">Screens</span><span class="panel-h-actions"><button class="add-btn clear" id="clear-all-screens-btn" data-i18n-title="clear_all_title" title="Clear all"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg></button><button class="add-btn" id="add-screen-btn" title="Add screen">＋</button></span></div>
     <div id="screen-tabs"></div>
@@ -1178,7 +1178,7 @@
     <div id="page-indicator" style="display: none;"></div>
     <div id="view-mode-toggle" class="view-mode-toggle" style="display: none;">
       <button data-view="single" data-i18n="view_single">Single</button>
-      <button data-view="all" data-i18n="view_all">All canvases</button>
+      <button data-view="all" data-i18n="view_all">All outputs</button>
     </div>
     <div class="tile-toolbar" id="tile-toolbar">
       <button class="tool-btn active" id="tt-pointer" data-tip="Pointer" data-tool="pointer">
@@ -1248,7 +1248,7 @@
           <span class="f-inputs"><input type="text" id="proj-subtitle" value="LED Pixelmap Reference" style="width: 130px;" /></span>
         </div>
         <div class="field">
-          <label data-i18n="canvas_size">Canvas</label>
+          <label data-i18n="canvas_size">Output</label>
           <span class="f-inputs">
             <input type="number" id="canvas-w" value="1920" min="100" max="20000" />
             <span class="sep">×</span>
@@ -1260,7 +1260,7 @@
           <span class="f-inputs"><input type="color" id="color-accent" value="#2590ce" /></span>
         </div>
         <div class="field">
-          <label data-i18n="canvas_bg">Canvas background</label>
+          <label data-i18n="canvas_bg">Output background</label>
           <span class="f-inputs">
             <input type="color" id="color-canvas-bg" value="#e6e6e8" />
             <button id="canvas-bg-white" style="padding:3px 7px;font-size:9px;" data-i18n="bg_white">White</button>
@@ -1680,22 +1680,22 @@ const I18N = {
     // Project fields
     title: 'Title',
     subtitle: 'Subtitle',
-    canvas_size: 'Canvas',
+    canvas_size: 'Output',
     accent_color: 'Accent color',
-    canvas_bg: 'Canvas background',
+    canvas_bg: 'Output background',
     bg_white: 'White',
     bg_black: 'Black',
     preset_overwrite_q: 'Load this preset? It replaces the whole project (screens, canvas, overlays). Continue?',
     dup_screen: 'Duplicate screen',
     clear_all_title: 'Clear all screens',
     clear_all_q: 'Clear everything? This removes all screens, overlays and logos (empty canvas). This cannot be undone.',
-    canvases: 'Canvases',
+    canvases: 'Outputs',
     view_single: 'Single',
-    view_all: 'All canvases',
-    add_canvas: 'Add canvas',
-    dup_canvas: 'Duplicate canvas',
-    rename_canvas: 'Canvas name:',
-    remove_canvas_q: 'Remove this canvas and all its screens?',
+    view_all: 'All outputs',
+    add_canvas: 'Add output',
+    dup_canvas: 'Duplicate output',
+    rename_canvas: 'Output name:',
+    remove_canvas_q: 'Remove this output and all its screens?',
     tiles_label: 'Tiles',
     accent_help: 'Used for outlines, overlays, labels',
     // Presets
@@ -1958,22 +1958,22 @@ const I18N = {
     logos: 'Logo\'s',
     title: 'Titel',
     subtitle: 'Ondertitel',
-    canvas_size: 'Canvas',
+    canvas_size: 'Output',
     accent_color: 'Accent kleur',
-    canvas_bg: 'Canvas achtergrond',
+    canvas_bg: 'Output achtergrond',
     bg_white: 'Wit',
     bg_black: 'Zwart',
     preset_overwrite_q: 'Deze preset laden? Dit vervangt het hele project (schermen, canvas, overlays). Doorgaan?',
     dup_screen: 'Scherm dupliceren',
     clear_all_title: 'Alle schermen wissen',
     clear_all_q: 'Alles wissen? Dit verwijdert alle schermen, overlays en logo\'s (leeg canvas). Dit kan niet ongedaan gemaakt worden.',
-    canvases: 'Canvassen',
+    canvases: 'Outputs',
     view_single: 'Enkel',
-    view_all: 'Alle canvassen',
-    add_canvas: 'Canvas toevoegen',
-    dup_canvas: 'Canvas dupliceren',
-    rename_canvas: 'Canvasnaam:',
-    remove_canvas_q: 'Dit canvas en al zijn schermen verwijderen?',
+    view_all: 'Alle outputs',
+    add_canvas: 'Output toevoegen',
+    dup_canvas: 'Output dupliceren',
+    rename_canvas: 'Outputnaam:',
+    remove_canvas_q: 'Deze output en al zijn schermen verwijderen?',
     tiles_label: 'Tegels',
     accent_help: 'Gebruikt voor omlijning, overlays, labels',
     presets_info: 'Klik om te laden. Ingebouwde presets bovenaan, je opgeslagen presets daaronder.',
@@ -3160,7 +3160,7 @@ function nextCanvasId() { return Math.max(0, ...state.canvases.map(c => c.id)) +
 function canvasDisplayName(c) {
   if (c.name) return c.name;
   const i = state.canvases.indexOf(c);
-  return `Canvas ${i >= 0 ? i + 1 : c.id}`;
+  return `Output ${i >= 0 ? i + 1 : c.id}`;
 }
 function rebuildLogoObj(lc) {
   const { image, ...rest } = lc;
@@ -3246,8 +3246,7 @@ function addCanvas() {
   state.canvases.push(c);
   state.activeCanvasId = c.id;
   loadCanvasIntoWorking(c);
-  addScreen(); // gives the fresh canvas one default screen
-  refreshAfterCanvasChange();
+  refreshAfterCanvasChange(); // a fresh output starts empty
 }
 function duplicateCanvas(id) {
   captureActiveCanvas();
