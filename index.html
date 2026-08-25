@@ -466,6 +466,18 @@
     z-index: 6;
   }
   .tile-toolbar .tt-sep { width: 1px; align-self: stretch; background: var(--border-input); margin: 2px 3px; }
+  .view-mode-toggle {
+    position: absolute; top: 12px; left: 50%; transform: translateX(-50%);
+    display: flex; gap: 3px; z-index: 6;
+    background: var(--bg-panel); border: 1px solid var(--border-input);
+    border-radius: 8px; padding: 3px;
+  }
+  .view-mode-toggle button {
+    border: none; background: transparent; color: var(--text-secondary);
+    font-size: 11px; font-weight: 600; padding: 5px 12px; border-radius: 6px;
+    cursor: pointer; font-family: inherit;
+  }
+  .view-mode-toggle button.on { background: var(--accent); color: #fff; }
   /* Reusable icon-button with delayed tooltip. Add class "tool-btn" and a data-tip attribute. */
   .tool-btn {
     position: relative;
@@ -1164,6 +1176,10 @@
       <span>TILE <b id="vm-tile">—</b></span>
     </div>
     <div id="page-indicator" style="display: none;"></div>
+    <div id="view-mode-toggle" class="view-mode-toggle" style="display: none;">
+      <button data-view="single" data-i18n="view_single">Single</button>
+      <button data-view="all" data-i18n="view_all">All canvases</button>
+    </div>
     <div class="tile-toolbar" id="tile-toolbar">
       <button class="tool-btn active" id="tt-pointer" data-tip="Pointer" data-tool="pointer">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -1674,6 +1690,8 @@ const I18N = {
     clear_all_title: 'Clear all screens',
     clear_all_q: 'Clear everything? This removes all screens, overlays and logos (empty canvas). This cannot be undone.',
     canvases: 'Canvases',
+    view_single: 'Single',
+    view_all: 'All canvases',
     add_canvas: 'Add canvas',
     dup_canvas: 'Duplicate canvas',
     rename_canvas: 'Canvas name:',
@@ -1950,6 +1968,8 @@ const I18N = {
     clear_all_title: 'Alle schermen wissen',
     clear_all_q: 'Alles wissen? Dit verwijdert alle schermen, overlays en logo\'s (leeg canvas). Dit kan niet ongedaan gemaakt worden.',
     canvases: 'Canvassen',
+    view_single: 'Enkel',
+    view_all: 'Alle canvassen',
     add_canvas: 'Canvas toevoegen',
     dup_canvas: 'Canvas dupliceren',
     rename_canvas: 'Canvasnaam:',
@@ -2309,6 +2329,7 @@ let state = {
   autoRender: true,
   canvases: [],          // multi-canvas: [{id,name,canvasW,canvasH,canvasBg,screens,activeScreenId,placedItems,logos,...}]
   activeCanvasId: null,  // the canvas currently loaded into the working fields above
+  viewMode: 'single',    // 'single' = edit one canvas; 'all' = overview of every canvas
 };
 
 let pmItemIdCounter = 0;
@@ -3177,9 +3198,11 @@ function loadCanvasIntoWorking(c) {
   state.selectedOverlay = c.selectedOverlay;
 }
 function refreshAfterCanvasChange() {
+  if (state.viewMode === 'all' && state.canvases.length <= 1) state.viewMode = 'single';
   syncProjectToUI();
   syncDisplayToUI();
   renderCanvasList();
+  updateViewModeToggle();
   renderScreenTabs();
   syncScreenToUI();
   renderGrid();
@@ -3288,6 +3311,201 @@ function renderCanvasList() {
     nm.ondblclick = (e) => { e.stopPropagation(); renameCanvas(c.id); };
     cont.appendChild(row);
   });
+}
+
+// ============================================================
+// MULTI-CANVAS OVERVIEW (all canvases at once, max 2 per row)
+// ============================================================
+const OV_COLS = 2;
+let overviewLayout = [];  // [{id,x,y,w,h}] cell rects in world coords for the current overview render
+let overviewDrag = null;  // { srcId, screenId, grabX, grabY, sw, sh, curX, curY, targetId }
+
+function setViewMode(mode) {
+  if (mode === 'all' && state.canvases.length <= 1) mode = 'single';
+  state.viewMode = mode;
+  updateViewModeToggle();
+  updatePageIndicator();
+  setPreviewZoom('fit');
+  scheduleRender();
+}
+function updateViewModeToggle() {
+  const wrap = $('view-mode-toggle');
+  if (!wrap) return;
+  wrap.style.display = (state.canvases.length > 1) ? 'flex' : 'none';
+  wrap.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.view === state.viewMode));
+}
+// Draws every canvas in a 2-column grid onto the main canvas element.
+function renderOverview() {
+  const canvas = $('canvas');
+  const ctx = canvas.getContext('2d');
+  const accent = state.project.accent || '#2590ce';
+  captureActiveCanvas(); // make the active slot current before we swap through them
+  const list = state.canvases;
+  const rows = Math.ceil(list.length / OV_COLS);
+  const gap = 150, labelH = 90;
+  const colW = new Array(OV_COLS).fill(0);
+  const rowH = new Array(rows).fill(0);
+  list.forEach((c, i) => {
+    const col = i % OV_COLS, row = Math.floor(i / OV_COLS);
+    colW[col] = Math.max(colW[col], c.canvasW);
+    rowH[row] = Math.max(rowH[row], c.canvasH);
+  });
+  const colX = []; { let x = gap; for (let c = 0; c < OV_COLS; c++) { colX[c] = x; x += colW[c] + gap; } }
+  const rowY = []; { let y = gap; for (let r = 0; r < rows; r++) { rowY[r] = y; y += labelH + rowH[r] + gap; } }
+  const totalW = colX[OV_COLS - 1] + colW[OV_COLS - 1] + gap;
+  const totalH = rowY[rows - 1] + labelH + rowH[rows - 1] + gap;
+
+  canvas.width = Math.max(100, Math.round(totalW));
+  canvas.height = Math.max(100, Math.round(totalH));
+  state.canvasBleed = { left: 0, top: 0, right: 0, bottom: 0, elW: canvas.width, elH: canvas.height, offX: 0, offY: 0 };
+  applyZoomToCanvas(canvas, previewZoom);
+
+  ctx.fillStyle = '#0f1218';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  overviewLayout = [];
+  list.forEach((c, i) => {
+    const col = i % OV_COLS, row = Math.floor(i / OV_COLS);
+    const cellX = colX[col];
+    const cellY = rowY[row] + labelH;
+    const isActive = c.id === state.activeCanvasId;
+    const isTarget = overviewDrag && overviewDrag.targetId === c.id && overviewDrag.srcId !== c.id;
+
+    // label above the canvas
+    ctx.save();
+    ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+    const lblFs = Math.max(26, Math.round(colW[col] / 48));
+    ctx.font = `700 ${lblFs}px sans-serif`;
+    ctx.fillStyle = isActive ? '#86e0a6' : '#c7ccd6';
+    ctx.fillText(canvasDisplayName(c), cellX, cellY - 34);
+    ctx.font = `500 ${Math.round(lblFs * 0.62)}px monospace`;
+    ctx.fillStyle = '#6a6e77';
+    ctx.fillText(`${c.canvasW} × ${c.canvasH}`, cellX, cellY - 10);
+    ctx.restore();
+
+    // canvas body (reuse the normal drawing code with the working fields pointed at c)
+    ctx.save();
+    ctx.translate(cellX, cellY);
+    loadCanvasIntoWorking(c);
+    ctx.fillStyle = c.canvasBg || '#e6e6e8';
+    ctx.fillRect(0, 0, c.canvasW, c.canvasH);
+    state.screens.forEach(s => {
+      if (overviewDrag && overviewDrag.srcId === c.id && overviewDrag.screenId === s.id) return; // hide the dragged one
+      drawScreen(ctx, s, c.canvasW, c.canvasH, accent);
+    });
+    drawLogos(ctx, c.canvasW, c.canvasH);
+    ctx.restore();
+
+    // frame
+    ctx.save();
+    ctx.lineWidth = (isActive || isTarget) ? Math.max(5, colW[col] / 300) : Math.max(2, colW[col] / 600);
+    ctx.strokeStyle = isTarget ? accent : (isActive ? '#86e0a6' : '#3a4150');
+    ctx.strokeRect(cellX, cellY, c.canvasW, c.canvasH);
+    ctx.restore();
+
+    overviewLayout.push({ id: c.id, x: cellX, y: cellY, w: c.canvasW, h: c.canvasH });
+  });
+
+  loadCanvasIntoWorking(state.canvases.find(c => c.id === state.activeCanvasId));
+
+  // ghost of the screen being dragged
+  if (overviewDrag) {
+    const gx = overviewDrag.curX - overviewDrag.grabX;
+    const gy = overviewDrag.curY - overviewDrag.grabY;
+    ctx.save();
+    ctx.setLineDash([12, 8]);
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = accent;
+    ctx.fillStyle = 'rgba(37,144,206,0.18)';
+    ctx.fillRect(gx, gy, overviewDrag.sw, overviewDrag.sh);
+    ctx.strokeRect(gx, gy, overviewDrag.sw, overviewDrag.sh);
+    ctx.restore();
+  }
+}
+function overviewCellAt(x, y) {
+  for (const cell of overviewLayout) {
+    if (x >= cell.x && x <= cell.x + cell.w && y >= cell.y && y <= cell.y + cell.h) return cell;
+  }
+  return null;
+}
+function overviewHitTest(x, y) {
+  for (let i = overviewLayout.length - 1; i >= 0; i--) {
+    const cell = overviewLayout[i];
+    if (x < cell.x || x > cell.x + cell.w || y < cell.y || y > cell.y + cell.h) continue;
+    const c = state.canvases.find(cc => cc.id === cell.id);
+    const lx = x - cell.x, ly = y - cell.y;
+    for (let si = c.screens.length - 1; si >= 0; si--) {
+      const r = screenRect(c.screens[si]);
+      if (lx >= r.x && lx <= r.x + r.w && ly >= r.y && ly <= r.y + r.h) {
+        return { canvasId: c.id, screen: c.screens[si], rect: r };
+      }
+    }
+    return { canvasId: c.id, screen: null };
+  }
+  return null;
+}
+function handleOverviewMouseDown(e) {
+  const { x, y } = getCanvasCoords(e); // world coords (bleed is 0 in overview)
+  const hit = overviewHitTest(x, y);
+  if (hit && hit.screen) {
+    const r = hit.rect;
+    overviewDrag = { srcId: hit.canvasId, screenId: hit.screen.id, grabX: x - r.x, grabY: y - r.y, sw: r.w, sh: r.h, curX: x, curY: y, targetId: hit.canvasId };
+    $('canvas').style.cursor = 'grabbing';
+    window.addEventListener('mousemove', overviewMove);
+    window.addEventListener('mouseup', overviewUp);
+    e.preventDefault();
+    scheduleRender();
+  } else if (hit && hit.canvasId && hit.canvasId !== state.activeCanvasId) {
+    switchCanvas(hit.canvasId); // clicking an empty canvas makes it active
+  }
+}
+function overviewMove(e) {
+  if (!overviewDrag) return;
+  const { x, y } = getCanvasCoords(e);
+  overviewDrag.curX = x; overviewDrag.curY = y;
+  const cell = overviewCellAt(x, y);
+  overviewDrag.targetId = cell ? cell.id : overviewDrag.srcId;
+  scheduleRender();
+}
+function overviewUp() {
+  window.removeEventListener('mousemove', overviewMove);
+  window.removeEventListener('mouseup', overviewUp);
+  $('canvas').style.cursor = 'default';
+  const d = overviewDrag; overviewDrag = null;
+  if (!d) return;
+  const cell = overviewLayout.find(c => c.id === d.targetId) || overviewLayout.find(c => c.id === d.srcId);
+  if (!cell) { scheduleRender(); return; }
+  moveScreenToCanvas(d.screenId, d.srcId, d.targetId, Math.round(d.curX - d.grabX - cell.x), Math.round(d.curY - d.grabY - cell.y));
+}
+// Move a screen (with its info overlay) to a position, optionally onto another canvas.
+function moveScreenToCanvas(screenId, srcId, dstId, offX, offY) {
+  captureActiveCanvas();
+  const src = state.canvases.find(c => c.id === srcId);
+  const dst = state.canvases.find(c => c.id === dstId);
+  const scr = src && src.screens.find(s => s.id === screenId);
+  if (!scr || !dst) { loadCanvasIntoWorking(state.canvases.find(c => c.id === state.activeCanvasId)); return; }
+  const oldR = screenRect(scr);
+  const newOffX = offX + (scr.offsetX - oldR.x);
+  const newOffY = offY + (scr.offsetY - oldR.y);
+  const dX = newOffX - scr.offsetX, dY = newOffY - scr.offsetY;
+  scr.offsetX = newOffX; scr.offsetY = newOffY;
+  const linked = src.placedItems.filter(it => it.type === 'screeninfo' && it.screenId === screenId);
+  linked.forEach(it => { it.x += dX; it.y += dY; delete it._infoBB; });
+  delete scr._infoBB;
+  if (srcId !== dstId) {
+    src.screens = src.screens.filter(s => s.id !== screenId);
+    src.placedItems = src.placedItems.filter(it => !(it.type === 'screeninfo' && it.screenId === screenId));
+    const newId = Math.max(0, ...dst.screens.map(s => s.id)) + 1;
+    if (src.activeScreenId === screenId) src.activeScreenId = src.screens.length ? src.screens[0].id : null;
+    scr.id = newId;
+    dst.screens.push(scr);
+    linked.forEach(it => { it.screenId = newId; });
+    dst.placedItems.push(...linked);
+    dst.activeScreenId = newId;
+    state.activeCanvasId = dstId; // follow the moved screen
+  }
+  loadCanvasIntoWorking(state.canvases.find(c => c.id === state.activeCanvasId));
+  refreshAfterCanvasChange();
 }
 
 function rebuildActiveGrid() {
@@ -3667,6 +3885,9 @@ function renderCanvas() {
   // Keep screen-info overlays anchored/scaled to their screens after any change.
   reflowScreenInfoItems();
 
+  // Overview mode: draw every canvas at once instead of the single active one.
+  if (state.viewMode === 'all' && state.canvases.length > 1) { renderOverview(); return; }
+
   const { canvasW: cw, canvasH: ch, accent, name, subtitle } = {
     canvasW: state.project.canvasW,
     canvasH: state.project.canvasH,
@@ -3861,7 +4082,8 @@ let currentPage = 1; // 1 = pixelmap, 2 = info page
 function updatePageIndicator() {
   const ind = $('page-indicator');
   const nav = $('page-nav');
-  const hasPage2 = state.infoFitsOnPage1 === false;
+  // The 2-page info banner/nav is a single-canvas concept — hide it in overview.
+  const hasPage2 = state.infoFitsOnPage1 === false && state.viewMode !== 'all';
   if (ind) {
     if (hasPage2) {
       ind.style.display = '';
@@ -5605,6 +5827,7 @@ function drawScreenDragGuides(ctx) {
 function attachCanvasDragHandlers() {
   const canvas = $('canvas');
   canvas.onmousedown = (e) => {
+    if (state.viewMode === 'all') { if (e.button === 0) handleOverviewMouseDown(e); return; }
     const { x, y } = getCanvasCoords(e);
     // Move tool (or Alt held) grabs a screen and moves it (priority over tile painting)
     if (activeTool === 'move' || e.altKey) {
@@ -5727,6 +5950,7 @@ function attachCanvasDragHandlers() {
     scheduleRender();
   };
   canvas.onmousemove = (e) => {
+    if (state.viewMode === 'all') return; // overview handles its own drag via window listeners
     const { x, y } = getCanvasCoords(e);
     updateViewMeta(x, y);
     // Advanced free-tile dragging (main canvas)
@@ -5860,6 +6084,7 @@ function attachCanvasDragHandlers() {
     }
   };
   canvas.onmouseup = () => {
+    if (state.viewMode === 'all') return; // overview drag ends via its own window listener
     const wasDragging = dragState || screenDragState || advTileDrag;
     dragState = null; paintState = null;
     if (screenDragState) { screenDragState = null; activeSnapGuides = []; frozenCanvasBleed = null; renderStats(); canvas.style.cursor = 'default'; }
@@ -7189,6 +7414,7 @@ function wireUp() {
   $('add-screen-btn').onclick = () => { addScreen(); renderCanvasList(); scheduleRender(); };
   if ($('clear-all-screens-btn')) $('clear-all-screens-btn').onclick = () => { clearAllScreens(); renderCanvasList(); };
   if ($('add-canvas-btn')) $('add-canvas-btn').onclick = addCanvas;
+  document.querySelectorAll('#view-mode-toggle button').forEach(b => b.onclick = () => setViewMode(b.dataset.view));
   // Screen-properties dropdown: switch the active screen (stopPropagation so
   // clicking it doesn't collapse the card via the h3 toggle).
   const screenSel = $('prop-screen-select');
@@ -9701,6 +9927,7 @@ function init() {
   syncScreenToUI();
   syncDisplayToUI();
   renderCanvasList();
+  updateViewModeToggle();
   renderScreenTabs();
   renderGrid();
   renderStats();
