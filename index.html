@@ -331,8 +331,9 @@
     box-shadow: inset 3px 0 0 var(--green, #86e0a6);
     color: var(--text-primary);
   }
-  /* Output rows are the tree headers — bigger, bolder, slightly raised background. */
-  .cnv-row { padding: 11px 12px; background: var(--bg-panel); }
+  /* Output rows are the tree headers — bigger, bolder, a lighter raised background
+     so they read as the parent tab; nested screen rows sit on a darker tone. */
+  .cnv-row { padding: 11px 12px; background: var(--bg-chip); }
   .cnv-row .cnv-nm { flex: 1; font-size: 13.5px; font-weight: 700; letter-spacing: .01em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .cnv-row .cnv-res { font-family: var(--mono); font-size: 9px; color: var(--text-muted); }
   .cnv-row .dup, .cnv-row .close, .cnv-row .clear-scr { display: none; color: var(--text-muted); font-size: 13px; padding: 0 2px; }
@@ -340,8 +341,8 @@
   .cnv-row .dup:hover, .cnv-row .clear-scr:hover { color: var(--accent-soft); }
   .cnv-row .close:hover { color: var(--danger); }
   #canvas-list { border-bottom: 1px solid var(--border-field); }
-  /* Screens nested under their output: indented, a touch smaller, subtle guide line. */
-  #canvas-list .scr-row, #tp-session-list .scr-row { padding-left: 30px; }
+  /* Screens nested under their output: darker tone, indented, subtle guide line. */
+  #canvas-list .scr-row, #tp-session-list .scr-row { padding-left: 30px; background: var(--bg-app); }
   #canvas-list .scr-row::before, #tp-session-list .scr-row::before {
     content: ""; position: absolute; left: 16px; top: 0; bottom: 0;
     border-left: 1px solid var(--border-field);
@@ -376,12 +377,18 @@
 
   /* Test pattern list in left panel */
   .left-panel .tp-pattern-grid { display: flex; flex-direction: column; }
-  .tp-pattern-select {
-    width: 100%; padding: 7px 8px; font-size: 12px; font-family: inherit;
-    background: var(--bg-input); color: var(--text-primary);
-    border: 1px solid var(--border-input); border-radius: 5px; cursor: pointer;
+  /* Pattern chooser (right-panel Patterns card): one clickable row per pattern. */
+  .tp-pattern-list { display: flex; flex-direction: column; gap: 3px; }
+  .tp-pat-row {
+    display: flex; flex-direction: column; gap: 1px;
+    padding: 7px 9px; border-radius: 6px; cursor: pointer;
+    border: 1px solid transparent; background: var(--bg-input);
   }
-  .tp-pattern-desc { font-size: 10px; color: var(--text-muted); margin-top: 6px; line-height: 1.4; }
+  .tp-pat-row:hover { background: var(--bg-hover); }
+  .tp-pat-row.on { background: var(--bg-active-row); border-color: var(--accent); }
+  .tp-pat-nm { font-size: 12px; font-weight: 600; color: var(--text-primary); }
+  .tp-pat-row.on .tp-pat-nm { color: var(--accent-soft); }
+  .tp-pat-desc { font-size: 9.5px; color: var(--text-muted); line-height: 1.3; }
   .tp-pattern-card {
     display: flex;
     align-items: center;
@@ -1522,13 +1529,8 @@
       <div class="tt-label" style="font-size:9px;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);margin-bottom:5px;" data-i18n="tp_overview">Layout overview</div>
       <div id="tp-overview" style="background:var(--bg-input);border:1px solid var(--border-input);border-radius:4px;padding:4px;"></div>
     </div>
-    <div class="btn-row" style="padding: 6px 10px;">
+    <div class="btn-row" style="padding: 6px 10px; margin-top: auto;">
       <button id="tp-sync-screens-btn" data-i18n="tp_sync_screens">↻ From pixelmap</button>
-    </div>
-    <div class="panel-h"><span data-i18n="tp_pattern">Patterns</span></div>
-    <div style="padding: 8px 10px;">
-      <select id="tp-pattern-select" class="tp-pattern-select"></select>
-      <div id="tp-pattern-desc" class="tp-pattern-desc"></div>
     </div>
   </aside>
 
@@ -1554,6 +1556,13 @@
 
   <!-- RIGHT: cards -->
   <aside class="right-panel">
+
+    <div class="card" id="tp-pattern-section">
+      <h3><span data-i18n="tp_pattern">Pattern type</span> <span class="car">▾</span></h3>
+      <div class="card-body">
+        <div id="tp-pattern-list" class="tp-pattern-list"></div>
+      </div>
+    </div>
 
     <div class="card">
       <h3><span data-i18n="tp_resolution">Resolution</span> <span class="car">▾</span></h3>
@@ -8361,22 +8370,24 @@ const TP_PREVIEW_SVGS = {
 };
 
 function renderTpPatternGrid() {
-  const sel = $('tp-pattern-select');
-  if (!sel) return;
-  sel.innerHTML = TP_PATTERNS.map(p =>
-    `<option value="${p.id}"${tpState.pattern === p.id ? ' selected' : ''}>${T(p.nameKey)}</option>`
-  ).join('');
-  const desc = $('tp-pattern-desc');
-  const cur = TP_PATTERNS.find(p => p.id === tpState.pattern);
-  if (desc) desc.textContent = cur ? T(cur.descKey) : '';
-  sel.onchange = () => {
-    tpState.pattern = sel.value;
-    tpSaveActiveSession();
-    renderTpSessionList();
-    renderTpPatternGrid();
-    renderTpOptions();
-    renderTpCanvas();
-  };
+  const cont = $('tp-pattern-list');
+  if (!cont) return;
+  cont.innerHTML = '';
+  TP_PATTERNS.forEach(p => {
+    const row = document.createElement('div');
+    row.className = 'tp-pat-row' + (tpState.pattern === p.id ? ' on' : '');
+    row.innerHTML = `<span class="tp-pat-nm">${T(p.nameKey)}</span><span class="tp-pat-desc">${T(p.descKey)}</span>`;
+    row.onclick = () => {
+      if (tpState.pattern === p.id) return;
+      tpState.pattern = p.id;
+      tpSaveActiveSession();
+      renderTpSessionList();
+      renderTpPatternGrid();
+      renderTpOptions();
+      renderTpCanvas();
+    };
+    cont.appendChild(row);
+  });
 }
 
 function renderTpOptions() {
