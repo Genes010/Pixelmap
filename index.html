@@ -341,12 +341,12 @@
   .cnv-row .close:hover { color: var(--danger); }
   #canvas-list { border-bottom: 1px solid var(--border-field); }
   /* Screens nested under their output: indented, a touch smaller, subtle guide line. */
-  #canvas-list .scr-row { padding-left: 30px; }
-  #canvas-list .scr-row::before {
+  #canvas-list .scr-row, #tp-session-list .scr-row { padding-left: 30px; }
+  #canvas-list .scr-row::before, #tp-session-list .scr-row::before {
     content: ""; position: absolute; left: 16px; top: 0; bottom: 0;
     border-left: 1px solid var(--border-field);
   }
-  #canvas-list .scr-row .nm { font-size: 11px; }
+  #canvas-list .scr-row .nm, #tp-session-list .scr-row .nm { font-size: 11px; }
   #canvas-list .scr-row.ro { cursor: pointer; opacity: .78; }
   #canvas-list .scr-row.ro:hover { opacity: 1; }
   #canvas-list .scr-add {
@@ -359,10 +359,13 @@
     border-left: 1px solid var(--border-field);
   }
   #canvas-list .scr-add:hover { color: var(--accent-soft); }
-  #canvas-list .scr-empty {
+  #canvas-list .scr-empty, #tp-session-list .scr-empty {
     padding: 7px 12px 8px 30px; font-size: 10px; font-style: italic;
     color: var(--text-muted); border-bottom: 1px solid var(--border-field);
   }
+  /* Output header rows in the test-pattern tree share the pixelmap look. */
+  #tp-session-list .cnv-row .cnv-nm { flex: 1; font-size: 13.5px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #tp-session-list .cnv-row .cnv-res { font-family: var(--mono); font-size: 9px; color: var(--text-muted); }
   .scr-row .row-actions { display: none; gap: 6px; align-items: center; flex-shrink: 0; }
   .scr-row:hover .row-actions { display: flex; }
   .scr-row .row-actions button {
@@ -373,6 +376,12 @@
 
   /* Test pattern list in left panel */
   .left-panel .tp-pattern-grid { display: flex; flex-direction: column; }
+  .tp-pattern-select {
+    width: 100%; padding: 7px 8px; font-size: 12px; font-family: inherit;
+    background: var(--bg-input); color: var(--text-primary);
+    border: 1px solid var(--border-input); border-radius: 5px; cursor: pointer;
+  }
+  .tp-pattern-desc { font-size: 10px; color: var(--text-muted); margin-top: 6px; line-height: 1.4; }
   .tp-pattern-card {
     display: flex;
     align-items: center;
@@ -1517,7 +1526,10 @@
       <button id="tp-sync-screens-btn" data-i18n="tp_sync_screens">↻ From pixelmap</button>
     </div>
     <div class="panel-h"><span data-i18n="tp_pattern">Patterns</span></div>
-    <div class="tp-pattern-grid" id="tp-pattern-grid"></div>
+    <div style="padding: 8px 10px;">
+      <select id="tp-pattern-select" class="tp-pattern-select"></select>
+      <div id="tp-pattern-desc" class="tp-pattern-desc"></div>
+    </div>
   </aside>
 
   <!-- CENTER: viewport -->
@@ -1797,7 +1809,7 @@ const I18N = {
     tp_preset_custom: 'Custom...',
     tp_custom_res: 'Resolution',
     tp_pattern: 'Pattern type',
-    tp_screens: 'Screens',
+    tp_screens: 'Outputs',
     tp_overview: 'Layout overview',
     tp_no_sessions: 'No screens with content yet. Draw tiles in the pixelmap, then sync.',
     tp_sync_screens: '↻ From pixelmap',
@@ -1808,6 +1820,8 @@ const I18N = {
     tp_tip_grid: 'Grid / crosshatch: check geometry, focus uniformity, and pixel alignment.',
     tp_tip_focus: 'Focus pattern: align fine details to verify lens focus across the image.',
     // Pattern names
+    pat_pixelmap: 'Pixelmap (from generator)',
+    pat_pixelmap_desc: 'The screen exactly as in the pixelmap generator, incl. text overlay',
     pat_colorbars: 'SMPTE Color Bars',
     pat_colorbars_desc: 'Color + grayscale ramp',
     pat_grayscale: 'Grayscale steps',
@@ -2078,7 +2092,7 @@ const I18N = {
     tp_preset_custom: 'Aangepast...',
     tp_custom_res: 'Resolutie',
     tp_pattern: 'Patroon type',
-    tp_screens: 'Schermen',
+    tp_screens: 'Outputs',
     tp_overview: 'Layout overzicht',
     tp_no_sessions: 'Nog geen schermen met inhoud. Teken tegels in de pixelmap en synchroniseer.',
     tp_sync_screens: '↻ Uit pixelmap',
@@ -2089,6 +2103,8 @@ const I18N = {
     tp_tip_grid: 'Grid / crosshatch: controleer geometrie, scherpte uniformiteit en pixel uitlijning.',
     tp_tip_focus: 'Focus patroon: lijn fijne details uit om lens focus te verifiëren.',
     // Pattern names
+    pat_pixelmap: 'Pixelmap (uit generator)',
+    pat_pixelmap_desc: 'Het scherm precies zoals in de pixelmap-generator, incl. tekst overlay',
     pat_colorbars: 'SMPTE Kleurbalken',
     pat_colorbars_desc: 'Kleur + grijswaarde',
     pat_grayscale: 'Grijswaarde stappen',
@@ -7849,6 +7865,7 @@ function wireUp() {
 // ============================================================
 
 const TP_PATTERNS = [
+  { id: 'pixelmap',    nameKey: 'pat_pixelmap',    descKey: 'pat_pixelmap_desc',    options: [] },
   { id: 'colorbars',   nameKey: 'pat_colorbars',   descKey: 'pat_colorbars_desc',   options: ['show_info', 'show_safe', 'show_outline'] },
   { id: 'grayscale',   nameKey: 'pat_grayscale',   descKey: 'pat_grayscale_desc',   options: ['show_info', 'show_outline'] },
   { id: 'grid',        nameKey: 'pat_grid',        descKey: 'pat_grid_desc',        options: ['show_info', 'show_outline', 'line_spacing', 'line_width', 'grid_color', 'bg_color'] },
@@ -7933,7 +7950,7 @@ function tpApplySessionToState(sess) {
 
 function tpDefaultSessionFields() {
   return {
-    pattern: 'colorbars',
+    pattern: 'pixelmap',
     options: {
       show_info: true, show_safe: false, show_outline: true,
       bg_color: '#000000', fg_color: '#ffffff', grid_color: '#ffffff',
@@ -7999,29 +8016,45 @@ function tpScreenResolution(s) {
 // Generate / update sessions from the pixelmap screens (live sync).
 // Existing sessions for a screen keep their pattern/options; only the resolution
 // (and name) follow the screen.
+// Find the pixelmap screen a session points at (across all outputs).
+function tpFindScreen(sess) {
+  if (!sess) return null;
+  const c = state.canvases.find(cc => cc.id === sess.canvasId);
+  if (!c) return null;
+  return (c.screens || []).find(s => s.id === sess.screenId) || null;
+}
+function tpSessionCanvas(sess) {
+  return sess ? state.canvases.find(cc => cc.id === sess.canvasId) || null : null;
+}
 function tpSyncFromScreens() {
   tpSaveActiveSession();
+  captureActiveCanvas(); // make sure the active output's screens are current before syncing
   const seen = new Set();
-  state.screens.forEach(s => {
-    const res = tpScreenResolution(s);
-    if (!res) return;
-    const w = Math.max(16, res.w);
-    const h = Math.max(16, res.h);
-    const name = screenDisplayName(s);
-    seen.add(s.id);
-    let sess = tpSessions.find(t => t.screenId === s.id);
-    if (sess) {
-      sess.width = w; sess.height = h; sess.name = name;
-    } else {
-      sess = Object.assign({ id: nextTpSessionId(), screenId: s.id, name, width: w, height: h }, tpDefaultSessionFields());
-      tpSessions.push(sess);
-    }
+  const order = []; // flattened (canvasId,screenId) order following the outputs tree
+  state.canvases.forEach(c => {
+    (c.screens || []).forEach(s => {
+      const res = tpScreenResolution(s);
+      if (!res) return;
+      const w = Math.max(16, res.w);
+      const h = Math.max(16, res.h);
+      const name = screenDisplayName(s);
+      const key = c.id + ':' + s.id;
+      seen.add(key);
+      order.push(key);
+      let sess = tpSessions.find(t => t.canvasId === c.id && t.screenId === s.id);
+      if (sess) {
+        sess.width = w; sess.height = h; sess.name = name;
+      } else {
+        sess = Object.assign({ id: nextTpSessionId(), canvasId: c.id, screenId: s.id, name, width: w, height: h }, tpDefaultSessionFields());
+        tpSessions.push(sess);
+      }
+    });
   });
   // Drop sessions whose screen no longer exists
-  tpSessions = tpSessions.filter(t => seen.has(t.screenId));
-  // Keep ordering aligned with the screens list
-  tpSessions.sort((a, b) => state.screens.findIndex(s => s.id === a.screenId) - state.screens.findIndex(s => s.id === b.screenId));
-  
+  tpSessions = tpSessions.filter(t => seen.has(t.canvasId + ':' + t.screenId));
+  // Keep ordering aligned with the outputs tree
+  tpSessions.sort((a, b) => order.indexOf(a.canvasId + ':' + a.screenId) - order.indexOf(b.canvasId + ':' + b.screenId));
+
   if (tpSessions.length === 0) {
     tpActiveSessionId = null;
   } else if (!tpSessions.find(t => t.id === tpActiveSessionId)) {
@@ -8043,11 +8076,16 @@ function tpSyncFromScreens() {
 // Thumbnail for a test-pattern session: the chosen pattern's mini-preview,
 // drawn into a rectangle matching the screen's aspect ratio (scaled proportionally
 // to the largest session, like the pixelmap thumbnails).
-function tpSessionThumbSVG(sess, boxW, boxH) {
+function tpSessionThumbSVG(sess, boxW, boxH, refExtent) {
   const accent = state.project.accent || '#2590ce';
-  // Scale proportionally to the largest session extent
-  let ref = 1;
-  tpSessions.forEach(t => { if (t.width > ref) ref = t.width; if (t.height > ref) ref = t.height; });
+  // For the Pixelmap pattern, show the actual screen thumbnail (matches the pixelmap tree).
+  if (sess.pattern === 'pixelmap') {
+    const scr = tpFindScreen(sess);
+    if (scr) return screenThumbSVG(scr, boxW, boxH, refExtent);
+  }
+  // Scale proportionally to the largest session extent (per output when provided).
+  let ref = refExtent || 1;
+  if (!refExtent) tpSessions.forEach(t => { if (t.width > ref) ref = t.width; if (t.height > ref) ref = t.height; });
   const usable = 0.9;
   const scale = (Math.min(boxW, boxH) * usable) / ref;
   const w = sess.width * scale, h = sess.height * scale;
@@ -8081,44 +8119,60 @@ function renderTpSessionList() {
   container.innerHTML = '';
   if (tpSessions.length === 0) {
     container.innerHTML = `<div class="info" style="padding:6px 10px;">${T('tp_no_sessions')}</div>`;
+    renderTpOverview();
     return;
   }
-  tpSessions.forEach(sess => {
-    const row = document.createElement('div');
-    row.className = 'scr-row' + (sess.id === tpActiveSessionId ? ' on' : '');
-    const scr = state.screens.find(s => s.id === sess.screenId);
-    const thumb = tpSessionThumbSVG(sess, 34, 26);
-    row.innerHTML = `
-      <span class="scr-thumb">${thumb}</span>
-      <span class="nm">${escapeHtml(sess.name)}</span>
-      <span class="res">${sess.width}×${sess.height}</span>
-      <span class="row-actions">
-        <button data-action="dl" title="${T('download_png')}">⬇</button>
-      </span>
-    `;
-    row.dataset.sessId = sess.id;
-    const nmSpan = row.querySelector('.nm');
-    nmSpan.title = T('rename_hint');
-    const doRename = () => {
-      const span = document.querySelector(`#tp-session-list .scr-row[data-sess-id="${sess.id}"] .nm`);
-      if (!span) return;
-      startInlineRename(span, sess.name || '', (val) => {
-        if (val !== null) {
-          sess.name = val || sess.name;
-          const scr2 = state.screens.find(s => s.id === sess.screenId);
-          if (scr2) { scr2.label = val; renderScreenTabs(); syncScreenToUI(); }
-        }
-        renderTpSessionList();
-      });
-    };
-    nmSpan.onclick = (e) => {
-      e.stopPropagation();
-      handleNameClick(`tp_${sess.id}`, () => tpLoadSession(sess.id), doRename);
-    };
-    row.querySelector('.res').onclick = () => tpLoadSession(sess.id);
-    row.querySelector('.scr-thumb').onclick = () => tpLoadSession(sess.id);
-    row.querySelector('[data-action="dl"]').onclick = (e) => { e.stopPropagation(); tpDownloadSession(sess.id); };
-    container.appendChild(row);
+  const activeSess = tpActiveSession();
+  const activeCanvasId = activeSess ? activeSess.canvasId : null;
+  // Outputs tree: each output header, with its screen sessions nested beneath.
+  state.canvases.forEach(c => {
+    const sessions = tpSessions.filter(t => t.canvasId === c.id);
+    const orow = document.createElement('div');
+    orow.className = 'cnv-row' + (c.id === activeCanvasId ? ' on' : '');
+    orow.innerHTML = `<span class="cnv-nm">${escapeHtml(canvasDisplayName(c))}</span>`
+      + `<span class="cnv-res">${c.canvasW}×${c.canvasH}</span>`;
+    orow.onclick = () => { if (sessions.length) tpLoadSession(sessions[0].id); };
+    container.appendChild(orow);
+    if (!sessions.length) {
+      const empty = document.createElement('div');
+      empty.className = 'scr-empty';
+      empty.textContent = T('no_screens');
+      container.appendChild(empty);
+      return;
+    }
+    // Scale this output's thumbnails against its own largest screen.
+    const ref = maxScreenExtent(c.screens);
+    sessions.forEach(sess => {
+      const row = document.createElement('div');
+      row.className = 'scr-row' + (sess.id === tpActiveSessionId ? ' on' : '');
+      row.innerHTML = `
+        <span class="scr-thumb">${tpSessionThumbSVG(sess, 34, 26, ref)}</span>
+        <span class="nm">${escapeHtml(sess.name)}</span>
+        <span class="res">${sess.width}×${sess.height}</span>
+        <span class="row-actions">
+          <button data-action="dl" title="${T('download_png')}">⬇</button>
+        </span>`;
+      row.dataset.sessId = sess.id;
+      const nmSpan = row.querySelector('.nm');
+      nmSpan.title = T('rename_hint');
+      const doRename = () => {
+        const span = document.querySelector(`#tp-session-list .scr-row[data-sess-id="${sess.id}"] .nm`);
+        if (!span) return;
+        startInlineRename(span, sess.name || '', (val) => {
+          if (val !== null) {
+            sess.name = val || sess.name;
+            const scr2 = tpFindScreen(sess);
+            if (scr2) { scr2.label = val; renderScreenTabs(); syncScreenToUI(); }
+          }
+          renderTpSessionList();
+        });
+      };
+      nmSpan.onclick = (e) => { e.stopPropagation(); handleNameClick(`tp_${sess.id}`, () => tpLoadSession(sess.id), doRename); };
+      row.querySelector('.res').onclick = () => tpLoadSession(sess.id);
+      row.querySelector('.scr-thumb').onclick = () => tpLoadSession(sess.id);
+      row.querySelector('[data-action="dl"]').onclick = (e) => { e.stopPropagation(); tpDownloadSession(sess.id); };
+      container.appendChild(row);
+    });
   });
   renderTpOverview();
 }
@@ -8128,15 +8182,18 @@ function renderTpSessionList() {
 function renderTpOverview() {
   const host = $('tp-overview');
   if (!host) return;
-  const cw = state.project.canvasW, ch = state.project.canvasH;
-  const boxW = 168, pad = 0;
-  const boxH = Math.max(40, Math.round(boxW * (ch / cw)));
   const activeSess = tpActiveSession();
+  // Show the layout of the SELECTED output (the active session's output).
+  const c = tpSessionCanvas(activeSess) || state.canvases.find(cc => cc.id === state.activeCanvasId) || state.canvases[0];
+  if (!c) { host.innerHTML = ''; return; }
+  const cw = c.canvasW, ch = c.canvasH;
+  const boxW = 168;
+  const boxH = Math.max(40, Math.round(boxW * (ch / cw)));
   const activeScreenId = activeSess ? activeSess.screenId : null;
   const accent = state.project.accent || '#2590ce';
   const sx = boxW / cw, sy = boxH / ch;
   let rects = '';
-  state.screens.forEach(s => {
+  (c.screens || []).forEach(s => {
     let rx, ry, rw, rh;
     if (s.advancedMode) {
       const bb = getAdvancedBBox(s);
@@ -8162,7 +8219,7 @@ function renderTpOverview() {
   host.querySelectorAll('.ov-screen').forEach(r => {
     r.onclick = () => {
       const scrId = parseInt(r.getAttribute('data-screen-id'));
-      const sess = tpSessions.find(t => t.screenId === scrId);
+      const sess = tpSessions.find(t => t.canvasId === c.id && t.screenId === scrId);
       if (sess) tpLoadSession(sess.id);
     };
   });
@@ -8304,26 +8361,22 @@ const TP_PREVIEW_SVGS = {
 };
 
 function renderTpPatternGrid() {
-  const container = $('tp-pattern-grid');
-  container.innerHTML = '';
-  TP_PATTERNS.forEach(p => {
-    const card = document.createElement('div');
-    card.className = 'tp-pattern-card' + (tpState.pattern === p.id ? ' selected' : '');
-    card.innerHTML = `
-      <div class="tp-pattern-card-icon">${TP_PREVIEW_SVGS[p.id] || ''}</div>
-      <div class="tp-pattern-card-name">${T(p.nameKey)}</div>
-      <div class="tp-pattern-card-desc">${T(p.descKey)}</div>
-    `;
-    card.onclick = () => {
-      tpState.pattern = p.id;
-      tpSaveActiveSession();
-      renderTpSessionList();
-      renderTpPatternGrid();
-      renderTpOptions();
-      renderTpCanvas();
-    };
-    container.appendChild(card);
-  });
+  const sel = $('tp-pattern-select');
+  if (!sel) return;
+  sel.innerHTML = TP_PATTERNS.map(p =>
+    `<option value="${p.id}"${tpState.pattern === p.id ? ' selected' : ''}>${T(p.nameKey)}</option>`
+  ).join('');
+  const desc = $('tp-pattern-desc');
+  const cur = TP_PATTERNS.find(p => p.id === tpState.pattern);
+  if (desc) desc.textContent = cur ? T(cur.descKey) : '';
+  sel.onchange = () => {
+    tpState.pattern = sel.value;
+    tpSaveActiveSession();
+    renderTpSessionList();
+    renderTpPatternGrid();
+    renderTpOptions();
+    renderTpCanvas();
+  };
 }
 
 function renderTpOptions() {
@@ -8402,8 +8455,9 @@ function tpRenderFrame(ctx) {
     tpDrawInfoLabel(ctx);
   }
   
-  // Universal outline around pattern (helps with geometry / edge alignment)
-  if (tpState.options.show_outline !== false) {
+  // Universal outline around pattern (helps with geometry / edge alignment).
+  // The pixelmap pattern already carries the screen's own outline, so skip it there.
+  if (tpState.options.show_outline !== false && tpState.pattern !== 'pixelmap') {
     tpDrawOutline(ctx);
   }
   
@@ -8455,6 +8509,7 @@ function tpDrawOutline(ctx) {
 
 function tpDispatchPattern(ctx) {
   switch (tpState.pattern) {
+    case 'pixelmap':    tpDrawPixelmapScreen(ctx); break;
     case 'colorbars':   tpDrawColorBars(ctx); break;
     case 'grayscale':   tpDrawGrayscale(ctx); break;
     case 'grid':        tpDrawGrid(ctx); break;
@@ -8470,6 +8525,45 @@ function tpDispatchPattern(ctx) {
 
 function tpDoesPatternUseInfoLabel(pat) {
   return ['colorbars','grayscale','grid','focus','geometry','solid','gradient','pixel_grid'].includes(pat);
+}
+
+// Render the active session's screen exactly as it looks in the pixelmap generator
+// (tiles / gradient + per-screen overlays + the screen-info text overlay).
+function tpDrawPixelmapScreen(ctx) {
+  const w = ctx.canvas.width, ch2 = ctx.canvas.height;
+  const sess = tpActiveSession();
+  const c = tpSessionCanvas(sess);
+  const scr = tpFindScreen(sess);
+  if (!scr || !c) { ctx.fillStyle = '#000'; ctx.fillRect(0, 0, w, ch2); return; }
+  // Swap the pixelmap working state to this screen's output so drawScreen /
+  // drawPmScreenInfoItem read the right screens, colours and overlay positions.
+  captureActiveCanvas();
+  const savedActiveId = state.activeCanvasId;
+  loadCanvasIntoWorking(c);
+  reflowScreenInfoItems();
+  const accent = state.project.accent || '#2590ce';
+  ctx.fillStyle = c.canvasBg || '#000';
+  ctx.fillRect(0, 0, w, ch2);
+  // Origin of this screen in canvas space (advanced screens start at their bbox).
+  let originX = scr.offsetX, originY = scr.offsetY;
+  if (scr.advancedMode) { const bb = getAdvancedBBox(scr); originX += bb.minX; originY += bb.minY; }
+  // Draw the screen at 0,0 by temporarily zeroing its canvas origin.
+  const savedOX = scr.offsetX, savedOY = scr.offsetY;
+  scr.offsetX -= originX; scr.offsetY -= originY;
+  drawScreen(ctx, scr, w, ch2, accent);
+  scr.offsetX = savedOX; scr.offsetY = savedOY;
+  // The screen-info text overlay is a placedItem anchored to the screen — draw it
+  // shifted so it lands correctly on the single-screen canvas.
+  const infoItems = (c.placedItems || []).filter(it => it.type === 'screeninfo' && it.screenId === scr.id);
+  if (infoItems.length) {
+    ctx.save();
+    ctx.translate(-originX, -originY);
+    infoItems.forEach(it => drawPmScreenInfoItem(ctx, it));
+    ctx.restore();
+  }
+  // Restore the pixelmap working state.
+  loadCanvasIntoWorking(state.canvases.find(cc => cc.id === savedActiveId));
+  state.activeCanvasId = savedActiveId;
 }
 
 // ========== Color bar band (used as extra) ==========
