@@ -8182,7 +8182,14 @@ function renderTpSessionList() {
           if (val !== null) {
             sess.name = val || sess.name;
             const scr2 = tpFindScreen(sess);
-            if (scr2) { scr2.label = val; renderScreenTabs(); syncScreenToUI(); }
+            if (scr2) {
+              // scr2 is the screen object in its output's slot (active output shares the
+              // ref with state.screens), so this persists directly. Refresh the pixelmap tree.
+              scr2.label = val;
+              renderScreenTabs();
+            }
+            // Re-render the preview so the Pixelmap pattern's screen-info text overlay updates.
+            renderTpCanvas();
           }
           renderTpSessionList();
         });
@@ -8254,17 +8261,22 @@ function tpDownloadSession(id) {
   off.width = sess.width;
   off.height = sess.height;
   const octx = off.getContext('2d');
-  // Temporarily swap tpState to this session so the existing draw pipeline renders it
+  // Temporarily swap tpState to this session so the existing draw pipeline renders it.
+  // Also point tpActiveSessionId at it so the Pixelmap pattern renders THIS screen.
   const backup = {};
   ['width','height','pattern','options','placedItems','logos','radarPhase','selectedItem'].forEach(k => backup[k] = tpState[k]);
+  const backupActiveId = tpActiveSessionId;
+  tpActiveSessionId = sess.id;
   tpApplySessionToState(sess);
   if (tpState.pattern === 'radar' || tpAnyRadarPulseItems()) tpState.radarPhase = 0;
   tpRenderFrame(octx);
   // Restore
   Object.assign(tpState, backup);
+  tpActiveSessionId = backupActiveId;
   const link = document.createElement('a');
-  const safe = (sess.name || 'screen').replace(/[^\w]+/g, '_');
-  link.download = `TestPattern_${safe}_${sess.width}x${sess.height}.png`;
+  const outSafe = (canvasDisplayName(tpSessionCanvas(sess)) || 'output').replace(/[^\w]+/g, '_');
+  const scrSafe = (sess.name || 'screen').replace(/[^\w]+/g, '_');
+  link.download = `TestPattern_${outSafe}_${scrSafe}_${sess.width}x${sess.height}.png`;
   link.href = off.toDataURL('image/png');
   link.click();
 }
@@ -8571,8 +8583,14 @@ function tpDrawPixelmapScreen(ctx) {
   if (!scr || !c) { ctx.fillStyle = '#000'; ctx.fillRect(0, 0, w, ch2); return; }
   // Swap the pixelmap working state to this screen's output so drawScreen /
   // drawPmScreenInfoItem read the right screens, colours and overlay positions.
-  captureActiveCanvas();
-  const savedActiveId = state.activeCanvasId;
+  // Save the working refs directly — do NOT use captureActiveCanvas here: it syncs
+  // from the pixelmap UI inputs, which aren't valid in test-pattern mode and would
+  // clobber the active screen (e.g. wipe a just-renamed label).
+  const saved = {
+    canvasW: state.project.canvasW, canvasH: state.project.canvasH, canvasBg: state.project.canvasBg,
+    screens: state.screens, activeScreenId: state.activeScreenId, placedItems: state.placedItems,
+    logos: state.logos, selectedLogoId: state.selectedLogoId, selectedOverlay: state.selectedOverlay,
+  };
   loadCanvasIntoWorking(c);
   reflowScreenInfoItems();
   const accent = state.project.accent || '#2590ce';
@@ -8595,9 +8613,10 @@ function tpDrawPixelmapScreen(ctx) {
     infoItems.forEach(it => drawPmScreenInfoItem(ctx, it));
     ctx.restore();
   }
-  // Restore the pixelmap working state.
-  loadCanvasIntoWorking(state.canvases.find(cc => cc.id === savedActiveId));
-  state.activeCanvasId = savedActiveId;
+  // Restore the pixelmap working state exactly as it was.
+  state.project.canvasW = saved.canvasW; state.project.canvasH = saved.canvasH; state.project.canvasBg = saved.canvasBg;
+  state.screens = saved.screens; state.activeScreenId = saved.activeScreenId; state.placedItems = saved.placedItems;
+  state.logos = saved.logos; state.selectedLogoId = saved.selectedLogoId; state.selectedOverlay = saved.selectedOverlay;
 }
 
 // ========== Color bar band (used as extra) ==========
@@ -9242,8 +9261,10 @@ function tpDownload() {
   renderTpCanvas();
   const canvas = $('tp-canvas');
   const link = document.createElement('a');
-  const pat = tpState.pattern;
-  link.download = `TestPattern_${pat}_${tpState.width}x${tpState.height}.png`;
+  const sess = tpActiveSession();
+  const outSafe = (canvasDisplayName(tpSessionCanvas(sess)) || 'output').replace(/[^\w]+/g, '_');
+  const scrSafe = (sess && sess.name ? sess.name : tpState.pattern).replace(/[^\w]+/g, '_');
+  link.download = `TestPattern_${outSafe}_${scrSafe}_${tpState.width}x${tpState.height}.png`;
   link.href = canvas.toDataURL('image/png');
   link.click();
   // Restore selection + resume animation
