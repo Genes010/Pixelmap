@@ -3423,6 +3423,7 @@ function renderCanvasList() {
 const OV_COLS = 2;
 let overviewLayout = [];  // [{id,x,y,w,h}] cell rects in world coords for the current overview render
 let overviewDrag = null;  // { srcId, screenId, grabX, grabY, sw, sh, curX, curY, targetId }
+let overviewOverlayDrag = null; // { kind, id, cellX, cellY, mode, handle, startX, startY, origX, origY, origW, origH }
 
 function setViewMode(mode) {
   if (mode === 'all' && state.canvases.length <= 1) mode = 'single';
@@ -3489,14 +3490,24 @@ function drawOverviewStatic(ctx, L) {
       if (overviewDrag && overviewDrag.srcId === c.id && overviewDrag.screenId === s.id) return; // hide the dragged one
       drawScreen(ctx, s, c.canvasW, c.canvasH, accent);
     });
-    // Also hide the dragged screen's linked info overlay while dragging.
-    let savedItems = null;
+    // Hide any overlay currently being dragged so the cache shows only the static rest.
+    let savedItems = null, savedLogos = null;
     if (overviewDrag && overviewDrag.srcId === c.id) {
       savedItems = state.placedItems;
       state.placedItems = savedItems.filter(it => !(it.type === 'screeninfo' && it.screenId === overviewDrag.screenId));
     }
+    if (overviewOverlayDrag && c.id === state.activeCanvasId) {
+      if (overviewOverlayDrag.kind === 'item') {
+        if (!savedItems) savedItems = state.placedItems;
+        state.placedItems = state.placedItems.filter(it => it.id !== overviewOverlayDrag.id);
+      } else {
+        savedLogos = state.logos;
+        state.logos = savedLogos.filter(l => l.id !== overviewOverlayDrag.id);
+      }
+    }
     drawLogos(ctx, c.canvasW, c.canvasH);
     if (savedItems) state.placedItems = savedItems;
+    if (savedLogos) state.logos = savedLogos;
     ctx.restore();
 
     ctx.save();
@@ -3539,8 +3550,41 @@ function overviewGhostPos() {
   }
   return { gx, gy, guides, cell };
 }
+// Draw the active output's selected overlay: its moving copy during a drag (the cache
+// hides it) plus the selection outline and resize handles. Also used to show a static
+// selection so the user sees what they picked.
+function drawOverviewActiveOverlay(ctx, dragging) {
+  const cell = overviewLayout.find(c => c.id === state.activeCanvasId);
+  const sel = state.selectedOverlay;
+  if (!cell || !sel) return;
+  const obj = sel.kind === 'logo' ? state.logos.find(l => l.id === sel.id) : state.placedItems.find(i => i.id === sel.id);
+  if (!obj) return;
+  ctx.save();
+  ctx.translate(cell.x, cell.y);
+  if (dragging) {
+    if (sel.kind === 'item' && obj.type === 'screeninfo') {
+      drawPmScreenInfoItem(ctx, obj);
+    } else if (sel.kind === 'logo' && obj.image) {
+      try { ctx.drawImage(obj.image, obj.x, obj.y, obj.w, obj.h); } catch (e) {}
+    } else {
+      ctx.fillStyle = 'rgba(37,144,206,0.18)';
+      ctx.fillRect(obj.x, obj.y, obj.w, obj.h);
+    }
+  }
+  const accent = state.project.accent || '#2590ce';
+  const hs = Math.max(12, Math.round(cell.w / 200)) * 2; // matches hitTestLogo's grab zone
+  ctx.setLineDash([]);
+  ctx.strokeStyle = accent;
+  ctx.lineWidth = Math.max(2, cell.w / 600);
+  ctx.strokeRect(obj.x, obj.y, obj.w, obj.h);
+  ctx.fillStyle = accent;
+  [[obj.x, obj.y], [obj.x + obj.w, obj.y], [obj.x, obj.y + obj.h], [obj.x + obj.w, obj.y + obj.h]]
+    .forEach(([hx, hy]) => ctx.fillRect(hx - hs, hy - hs, hs * 2, hs * 2));
+  ctx.restore();
+}
 // Light per-frame overlay: target highlight, snap guides, dashed ghost.
 function drawOverviewDragOverlay(ctx) {
+  if (overviewOverlayDrag) { drawOverviewActiveOverlay(ctx, true); return; }
   if (!overviewDrag) return;
   const accent = state.project.accent || '#2590ce';
   const tcell = overviewLayout.find(c => c.id === overviewDrag.targetId);
@@ -3585,7 +3629,8 @@ function renderOverview() {
   applyZoomToCanvas(canvas, previewZoom);
   drawOverviewStatic(ctx, L);
   overviewCache = null; // canvas was resized/redrawn; any drag cache is stale
-  if (overviewDrag) drawOverviewDragOverlay(ctx);
+  if (overviewDrag || overviewOverlayDrag) drawOverviewDragOverlay(ctx);
+  else if (state.selectedOverlay) drawOverviewActiveOverlay(ctx, false); // show current selection
 }
 // Fast path during a drag: blit the cached static overview, then the light overlay.
 function overviewDragRender() {
@@ -3630,21 +3675,101 @@ function overviewHitTest(x, y) {
 }
 function handleOverviewMouseDown(e) {
   const { x, y } = getCanvasCoords(e); // world coords (bleed is 0 in overview)
-  const hit = overviewHitTest(x, y);
-  if (hit && hit.screen) {
-    const srcCell = overviewLayout.find(c => c.id === hit.canvasId);
-    const r = hit.rect;
-    // Screen's world origin = cell origin + local screen rect. Store grab relative to that.
-    const swX = srcCell.x + r.x, swY = srcCell.y + r.y;
-    overviewDrag = { srcId: hit.canvasId, screenId: hit.screen.id, grabX: x - swX, grabY: y - swY, sw: r.w, sh: r.h, startX: x, startY: y, curX: x, curY: y, targetId: hit.canvasId, moved: false };
-    $('canvas').style.cursor = 'grabbing';
-    window.addEventListener('mousemove', overviewMove);
-    window.addEventListener('mouseup', overviewUp);
-    e.preventDefault();
-    scheduleRender();
-  } else if (hit && hit.canvasId && hit.canvasId !== state.activeCanvasId) {
-    switchCanvas(hit.canvasId); // clicking an empty canvas makes it active
+  const cell = overviewCellAt(x, y);
+  const wantMove = (activeTool === 'move' || e.altKey);
+
+  // Screen move: only with the Move tool or Alt held — same as single-output view.
+  if (wantMove) {
+    const hit = overviewHitTest(x, y);
+    if (hit && hit.screen) {
+      const srcCell = overviewLayout.find(c => c.id === hit.canvasId);
+      const r = hit.rect;
+      const swX = srcCell.x + r.x, swY = srcCell.y + r.y;
+      overviewDrag = { srcId: hit.canvasId, screenId: hit.screen.id, grabX: x - swX, grabY: y - swY, sw: r.w, sh: r.h, startX: x, startY: y, curX: x, curY: y, targetId: hit.canvasId, moved: false };
+      $('canvas').style.cursor = 'grabbing';
+      window.addEventListener('mousemove', overviewMove);
+      window.addEventListener('mouseup', overviewUp);
+      e.preventDefault();
+      scheduleRender();
+    }
+    return;
   }
+
+  // Pointer mode: select / adjust overlays and select screens (like single-output view).
+  if (!cell) return;
+  // Activate the clicked output first so its overlays live in the working state.
+  if (cell.id !== state.activeCanvasId) switchCanvas(cell.id);
+  const lx = x - cell.x, ly = y - cell.y; // coords in this output's own frame
+  const hit = hitTestLogo(lx, ly, cell.w);
+  if (hit) {
+    e.preventDefault();
+    state.selectedLogoId = null;
+    state.selectedOverlay = { kind: hit.kind, id: hit.obj.id };
+    // Selecting a screen-info box also opens its screen.
+    if (hit.kind === 'item' && hit.obj.type === 'screeninfo' && hit.obj.screenId != null) {
+      state.activeScreenId = hit.obj.screenId;
+      const cur = state.canvases.find(c => c.id === state.activeCanvasId);
+      if (cur) cur.activeScreenId = hit.obj.screenId;
+    }
+    overviewOverlayDrag = {
+      kind: hit.kind, id: hit.obj.id, cellX: cell.x, cellY: cell.y,
+      mode: hit.mode, handle: hit.handle,
+      startX: lx, startY: ly, origX: hit.obj.x, origY: hit.obj.y, origW: hit.obj.w, origH: hit.obj.h,
+      moved: false,
+    };
+    overviewCache = null; // rebuild the cache with this overlay hidden
+    $('canvas').style.cursor = 'grabbing';
+    window.addEventListener('mousemove', overviewOverlayMove);
+    window.addEventListener('mouseup', overviewOverlayUp);
+    refreshAfterCanvasChange();
+    return;
+  }
+  // No overlay under the cursor → select the screen there, or just this output.
+  const sHit = overviewHitTest(x, y);
+  const cur = state.canvases.find(c => c.id === state.activeCanvasId);
+  state.selectedOverlay = null;
+  state.selectedLogoId = null;
+  if (sHit && sHit.screen) {
+    if (cur) cur.activeScreenId = sHit.screen.id;
+    state.activeScreenId = sHit.screen.id;
+  }
+  refreshAfterCanvasChange();
+}
+function overviewOverlayMove(e) {
+  if (!overviewOverlayDrag) return;
+  const d = overviewOverlayDrag;
+  const { x, y } = getCanvasCoords(e);
+  const lx = x - d.cellX, ly = y - d.cellY;
+  const obj = d.kind === 'logo' ? state.logos.find(l => l.id === d.id) : state.placedItems.find(i => i.id === d.id);
+  if (!obj) return;
+  const dx = lx - d.startX, dy = ly - d.startY;
+  if (Math.abs(dx) > 3 || Math.abs(dy) > 3) d.moved = true;
+  if (d.mode === 'move') {
+    obj.x = Math.round(d.origX + dx);
+    obj.y = Math.round(d.origY + dy);
+  } else {
+    const h = d.handle;
+    let nx = d.origX, ny = d.origY, nw = d.origW, nh = d.origH;
+    if (h === 'se') { nw = d.origW + dx; nh = d.origH + dy; }
+    else if (h === 'ne') { nw = d.origW + dx; nh = d.origH - dy; ny = d.origY + dy; }
+    else if (h === 'sw') { nw = d.origW - dx; nh = d.origH + dy; nx = d.origX + dx; }
+    else if (h === 'nw') { nw = d.origW - dx; nh = d.origH - dy; nx = d.origX + dx; ny = d.origY + dy; }
+    if (nw >= 20 && nh >= 20) { obj.x = Math.round(nx); obj.y = Math.round(ny); obj.w = Math.round(nw); obj.h = Math.round(nh); }
+  }
+  // Anchor screen-info overlays to their new spot so reflow doesn't fight the drag.
+  if (d.kind === 'item' && obj.type === 'screeninfo' && obj.screenId != null) {
+    const s = state.screens.find(sc => sc.id === obj.screenId);
+    if (s) { const bb = getScreenBBoxCanvas(s); if (bb) s._infoBB = { x: bb.x, y: bb.y, w: bb.w, h: bb.h }; }
+  }
+  overviewDragRenderRAF();
+}
+function overviewOverlayUp() {
+  window.removeEventListener('mousemove', overviewOverlayMove);
+  window.removeEventListener('mouseup', overviewOverlayUp);
+  $('canvas').style.cursor = 'default';
+  overviewOverlayDrag = null;
+  overviewCache = null;
+  scheduleRender();
 }
 function overviewMove(e) {
   if (!overviewDrag) return;
@@ -5902,7 +6027,7 @@ function findScreenTileAt(x, y) {
   return null;
 }
 
-function hitTestLogo(x, y) {
+function hitTestLogo(x, y, refW) {
   // First check selected overlay handles (priority)
   let selectedObj = null;
   let selectedKind = null;
@@ -5919,7 +6044,7 @@ function hitTestLogo(x, y) {
     selectedKind = 'logo';
   }
   if (selectedObj) {
-    const canvasW = $('canvas').width;
+    const canvasW = refW || $('canvas').width;
     const hSize = Math.max(12, Math.round(canvasW / 200)) * 2;
     const handles = {
       'nw': [selectedObj.x, selectedObj.y],
