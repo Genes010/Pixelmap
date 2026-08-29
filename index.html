@@ -3202,12 +3202,24 @@ function duplicateScreen(id) {
   copy.offsetX = pos.x;
   copy.offsetY = pos.y;
   delete copy._infoBB;
+  // Give the duplicate a fresh colour, just like a brand-new screen.
+  const col = nextScreenColor();
+  copy.colorA = col.colorA;
+  copy.colorB = col.colorB;
   state.screens.push(copy);
   state.activeScreenId = copy.id;
-  // Give the copy its own screen-info overlay if the original had one.
-  if (state.placedItems.some(it => it.type === 'screeninfo' && it.screenId === src.id)) {
-    addScreenInfoItem(copy);
-  }
+  // Copy the original's screen-info overlay(s) so the duplicate keeps the same size
+  // and relative position, shifted onto the copy's new spot on the canvas.
+  const dX = copy.offsetX - src.offsetX, dY = copy.offsetY - src.offsetY;
+  const srcInfoItems = state.placedItems.filter(it => it.type === 'screeninfo' && it.screenId === src.id);
+  srcInfoItems.forEach(it => {
+    const ni = JSON.parse(JSON.stringify(it));
+    ni.id = nextPmItemId();
+    ni.screenId = copy.id;
+    ni.x = Math.round(it.x + dX);
+    ni.y = Math.round(it.y + dY);
+    state.placedItems.push(ni);
+  });
   renderScreenTabs();
   syncScreenToUI();
   renderGrid();
@@ -4914,7 +4926,10 @@ function drawCenterText(ctx, accent, bbX, bbY, bbW, bbH) {
 // Simplified rulers for advanced mode (just BB dimensions, no tile-grid ticks)
 function drawRulersForAdvanced(ctx, s, bbX, bbY, bbW, bbH, cw, ch, accent) {
   const offset = Math.max(20, cw / 80);
-  const rulerCol = '#505055';
+  // Adapt ruler line + text colour to the canvas background so they stay readable
+  // on a black (or any dark) output, not just on a light one.
+  const rulerText = readableTextColor(state.project.canvasBg);
+  const rulerCol = rulerText === '#1e1e23' ? '#505055' : '#9a9ea6';
   const fs = Math.max(14, Math.round(cw / 100));
   
   // Horizontal ruler bottom
@@ -4931,7 +4946,7 @@ function drawRulersForAdvanced(ctx, s, bbX, bbY, bbW, bbH, cw, ch, accent) {
     ctx.moveTo(bbX, ry - 12); ctx.lineTo(bbX, ry + 12);
     ctx.moveTo(bbX + bbW, ry - 12); ctx.lineTo(bbX + bbW, ry + 12);
     ctx.stroke();
-    ctx.fillStyle = '#1e1e23';
+    ctx.fillStyle = rulerText;
     ctx.font = `700 ${fs}px sans-serif`;
     ctx.textAlign = 'center';
     ctx.fillText(`${bbW} px`, bbX + bbW / 2, ry + 20 + fs);
@@ -4955,7 +4970,7 @@ function drawRulersForAdvanced(ctx, s, bbX, bbY, bbW, bbH, cw, ch, accent) {
     ctx.save();
     ctx.translate(rx + 22 + fs, bbY + bbH / 2);
     ctx.rotate(-Math.PI / 2);
-    ctx.fillStyle = '#1e1e23';
+    ctx.fillStyle = rulerText;
     ctx.font = `700 ${fs}px sans-serif`;
     ctx.textAlign = 'center';
     ctx.fillText(`${bbH} px`, 0, 0);
@@ -4966,7 +4981,9 @@ function drawRulersForAdvanced(ctx, s, bbX, bbY, bbW, bbH, cw, ch, accent) {
 
 function drawRulers(ctx, s, bbX, bbY, bbW, bbH, ntilesH, ntilesV, cw, ch, accent) {
   const offset = Math.max(20, cw / 80);
-  const rulerCol = '#505055';
+  // Adapt ruler line + text colour to the canvas background (readable on black too).
+  const rulerText = readableTextColor(state.project.canvasBg);
+  const rulerCol = rulerText === '#1e1e23' ? '#505055' : '#9a9ea6';
   const fs = Math.max(14, Math.round(cw / 100));
   const labelH = fs * 2 + 50; // ruimte nodig voor 2 regels label (main + sublabel)
   const labelW = fs * 6 + 40; // ruwe schatting van label breedte
@@ -5054,13 +5071,13 @@ function drawRulers(ctx, s, bbX, bbY, bbW, bbH, ntilesH, ntilesV, cw, ch, accent
     
     if (hCompact) {
       const compactFs = Math.max(11, Math.round(fs * 0.75));
-      ctx.fillStyle = '#1e1e23';
+      ctx.fillStyle = rulerText;
       ctx.font = `700 ${compactFs}px sans-serif`;
       ctx.textAlign = 'center';
       const labelY = hSide === 'bottom' ? (ry + 10 + compactFs) : (ry - 10);
       ctx.fillText(`${bbW} px`, bbX + bbW / 2, labelY);
     } else {
-      ctx.fillStyle = '#1e1e23';
+      ctx.fillStyle = rulerText;
       ctx.font = `700 ${fs}px sans-serif`;
       ctx.textAlign = 'center';
       const labelY = hSide === 'bottom' ? (ry + 20 + fs) : (ry - 30 - fs);
@@ -5136,7 +5153,7 @@ function drawRulers(ctx, s, bbX, bbY, bbW, bbH, ntilesH, ntilesV, cw, ch, accent
       const labelX = vSide === 'right' ? rx + 10 : rx - 10;
       ctx.translate(labelX, bbY + bbH / 2);
       ctx.rotate(-Math.PI / 2);
-      ctx.fillStyle = '#1e1e23';
+      ctx.fillStyle = rulerText;
       ctx.font = `700 ${compactFs}px sans-serif`;
       ctx.textAlign = 'center';
       ctx.fillText(`${bbH} px`, 0, vSide === 'right' ? 0 : 0);
@@ -5144,7 +5161,7 @@ function drawRulers(ctx, s, bbX, bbY, bbW, bbH, ntilesH, ntilesV, cw, ch, accent
       const labelX = vSide === 'right' ? rx + 22 + fs : rx - 22 - fs;
       ctx.translate(labelX, bbY + bbH / 2);
       ctx.rotate(-Math.PI / 2);
-      ctx.fillStyle = '#1e1e23';
+      ctx.fillStyle = rulerText;
       ctx.font = `700 ${fs}px sans-serif`;
       ctx.textAlign = 'center';
       ctx.fillText(`${bbH} px`, 0, 0);
