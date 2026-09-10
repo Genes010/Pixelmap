@@ -3755,6 +3755,8 @@ function overviewOverlayMove(e) {
     else if (h === 'sw') { nw = d.origW - dx; nh = d.origH + dy; nx = d.origX + dx; }
     else if (h === 'nw') { nw = d.origW - dx; nh = d.origH - dy; nx = d.origX + dx; ny = d.origY + dy; }
     if (nw >= 20 && nh >= 20) { obj.x = Math.round(nx); obj.y = Math.round(ny); obj.w = Math.round(nw); obj.h = Math.round(nh); }
+    // A hand-resized screen-info overlay keeps its size — stop auto-fitting it.
+    if (d.kind === 'item' && obj.type === 'screeninfo') obj._userSized = true;
   }
   // Anchor screen-info overlays to their new spot so reflow doesn't fight the drag.
   if (d.kind === 'item' && obj.type === 'screeninfo' && obj.screenId != null) {
@@ -4122,17 +4124,21 @@ function reflowScreenInfoItems() {
     if (!prev) { s._infoBB = { x: bb.x, y: bb.y, w: bb.w, h: bb.h }; return; }
     if (Math.abs(prev.x - bb.x) < 0.5 && Math.abs(prev.y - bb.y) < 0.5 &&
         Math.abs(prev.w - bb.w) < 0.5 && Math.abs(prev.h - bb.h) < 0.5) return;
-    const sx = bb.w / prev.w, sy = bb.h / prev.h;
     items.forEach(it => {
-      const relX = (it.x - prev.x) / prev.w;
-      const relY = (it.y - prev.y) / prev.h;
-      it.x = Math.round(bb.x + relX * bb.w);
-      it.y = Math.round(bb.y + relY * bb.h);
-      // Keep the box legible even at small scales: never shrink below the size
-      // the overlay is created at, so the text (which is sized from the box
-      // height) stays readable.
-      it.w = Math.max(120, Math.round(it.w * sx));
-      it.h = Math.max(60, Math.round(it.h * sy));
+      // Keep the overlay at the same relative spot inside the screen box.
+      const relCX = (it.x + it.w / 2 - prev.x) / prev.w;
+      const relCY = (it.y + it.h / 2 - prev.y) / prev.h;
+      // Auto-fit: the overlay is a fixed fraction of the screen (50% × 30%),
+      // recomputed from the box each time it changes. This is self-healing —
+      // it can never balloon larger than the screen, no matter how the tile
+      // size / grid shrinks or grows. Once the user resizes the overlay by hand
+      // (it._userSized) we respect that size and only follow the position.
+      if (!it._userSized) {
+        it.w = Math.max(8, Math.round(bb.w * 0.5));
+        it.h = Math.max(8, Math.round(bb.h * 0.3));
+      }
+      it.x = Math.round(bb.x + relCX * bb.w - it.w / 2);
+      it.y = Math.round(bb.y + relCY * bb.h - it.h / 2);
     });
     s._infoBB = { x: bb.x, y: bb.y, w: bb.w, h: bb.h };
   });
@@ -4143,8 +4149,9 @@ function hasScreenInfo(s) { return state.placedItems.some(it => it.type === 'scr
 function addScreenInfoItem(s) {
   if (hasScreenInfo(s)) return;
   const bb = getScreenBBoxCanvas(s) || { x: s.offsetX, y: s.offsetY, w: 400, h: 200 };
-  const w = Math.max(120, Math.round(bb.w * 0.5));
-  const h = Math.max(60, Math.round(bb.h * 0.3));
+  // 50% × 30% of the screen box, no absolute floor (so it never dwarfs a small screen).
+  const w = Math.max(8, Math.round(bb.w * 0.5));
+  const h = Math.max(8, Math.round(bb.h * 0.3));
   const item = {
     id: nextPmItemId(),
     type: 'screeninfo',
@@ -6391,6 +6398,8 @@ function attachCanvasDragHandlers() {
         obj.y = Math.round(newY);
         obj.w = Math.round(newW);
         obj.h = Math.round(newH);
+        // A hand-resized screen-info overlay keeps its size — stop auto-fitting it.
+        if (dragState.kind === 'item' && obj.type === 'screeninfo') obj._userSized = true;
       }
       renderNow();
     } else {
