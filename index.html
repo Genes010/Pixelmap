@@ -7552,8 +7552,12 @@ function renderAdvancedCanvas() {
 // same screen, so tiles butt up cleanly. Falls back to the screen's grid snap.
 // Honours the toolbar snap toggle; with snap off the position is used as-is.
 function advSnapTilePos(s, propX, propY, w, h, skipIdx) {
-  if (!screenSnapEnabled) return { x: Math.round(propX), y: Math.round(propY), guides: [] };
-  const threshold = Math.max(6, Math.round(Math.min(w, h) * 0.35));
+  // Advanced snapping is controlled by the advanced panel's own "Snap" checkbox
+  // (s.snapEnabled), not the main-canvas toolbar magnet. That toolbar toggle is for
+  // dragging whole screens; wiring tile snapping to it was a hidden footgun that left
+  // gaps between tiles when the toolbar magnet happened to be off.
+  if (!s.snapEnabled) return { x: Math.round(propX), y: Math.round(propY), guides: [] };
+  const threshold = Math.max(10, Math.round(Math.min(w, h) * 0.4));
   let bestX = null, bestDX = null, gx = null;
   let bestY = null, bestDY = null, gy = null;
   (s.placedTiles || []).forEach((pt, i) => {
