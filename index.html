@@ -987,6 +987,7 @@
     font-family: inherit;
   }
   .mode-tab.active { background: var(--bg-card); color: var(--accent-soft); font-weight: 600; }
+  .mode-tab.disabled { opacity: .4; cursor: not-allowed; }
 
   /* Stats */
   .stats {
@@ -1820,6 +1821,7 @@ const I18N = {
     convert_to_advanced: 'Convert grid to advanced',
     convert_advanced_warning: 'Switching to advanced mode will convert your current grid into individually placed tiles. Continue?',
     mixed_tile_sizes_warning: 'This screen uses more than one tile size. Grid mode supports only a single tile size, so differently sized tiles will be approximated to the most-used size. Switch anyway? (Cancel to stay in advanced mode.)',
+    grid_locked_tip: "This screen uses multiple tile sizes and can't be shown as a uniform grid — it stays in Advanced.",
     // Top-level modes
     topmode_pixelmap: 'Pixelmap',
     topmode_testpattern: 'Test patterns',
@@ -2103,6 +2105,7 @@ const I18N = {
     convert_to_advanced: 'Grid naar geavanceerd omzetten',
     convert_advanced_warning: 'Overschakelen naar geavanceerde modus zet je huidige grid om naar individueel geplaatste tegels. Doorgaan?',
     mixed_tile_sizes_warning: 'Dit scherm gebruikt meerdere tegelformaten. Grid-modus ondersteunt maar één tegelformaat, dus afwijkende tegels worden benaderd naar het meest gebruikte formaat. Toch overschakelen? (Annuleer om in geavanceerde modus te blijven.)',
+    grid_locked_tip: 'Dit scherm gebruikt meerdere tegelformaten en past niet in een uniform raster — blijft in Advanced.',
     // Top-level modes
     topmode_pixelmap: 'Pixelmap',
     topmode_testpattern: 'Test patronen',
@@ -3978,6 +3981,7 @@ function invertAll() { const s=activeScreen(); for(let r=0;r<s.rows;r++)for(let 
 
 function renderStats() {
   const s = activeScreen();
+  refreshGridTabLock();
   if (!s) { const st = $('stats'); if (st) st.innerHTML = ''; updateFooterStats(); return; }
   if (s.advancedMode) {
     ensureDefaultTileType(s);
@@ -7194,19 +7198,15 @@ function setMode(mode) {
     }
   } else if (mode === 'grid' && s.advancedMode) {
     // Grid mode has one tile size for the whole screen. If the advanced layout
-    // mixes sizes, converting necessarily approximates them — ask first.
-    const sizes = new Set((s.placedTiles || []).map(pt => {
-      const t = getTileType(s, pt.typeId);
-      return t ? `${t.w}x${t.h}` : '';
-    }));
-    sizes.delete('');
-    if (sizes.size > 1 && !confirm(T('mixed_tile_sizes_warning'))) {
+    // mixes sizes it can't be represented as a uniform grid — block the switch
+    // and stay in advanced (the Grid tab is disabled in this state anyway).
+    if (advancedTileSizeCount(s) > 1) {
       document.querySelectorAll('.mode-tab').forEach(t => {
         t.classList.toggle('active', t.dataset.mode === 'advanced');
       });
       return;
     }
-    // Carry the advanced layout over into the grid so the work stays visible
+    // Single-size advanced layout: carry it over into the grid cleanly.
     convertAdvancedToGrid(s);
     s.advancedMode = false;
     syncScreenToUI();
@@ -7221,6 +7221,23 @@ function setMode(mode) {
   scheduleRender();
 }
 
+// How many distinct tile sizes an advanced screen's placed tiles use. A uniform
+// grid can only represent one size, so >1 means the screen isn't grid-representable.
+function advancedTileSizeCount(s) {
+  if (!s || !s.advancedMode || !s.placedTiles || !s.placedTiles.length) return 0;
+  const sizes = new Set();
+  s.placedTiles.forEach(pt => { const t = getTileType(s, pt.typeId); if (t) sizes.add(`${t.w}x${t.h}`); });
+  return sizes.size;
+}
+// Lock the Grid-mode tab whenever the active screen mixes tile sizes in advanced mode.
+function refreshGridTabLock() {
+  const gridTab = document.querySelector('.mode-tab[data-mode="grid"]');
+  if (!gridTab) return;
+  const s = activeScreen();
+  const locked = !!(s && s.advancedMode && advancedTileSizeCount(s) > 1);
+  gridTab.classList.toggle('disabled', locked);
+  if (locked) gridTab.title = T('grid_locked_tip'); else gridTab.removeAttribute('title');
+}
 function updateModeUI() {
   const s = activeScreen();
   if (!s) return;
@@ -7230,6 +7247,7 @@ function updateModeUI() {
   document.querySelectorAll('.mode-tab').forEach(t => {
     t.classList.toggle('active', t.dataset.mode === (isAdv ? 'advanced' : 'grid'));
   });
+  refreshGridTabLock();
   
   // Toggle config panels
   $('screen-config').style.display = isAdv ? 'none' : '';
@@ -7268,6 +7286,7 @@ function updateSelectedTypeIndicator() {
 
 function renderTileTypesList() {
   const s = activeScreen();
+  refreshGridTabLock();
   if (!s || !s.advancedMode) return;
   ensureDefaultTileType(s);
   
