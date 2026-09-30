@@ -3583,6 +3583,24 @@ function drawOverviewActiveOverlay(ctx, dragging) {
   ctx.fillStyle = accent;
   [[obj.x, obj.y], [obj.x + obj.w, obj.y], [obj.x, obj.y + obj.h], [obj.x + obj.w, obj.y + obj.h]]
     .forEach(([hx, hy]) => ctx.fillRect(hx - hs, hy - hs, hs * 2, hs * 2));
+  // Centre marker (crosshair when centred on the screen cross) for screen-info overlays.
+  if (sel.kind === 'item' && obj.type === 'screeninfo') {
+    const icx = obj.x + obj.w / 2, icy = obj.y + obj.h / 2;
+    const bb = screeninfoScreenBB(obj);
+    const centred = bb && Math.abs(icx - (bb.x + bb.w / 2)) < 1.5 && Math.abs(icy - (bb.y + bb.h / 2)) < 1.5;
+    const r = Math.max(6, Math.round(cell.w / 260));
+    if (centred) {
+      ctx.strokeStyle = '#ff3b6b'; ctx.lineWidth = Math.max(2, cell.w / 700);
+      const arm = r * 3;
+      ctx.beginPath();
+      ctx.moveTo(icx - arm, icy); ctx.lineTo(icx + arm, icy);
+      ctx.moveTo(icx, icy - arm); ctx.lineTo(icx, icy + arm);
+      ctx.stroke();
+    }
+    ctx.beginPath(); ctx.arc(icx, icy, r, 0, Math.PI * 2);
+    ctx.fillStyle = centred ? '#ff3b6b' : accent; ctx.fill();
+    ctx.lineWidth = 2; ctx.strokeStyle = '#fff'; ctx.stroke();
+  }
   ctx.restore();
 }
 // Light per-frame overlay: target highlight, snap guides, dashed ghost.
@@ -3750,6 +3768,7 @@ function overviewOverlayMove(e) {
   if (d.mode === 'move') {
     obj.x = Math.round(d.origX + dx);
     obj.y = Math.round(d.origY + dy);
+    if (d.kind === 'item' && obj.type === 'screeninfo') centerSnapItem(obj);
   } else {
     const h = d.handle;
     let nx = d.origX, ny = d.origY, nw = d.origW, nh = d.origH;
@@ -3759,7 +3778,10 @@ function overviewOverlayMove(e) {
     else if (h === 'nw') { nw = d.origW - dx; nh = d.origH - dy; nx = d.origX + dx; ny = d.origY + dy; }
     if (nw >= 20 && nh >= 20) { obj.x = Math.round(nx); obj.y = Math.round(ny); obj.w = Math.round(nw); obj.h = Math.round(nh); }
     // A hand-resized screen-info overlay keeps its size — stop auto-fitting it.
-    if (d.kind === 'item' && obj.type === 'screeninfo') obj._userSized = true;
+    if (d.kind === 'item' && obj.type === 'screeninfo') {
+      obj._userSized = true;
+      keepCenterOnResize(obj, d.origX, d.origY, d.origW, d.origH);
+    }
   }
   // Anchor screen-info overlays to their new spot so reflow doesn't fight the drag.
   if (d.kind === 'item' && obj.type === 'screeninfo' && obj.screenId != null) {
@@ -5748,6 +5770,33 @@ function drawPmProjectInfoItem(ctx, item) {
   ctx.textBaseline = 'alphabetic';
 }
 
+// Screen bounding box a screen-info overlay is linked to (null for logos/other items).
+function screeninfoScreenBB(item) {
+  if (!item || item.type !== 'screeninfo' || item.screenId == null) return null;
+  const s = state.screens.find(sc => sc.id === item.screenId);
+  if (!s) return null;
+  return getScreenBBoxCanvas(s);
+}
+// While moving a screen-info overlay, snap its centre onto the screen centre (the
+// cross) per axis. Returns which axes snapped so callers can draw a guide.
+function centerSnapItem(item) {
+  const bb = screeninfoScreenBB(item);
+  if (!bb) return { x: false, y: false };
+  const cx = bb.x + bb.w / 2, cy = bb.y + bb.h / 2;
+  const tX = Math.max(10, bb.w * 0.02), tY = Math.max(10, bb.h * 0.02);
+  let sx = false, sy = false;
+  if (Math.abs((item.x + item.w / 2) - cx) <= tX) { item.x = Math.round(cx - item.w / 2); sx = true; }
+  if (Math.abs((item.y + item.h / 2) - cy) <= tY) { item.y = Math.round(cy - item.h / 2); sy = true; }
+  return { x: sx, y: sy };
+}
+// While resizing, keep a centred overlay centred on the axes it was already centred on.
+function keepCenterOnResize(item, origX, origY, origW, origH) {
+  const bb = screeninfoScreenBB(item);
+  if (!bb) return;
+  const cx = bb.x + bb.w / 2, cy = bb.y + bb.h / 2;
+  if (Math.abs((origX + origW / 2) - cx) < 2) item.x = Math.round(cx - item.w / 2);
+  if (Math.abs((origY + origH / 2) - cy) < 2) item.y = Math.round(cy - item.h / 2);
+}
 function drawLogoSelectionOverlay(ctx) {
   // Draws on top of base canvas — only visible in preview, NOT in download
   // Supports new selectedOverlay format or legacy selectedLogoId
@@ -5775,6 +5824,29 @@ function drawLogoSelectionOverlay(ctx) {
    [item.x, item.y + item.h], [item.x + item.w, item.y + item.h]].forEach(([x,y]) => {
     ctx.fillRect(x - hSize/2, y - hSize/2, hSize, hSize);
   });
+  // Centre marker for screen-info overlays — a crosshair when the overlay centre sits
+  // exactly on the screen centre (the cross), so centring is easy to see.
+  if (item.type === "screeninfo") {
+    const icx = item.x + item.w / 2, icy = item.y + item.h / 2;
+    const bb = screeninfoScreenBB(item);
+    const centred = bb && Math.abs(icx - (bb.x + bb.w / 2)) < 1.5 && Math.abs(icy - (bb.y + bb.h / 2)) < 1.5;
+    const r = Math.max(5, Math.round(ctx.canvas.width / 320));
+    if (centred) {
+      ctx.strokeStyle = "#ff3b6b";
+      ctx.lineWidth = Math.max(2, Math.round(ctx.canvas.width / 900));
+      ctx.setLineDash([]);
+      const arm = r * 3;
+      ctx.beginPath();
+      ctx.moveTo(icx - arm, icy); ctx.lineTo(icx + arm, icy);
+      ctx.moveTo(icx, icy - arm); ctx.lineTo(icx, icy + arm);
+      ctx.stroke();
+    }
+    ctx.beginPath();
+    ctx.arc(icx, icy, r, 0, Math.PI * 2);
+    ctx.fillStyle = centred ? "#ff3b6b" : "#2590ce";
+    ctx.fill();
+    ctx.lineWidth = 2; ctx.strokeStyle = "#fff"; ctx.stroke();
+  }
   ctx.restore();
 }
 
@@ -6375,6 +6447,8 @@ function attachCanvasDragHandlers() {
       if (dragState.mode === 'move') {
         obj.x = Math.round(dragState.origX + dx);
         obj.y = Math.round(dragState.origY + dy);
+        // Snap a screen-info overlay's centre onto the screen centre (the cross).
+        if (dragState.kind === 'item' && obj.type === 'screeninfo') centerSnapItem(obj);
       } else if (dragState.mode === 'resize') {
         const h = dragState.handle;
         let newX = dragState.origX, newY = dragState.origY;
@@ -6403,7 +6477,12 @@ function attachCanvasDragHandlers() {
         obj.w = Math.round(newW);
         obj.h = Math.round(newH);
         // A hand-resized screen-info overlay keeps its size — stop auto-fitting it.
-        if (dragState.kind === 'item' && obj.type === 'screeninfo') obj._userSized = true;
+        if (dragState.kind === 'item' && obj.type === 'screeninfo') {
+          obj._userSized = true;
+          // Stay centred on any axis it was already centred on, so resizing a
+          // centred overlay grows it symmetrically and it stays on the cross.
+          keepCenterOnResize(obj, dragState.origX, dragState.origY, dragState.origW, dragState.origH);
+        }
       }
       renderNow();
     } else {
