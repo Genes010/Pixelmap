@@ -3078,8 +3078,13 @@ function selectScreen(id) {
 function syncScreenFromUI() {
   const s = activeScreen();
   if (!s) return;
+  // In advanced mode the label + offset live in the .sc-input-adv fields; the hidden
+  // grid .sc-input fields are stale, so don't let them clobber those keys (that was
+  // why "Offset on canvas" did nothing for advanced screens).
+  const skip = s.advancedMode ? new Set(['offsetX', 'offsetY', 'label']) : null;
   document.querySelectorAll('.sc-input').forEach(inp => {
     const key = inp.dataset.key;
+    if (skip && skip.has(key)) return;
     let val = inp.value;
     if (inp.type === 'number') val = parseInt(val) || 0;
     s[key] = val;
@@ -8088,6 +8093,31 @@ function wireUp() {
   
   // Add tile type
   $('add-tile-type-btn').onclick = addTileType;
+
+  // Arrow keys nudge the selected screen on the canvas, one pixel at a time
+  // (hold Shift for 10px). Works in both grid and advanced mode.
+  document.addEventListener('keydown', (e) => {
+    const map = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
+    const d = map[e.key];
+    if (!d) return;
+    if (e.ctrlKey || e.metaKey || e.altKey) return; // leave browser/system shortcuts alone
+    if ($('container-pixelmap') && $('container-pixelmap').style.display === 'none') return; // pixelmap editor only
+    const ae = document.activeElement;
+    if (ae && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA' || ae.tagName === 'SELECT' || ae.isContentEditable)) return;
+    if (document.querySelector('.modal-backdrop')) return; // a dialog is open
+    const s = activeScreen();
+    if (!s) return;
+    e.preventDefault();
+    const step = e.shiftKey ? 10 : 1;
+    s.offsetX += d[0] * step;
+    s.offsetY += d[1] * step;
+    // Keep both the grid and advanced offset inputs in sync with the new position.
+    document.querySelectorAll('.sc-input[data-key="offsetX"], .sc-input-adv[data-key="offsetX"]').forEach(i => i.value = s.offsetX);
+    document.querySelectorAll('.sc-input[data-key="offsetY"], .sc-input-adv[data-key="offsetY"]').forEach(i => i.value = s.offsetY);
+    renderScreenTabs();
+    scheduleRender();
+  });
+
   
   // Snap controls
   $('adv-snap-enabled').onchange = (e) => {
