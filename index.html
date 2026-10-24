@@ -1414,8 +1414,8 @@
           <span style="font-size:11px; color:var(--text-muted);" data-i18n="presets_label">Preset library:</span>
           <select id="tile-preset-select" style="flex:1; min-width:80px;"></select>
           <button id="tile-preset-del" class="danger" data-i18n-title="preset_del_title" title="Delete the selected preset" style="padding:3px 8px;">🗑</button>
-          <button id="tile-preset-export" data-i18n-title="preset_export_title" title="Export all tile presets to a file" style="padding:3px 8px;">⬇</button>
-          <button id="tile-preset-import" data-i18n-title="preset_import_title" title="Import tile presets from a file" style="padding:3px 8px;">⬆</button>
+          <button id="tile-preset-export" data-i18n="preset_export_short" data-i18n-title="preset_export_title" title="Export all tile presets to a file" style="padding:3px 8px;">Export</button>
+          <button id="tile-preset-import" data-i18n="preset_import_short" data-i18n-title="preset_import_title" title="Import tile presets from a file" style="padding:3px 8px;">Import</button>
           <input type="file" id="tile-preset-import-file" accept=".json" style="display:none;" />
         </div>
 
@@ -1800,6 +1800,8 @@ const I18N = {
     preset_apply_title: 'Apply a saved preset to this tile',
     presets_label: 'Preset library:',
     grid_tile_name: 'Tile',
+    preset_export_short: 'Export',
+    preset_import_short: 'Import',
     adv_enlarge: '⤢ Enlarge',
     adv_enlarge_title: 'Tile editor',
     adv_zoompan_hint: 'Scroll = zoom · middle-mouse drag = pan',
@@ -2104,6 +2106,8 @@ const I18N = {
     preset_apply_title: 'Pas een opgeslagen preset toe op deze tegel',
     presets_label: 'Preset-bibliotheek:',
     grid_tile_name: 'Tegel',
+    preset_export_short: 'Exporteren',
+    preset_import_short: 'Importeren',
     adv_enlarge: '⤢ Vergroten',
     adv_enlarge_title: 'Tegel-editor',
     adv_zoompan_hint: 'Scroll = zoom · middelste muisknop = pan',
