@@ -1346,14 +1346,6 @@
             <span class="f-inputs"><input type="text" class="sc-input" data-key="label" value="" data-i18n-placeholder="screen_placeholder" placeholder="e.g. IMAG" style="width: 110px;" /></span>
           </div>
           <div class="field">
-            <label data-i18n="tile_pixels">Tile pixels</label>
-            <span class="f-inputs">
-              <input type="number" class="sc-input" data-key="tileW" value="56" min="1" max="500" />
-              <span class="sep">×</span>
-              <input type="number" class="sc-input" data-key="tileH" value="112" min="1" max="500" />
-            </span>
-          </div>
-          <div class="field">
             <label data-i18n="grid_label">Grid (cols × rows)</label>
             <span class="f-inputs">
               <input type="number" class="sc-input" data-key="cols" value="20" min="1" max="200" />
@@ -1369,34 +1361,9 @@
               <input type="number" class="sc-input" data-key="offsetY" value="0" min="-10000" max="20000" />
             </span>
           </div>
-          <div class="field">
-            <label data-i18n="tile_colors">Colors</label>
-            <span class="f-inputs">
-              <input type="color" class="sc-input" data-key="colorA" value="#d23c3c" />
-              <input type="color" class="sc-input" data-key="colorB" value="#781414" />
-            </span>
-          </div>
-          <div class="field">
-            <label data-i18n="gradient_mode">Gradient</label>
-            <span class="f-inputs">
-              <select class="sc-input" data-key="gradientMode">
-                <option value="checker" data-i18n="grad_checker">Checker (A + B)</option>
-                <option value="per_tile" data-i18n="grad_per_tile">Gradient per tile</option>
-                <option value="full_screen" data-i18n="grad_full">Gradient across screen</option>
-              </select>
-            </span>
-          </div>
-          <div class="field">
-            <label data-i18n="gradient_dir">Direction</label>
-            <span class="f-inputs">
-              <select class="sc-input" data-key="gradientDir">
-                <option value="horizontal" data-i18n="dir_horizontal">Horizontal →</option>
-                <option value="vertical" data-i18n="dir_vertical">Vertical ↓</option>
-                <option value="diagonal" data-i18n="dir_diagonal">Diagonal ↘</option>
-                <option value="diagonal_rev" data-i18n="dir_diagonal_rev">Diagonal ↗</option>
-              </select>
-            </span>
-          </div>
+          <!-- Same tile "card" as advanced mode: dbl-click the title to rename, a
+               dropdown to apply a saved preset, and 💾 to save the current tile. -->
+          <div id="grid-tile-card" class="tile-types-list"></div>
           <div class="btn-row">
             <button id="rebuild-grid" data-i18n="rebuild_grid">Rebuild this screen's grid</button>
           </div>
@@ -1420,16 +1387,6 @@
           <div class="btn-row">
             <button id="add-tile-type-btn" data-i18n="add_tile_type">+ Add tile type</button>
           </div>
-          <div class="btn-row" id="tile-preset-row" style="gap:6px; align-items:center;">
-            <select id="tile-preset-select" style="flex:1; min-width:0;"></select>
-            <button id="tile-preset-add" data-i18n="preset_add_btn" data-i18n-title="preset_add_title" title="Add the selected preset as a new tile type">Add</button>
-            <button id="tile-preset-del" class="danger" data-i18n-title="preset_del_title" title="Delete the selected preset" style="padding:3px 8px;">🗑</button>
-          </div>
-          <div class="btn-row" id="tile-preset-io-row" style="gap:6px;">
-            <button id="tile-preset-export" data-i18n="preset_export" data-i18n-title="preset_export_title" title="Export all tile presets to a file">⬇ Export presets</button>
-            <button id="tile-preset-import" data-i18n="preset_import" data-i18n-title="preset_import_title" title="Import tile presets from a file">⬆ Import presets</button>
-            <input type="file" id="tile-preset-import-file" accept=".json" style="display:none;" />
-          </div>
           <div class="advanced-toolbar">
             <span class="selected-type-indicator" id="selected-type-indicator">
               <span class="swatch" id="selected-type-swatch"></span>
@@ -1450,6 +1407,17 @@
           <div class="stats" id="stats"></div>
         </div>
         <div id="grid" style="display: none;"></div>
+
+        <!-- Preset library (shared by grid + advanced): delete / export / import.
+             Applying and saving presets happens on the tile card itself. -->
+        <div class="btn-row" id="tile-preset-manage-row" style="gap:6px; align-items:center; flex-wrap:wrap;">
+          <span style="font-size:11px; color:var(--text-muted);" data-i18n="presets_label">Preset library:</span>
+          <select id="tile-preset-select" style="flex:1; min-width:80px;"></select>
+          <button id="tile-preset-del" class="danger" data-i18n-title="preset_del_title" title="Delete the selected preset" style="padding:3px 8px;">🗑</button>
+          <button id="tile-preset-export" data-i18n-title="preset_export_title" title="Export all tile presets to a file" style="padding:3px 8px;">⬇</button>
+          <button id="tile-preset-import" data-i18n-title="preset_import_title" title="Import tile presets from a file" style="padding:3px 8px;">⬆</button>
+          <input type="file" id="tile-preset-import-file" accept=".json" style="display:none;" />
+        </div>
 
         <hr/>
         <div class="info" data-i18n="per_screen_overlays_info">Circle and cross overlays are on by default (white, 2px) for every screen. Toggle them off per screen here if needed.</div>
@@ -1828,6 +1796,10 @@ const I18N = {
     preset_import_title: 'Load tile presets from a file (merged with yours)',
     presets_imported: '{n} preset(s) imported.',
     presets_import_failed: 'Could not import presets:',
+    preset_pick: 'Apply preset…',
+    preset_apply_title: 'Apply a saved preset to this tile',
+    presets_label: 'Preset library:',
+    grid_tile_name: 'Tile',
     adv_enlarge: '⤢ Enlarge',
     adv_enlarge_title: 'Tile editor',
     adv_zoompan_hint: 'Scroll = zoom · middle-mouse drag = pan',
@@ -2128,6 +2100,10 @@ const I18N = {
     preset_import_title: 'Tegel-presets uit een bestand laden (samengevoegd met die van jou)',
     presets_imported: '{n} preset(s) geïmporteerd.',
     presets_import_failed: 'Kon presets niet importeren:',
+    preset_pick: 'Preset toepassen…',
+    preset_apply_title: 'Pas een opgeslagen preset toe op deze tegel',
+    presets_label: 'Preset-bibliotheek:',
+    grid_tile_name: 'Tegel',
     adv_enlarge: '⤢ Vergroten',
     adv_enlarge_title: 'Tegel-editor',
     adv_zoompan_hint: 'Scroll = zoom · middelste muisknop = pan',
@@ -2339,6 +2315,7 @@ function setLanguage(lang) {
   renderStats();
   renderPresets();
   renderLogoList();
+  renderTileTypesList(); // tile cards build their labels/buttons via T() at render time
   scheduleRender();
 }
 
@@ -7437,105 +7414,230 @@ function updateSelectedTypeIndicator() {
   $('selected-type-name').textContent = `${t.name} (${t.w}×${t.h})`;
 }
 
+// Build one tile "card": a title you double-click to rename, size + colour +
+// gradient controls, a dropdown to apply a saved preset, 💾 to save as a preset,
+// and (optionally) a Select button and a 🗑 delete button. Shared by advanced
+// tile types and the single grid tile so both look and behave identically.
+// opts: { name, w, h, colorA, colorB, gradientMode, gradientDir,
+//         selected?, showSelect?, canDelete?,
+//         onProp(prop,val), onRename(valOrNull), onApplyPreset(preset),
+//         onSavePreset(), onSelect?(), onDelete?() }
+function buildTileCard(opts) {
+  const item = document.createElement('div');
+  item.className = 'tile-type-item' + (opts.selected ? ' selected' : '');
+  const presets = loadTilePresets();
+  const presetOpts = `<option value="">${T('preset_pick')}</option>` +
+    presets.map(p => `<option value="${p.id}">${escapeHtml(p.name)} (${p.w}×${p.h})</option>`).join('');
+  item.innerHTML = `
+    <div class="tile-type-item-header">
+      <div class="tile-type-swatch"></div>
+      <div class="tile-type-name" title="${T('rename_hint')}" style="cursor:text;"></div>
+      ${opts.showSelect ? `<button data-act="select" style="padding: 4px 10px; font-size: 11px;">${opts.selected ? T('selected_type') : T('select_type')}</button>` : ''}
+      ${opts.canDelete ? `<button data-act="delete" class="danger" title="${T('delete_type')}" style="padding: 3px 9px; font-size: 13px;">🗑</button>` : ''}
+    </div>
+    <div class="tile-type-controls">
+      <label>${T('type_w')}</label>
+      <input type="number" data-prop="w" min="1" max="2000" />
+      <label>${T('type_h')}</label>
+      <input type="number" data-prop="h" min="1" max="2000" />
+      <input type="color" data-prop="colorA" title="${T('tile_color_a')}" />
+      <input type="color" data-prop="colorB" title="${T('tile_color_b')}" />
+      <select data-prop="gradientMode">
+        <option value="checker">${T('grad_checker')}</option>
+        <option value="per_tile">${T('grad_per_tile')}</option>
+        <option value="full_screen">${T('grad_full')}</option>
+      </select>
+      <select data-prop="gradientDir">
+        <option value="horizontal">${T('dir_horizontal')}</option>
+        <option value="vertical">${T('dir_vertical')}</option>
+        <option value="diagonal">${T('dir_diagonal')}</option>
+        <option value="diagonal_rev">${T('dir_diagonal_rev')}</option>
+      </select>
+      <select data-act="apply-preset" title="${T('preset_apply_title')}">${presetOpts}</select>
+      <button data-act="save-preset" title="${T('save_preset_title')}" style="padding: 3px 8px; font-size: 11px;">${T('save_preset')}</button>
+    </div>
+  `;
+  // Fill values via JS (avoids HTML-escaping pitfalls and keeps selects in sync).
+  const swatch = item.querySelector('.tile-type-swatch');
+  const nameEl = item.querySelector('.tile-type-name');
+  const wxh = () => `<span style="font-size: 11px; color: var(--text-muted); font-weight: 400;">(${opts.w}×${opts.h} px)</span>`;
+  const paintHeader = () => {
+    swatch.style.background = opts.colorA;
+    nameEl.innerHTML = `${escapeHtml(opts.name)} ${wxh()}`;
+  };
+  paintHeader();
+  item.querySelector('[data-prop="w"]').value = opts.w;
+  item.querySelector('[data-prop="h"]').value = opts.h;
+  item.querySelector('[data-prop="colorA"]').value = opts.colorA;
+  item.querySelector('[data-prop="colorB"]').value = opts.colorB;
+  item.querySelector('[data-prop="gradientMode"]').value = opts.gradientMode || 'checker';
+  item.querySelector('[data-prop="gradientDir"]').value = opts.gradientDir || 'horizontal';
+
+  // Double-click the title to rename inline (no separate "Name" field any more).
+  nameEl.ondblclick = (e) => {
+    e.stopPropagation();
+    startInlineRename(nameEl, opts.name, (val) => opts.onRename(val));
+  };
+
+  item.querySelectorAll('input[data-prop], select[data-prop]').forEach(el => {
+    el.oninput = () => {
+      const prop = el.dataset.prop;
+      let val = el.value;
+      if (el.type === 'number') val = parseInt(val) || 1;
+      opts[prop] = val; // keep local copy fresh so the header repaints correctly
+      opts.onProp(prop, val);
+      paintHeader();
+    };
+    if (el.type === 'color') el.onchange = el.oninput;
+  });
+
+  const applySel = item.querySelector('[data-act="apply-preset"]');
+  if (applySel) applySel.onchange = () => {
+    const p = loadTilePresets().find(x => x.id === applySel.value);
+    if (p) opts.onApplyPreset(p);
+  };
+  const saveBtn = item.querySelector('[data-act="save-preset"]');
+  if (saveBtn) saveBtn.onclick = (e) => { e.stopPropagation(); opts.onSavePreset(); };
+  const selBtn = item.querySelector('[data-act="select"]');
+  if (selBtn) selBtn.onclick = (e) => { e.stopPropagation(); opts.onSelect(); };
+  const delBtn = item.querySelector('[data-act="delete"]');
+  if (delBtn) delBtn.onclick = (e) => { e.stopPropagation(); opts.onDelete(); };
+
+  return item;
+}
+
+// Dispatch: grid mode renders the single grid tile card; advanced mode renders
+// one card per tile type. Both reuse buildTileCard above.
 function renderTileTypesList() {
   const s = activeScreen();
   refreshGridTabLock();
-  if (!s || !s.advancedMode) return;
+  if (!s) return;
+  if (!s.advancedMode) { renderGridTileCard(); return; }
   ensureDefaultTileType(s);
-  
+
   const container = $('tile-types-list');
   container.innerHTML = '';
-  
+
   s.tileTypes.forEach(t => {
-    const item = document.createElement('div');
-    item.className = 'tile-type-item' + (s.selectedTileTypeId === t.id ? ' selected' : '');
-    item.dataset.typeId = t.id;
-    item.innerHTML = `
-      <div class="tile-type-item-header">
-        <div class="tile-type-swatch" style="background:${t.colorA}"></div>
-        <div class="tile-type-name">${escapeHtml(t.name)} <span style="font-size: 11px; color: var(--text-muted); font-weight: 400;">(${t.w}×${t.h} px)</span></div>
-        <button data-act="select-type" data-id="${t.id}" style="padding: 4px 10px; font-size: 11px;">${s.selectedTileTypeId === t.id ? T('selected_type') : T('select_type')}</button>
-      </div>
-      <div class="tile-type-controls">
-        <label>${T('type_name')}</label>
-        <input type="text" data-prop="name" data-id="${t.id}" value="${escapeHtml(t.name)}" />
-        <label>${T('type_w')}</label>
-        <input type="number" data-prop="w" data-id="${t.id}" value="${t.w}" min="1" max="2000" />
-        <label>${T('type_h')}</label>
-        <input type="number" data-prop="h" data-id="${t.id}" value="${t.h}" min="1" max="2000" />
-        <input type="color" data-prop="colorA" data-id="${t.id}" value="${t.colorA}" title="${T('tile_color_a')}" />
-        <input type="color" data-prop="colorB" data-id="${t.id}" value="${t.colorB}" title="${T('tile_color_b')}" />
-        <select data-prop="gradientMode" data-id="${t.id}">
-          <option value="checker"${t.gradientMode === 'checker' ? ' selected' : ''}>${T('grad_checker')}</option>
-          <option value="per_tile"${t.gradientMode === 'per_tile' ? ' selected' : ''}>${T('grad_per_tile')}</option>
-          <option value="full_screen"${t.gradientMode === 'full_screen' ? ' selected' : ''}>${T('grad_full')}</option>
-        </select>
-        <select data-prop="gradientDir" data-id="${t.id}">
-          <option value="horizontal"${t.gradientDir === 'horizontal' ? ' selected' : ''}>${T('dir_horizontal')}</option>
-          <option value="vertical"${t.gradientDir === 'vertical' ? ' selected' : ''}>${T('dir_vertical')}</option>
-          <option value="diagonal"${t.gradientDir === 'diagonal' ? ' selected' : ''}>${T('dir_diagonal')}</option>
-          <option value="diagonal_rev"${t.gradientDir === 'diagonal_rev' ? ' selected' : ''}>${T('dir_diagonal_rev')}</option>
-        </select>
-        ${s.tileTypes.length > 1 ? `<button data-act="delete-type" data-id="${t.id}" class="danger" style="padding: 3px 8px; font-size: 11px;">${T('delete_type')}</button>` : ''}
-        <button data-act="save-preset" data-id="${t.id}" title="${T('save_preset_title')}" style="padding: 3px 8px; font-size: 11px;">${T('save_preset')}</button>
-      </div>
-    `;
-    container.appendChild(item);
-  });
-  
-  // Wire selects/inputs
-  container.querySelectorAll('input[data-prop], select[data-prop]').forEach(el => {
-    el.oninput = (e) => {
-      const id = el.dataset.id;
-      const prop = el.dataset.prop;
-      const t = s.tileTypes.find(tt => tt.id === id);
-      if (!t) return;
-      let val = el.value;
-      if (el.type === 'number') val = parseInt(val) || 1;
-      t[prop] = val;
-      // Update this row's header in place. Rebuilding the whole list here would
-      // destroy the field being typed in, so you could only enter one digit at a time.
-      const item = container.querySelector(`.tile-type-item[data-type-id="${id}"]`);
-      if (item) {
-        const nameEl = item.querySelector('.tile-type-name');
-        if (nameEl) nameEl.innerHTML = `${escapeHtml(t.name)} <span style="font-size: 11px; color: var(--text-muted); font-weight: 400;">(${t.w}×${t.h} px)</span>`;
-        const sw = item.querySelector('.tile-type-swatch');
-        if (sw) sw.style.background = t.colorA;
-      }
-      updateSelectedTypeIndicator();
-      renderAdvancedCanvas();
-      renderStats();
-      scheduleRender();
-    };
-    // Colour pickers settle on change as well
-    if (el.type === 'color') el.onchange = el.oninput;
-  });
-  
-  container.querySelectorAll('button[data-act]').forEach(btn => {
-    btn.onclick = (e) => {
-      e.stopPropagation();
-      const id = btn.dataset.id;
-      if (btn.dataset.act === 'select-type') {
-        s.selectedTileTypeId = id;
+    const card = buildTileCard({
+      name: t.name, w: t.w, h: t.h, colorA: t.colorA, colorB: t.colorB,
+      gradientMode: t.gradientMode, gradientDir: t.gradientDir,
+      selected: s.selectedTileTypeId === t.id,
+      showSelect: true,
+      canDelete: s.tileTypes.length > 1,
+      onProp: (prop, val) => {
+        t[prop] = val;
+        updateSelectedTypeIndicator();
+        renderAdvancedCanvas();
+        renderStats();
+        scheduleRender();
+      },
+      onRename: (val) => {
+        if (val) t.name = val;
         renderTileTypesList();
         updateSelectedTypeIndicator();
-      } else if (btn.dataset.act === 'delete-type') {
+        renderScreenTabs();
+        scheduleRender();
+      },
+      onApplyPreset: (p) => {
+        t.name = p.name; t.w = p.w; t.h = p.h;
+        t.colorA = p.colorA; t.colorB = p.colorB;
+        t.gradientMode = p.gradientMode || 'checker';
+        t.gradientDir = p.gradientDir || 'horizontal';
+        renderTileTypesList();
+        updateSelectedTypeIndicator();
+        renderAdvancedCanvas();
+        renderStats();
+        scheduleRender();
+      },
+      onSavePreset: () => saveTileTypeAsPreset(t.id),
+      onSelect: () => {
+        s.selectedTileTypeId = t.id;
+        renderTileTypesList();
+        updateSelectedTypeIndicator();
+      },
+      onDelete: () => {
         if (s.tileTypes.length <= 1) return;
         if (!confirm(T('confirm_delete_type'))) return;
-        s.tileTypes = s.tileTypes.filter(t => t.id !== id);
-        // Remove placed tiles of this type
-        s.placedTiles = s.placedTiles.filter(pt => pt.typeId !== id);
-        if (s.selectedTileTypeId === id) s.selectedTileTypeId = s.tileTypes[0].id;
+        s.tileTypes = s.tileTypes.filter(x => x.id !== t.id);
+        s.placedTiles = s.placedTiles.filter(pt => pt.typeId !== t.id);
+        if (s.selectedTileTypeId === t.id) s.selectedTileTypeId = s.tileTypes[0].id;
         renderTileTypesList();
         updateSelectedTypeIndicator();
         renderAdvancedCanvas();
         scheduleRender();
-      } else if (btn.dataset.act === 'save-preset') {
-        saveTileTypeAsPreset(id);
-      }
-    };
+      },
+    });
+    card.dataset.typeId = t.id;
+    container.appendChild(card);
   });
   renderTilePresetSelect();
+}
+
+// Grid mode: one card driving the screen's single uniform tile (s.tileW/tileH/
+// colorA/colorB/gradientMode/gradientDir + s.tileName for the title/preset name).
+function renderGridTileCard() {
+  const s = activeScreen();
+  const container = $('grid-tile-card');
+  if (!container) return;
+  if (!s || s.advancedMode) { container.innerHTML = ''; return; }
+  container.innerHTML = '';
+  const GRID_PROP = { w: 'tileW', h: 'tileH', colorA: 'colorA', colorB: 'colorB', gradientMode: 'gradientMode', gradientDir: 'gradientDir' };
+  const card = buildTileCard({
+    name: s.tileName || T('grid_tile_name'),
+    w: s.tileW, h: s.tileH, colorA: s.colorA, colorB: s.colorB,
+    gradientMode: s.gradientMode, gradientDir: s.gradientDir,
+    showSelect: false,
+    canDelete: false,
+    onProp: (prop, val) => {
+      s[GRID_PROP[prop]] = val;
+      if (s.tileW > 0) state.lastTileW = s.tileW;
+      if (s.tileH > 0) state.lastTileH = s.tileH;
+      renderGrid();
+      renderStats();
+      renderScreenTabs();
+      scheduleRender();
+    },
+    onRename: (val) => {
+      if (val) s.tileName = val;
+      renderGridTileCard();
+      scheduleRender();
+    },
+    onApplyPreset: (p) => {
+      s.tileName = p.name; s.tileW = p.w; s.tileH = p.h;
+      s.colorA = p.colorA; s.colorB = p.colorB;
+      s.gradientMode = p.gradientMode || 'checker';
+      s.gradientDir = p.gradientDir || 'horizontal';
+      if (s.tileW > 0) state.lastTileW = s.tileW;
+      if (s.tileH > 0) state.lastTileH = s.tileH;
+      renderGridTileCard();
+      renderGrid();
+      renderStats();
+      renderScreenTabs();
+      scheduleRender();
+    },
+    onSavePreset: () => saveGridTileAsPreset(),
+  });
+  container.appendChild(card);
+  renderTilePresetSelect();
+}
+
+// Save the current grid tile as a reusable preset (mirrors saveTileTypeAsPreset).
+function saveGridTileAsPreset() {
+  const s = activeScreen();
+  if (!s) return;
+  const name = prompt(T('preset_name_q'), s.tileName || T('grid_tile_name'));
+  if (name === null) return;
+  const presets = loadTilePresets();
+  presets.push({
+    id: 'tpz_' + Date.now() + '_' + Math.round(Math.random() * 1e4),
+    name: (name.trim() || s.tileName || T('grid_tile_name')),
+    w: s.tileW, h: s.tileH, colorA: s.colorA, colorB: s.colorB,
+    gradientMode: s.gradientMode || 'checker', gradientDir: s.gradientDir || 'horizontal',
+  });
+  saveTilePresets(presets);
+  // Re-render so the new preset shows up in the card's apply dropdown too.
+  renderGridTileCard();
 }
 
 function addTileType() {
@@ -7598,7 +7700,8 @@ function saveTileTypeAsPreset(typeId) {
     gradientMode: t.gradientMode || 'checker', gradientDir: t.gradientDir || 'horizontal',
   });
   saveTilePresets(presets);
-  renderTilePresetSelect();
+  // Re-render so the new preset shows up in every card's apply dropdown too.
+  renderTileTypesList();
 }
 function addTileTypeFromPreset(presetId) {
   const s = activeScreen();
