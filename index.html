@@ -1425,6 +1425,11 @@
             <button id="tile-preset-add" data-i18n="preset_add_btn" data-i18n-title="preset_add_title" title="Add the selected preset as a new tile type">Add</button>
             <button id="tile-preset-del" class="danger" data-i18n-title="preset_del_title" title="Delete the selected preset" style="padding:3px 8px;">🗑</button>
           </div>
+          <div class="btn-row" id="tile-preset-io-row" style="gap:6px;">
+            <button id="tile-preset-export" data-i18n="preset_export" data-i18n-title="preset_export_title" title="Export all tile presets to a file">⬇ Export presets</button>
+            <button id="tile-preset-import" data-i18n="preset_import" data-i18n-title="preset_import_title" title="Import tile presets from a file">⬆ Import presets</button>
+            <input type="file" id="tile-preset-import-file" accept=".json" style="display:none;" />
+          </div>
           <div class="advanced-toolbar">
             <span class="selected-type-indicator" id="selected-type-indicator">
               <span class="swatch" id="selected-type-swatch"></span>
@@ -1817,6 +1822,12 @@ const I18N = {
     save_preset_title: 'Save this tile type as a reusable named preset',
     preset_name_q: 'Preset name:',
     delete_preset_q: 'Delete this tile preset?',
+    preset_export: '⬇ Export presets',
+    preset_export_title: 'Download all tile presets as a file to share',
+    preset_import: '⬆ Import presets',
+    preset_import_title: 'Load tile presets from a file (merged with yours)',
+    presets_imported: '{n} preset(s) imported.',
+    presets_import_failed: 'Could not import presets:',
     adv_enlarge: '⤢ Enlarge',
     adv_enlarge_title: 'Tile editor',
     adv_zoompan_hint: 'Scroll = zoom · middle-mouse drag = pan',
@@ -2111,6 +2122,12 @@ const I18N = {
     save_preset_title: 'Sla dit tegeltype op als herbruikbare, benoemde preset',
     preset_name_q: 'Preset-naam:',
     delete_preset_q: 'Deze tegel-preset verwijderen?',
+    preset_export: '⬇ Presets exporteren',
+    preset_export_title: 'Alle tegel-presets als bestand downloaden om te delen',
+    preset_import: '⬆ Presets importeren',
+    preset_import_title: 'Tegel-presets uit een bestand laden (samengevoegd met die van jou)',
+    presets_imported: '{n} preset(s) geïmporteerd.',
+    presets_import_failed: 'Kon presets niet importeren:',
     adv_enlarge: '⤢ Vergroten',
     adv_enlarge_title: 'Tegel-editor',
     adv_zoompan_hint: 'Scroll = zoom · middelste muisknop = pan',
@@ -7611,6 +7628,57 @@ function deleteTilePreset(presetId) {
   saveTilePresets(presets.filter(x => x.id !== presetId));
   renderTilePresetSelect();
 }
+// Export/import tile presets as a file so colleagues can share them.
+function exportTilePresets() {
+  const presets = loadTilePresets();
+  if (!presets.length) { alert(T('no_tile_presets')); return; }
+  const json = JSON.stringify({ type: 'genes-pixelmap-tile-presets', version: 1, presets }, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.download = 'tile_presets.json';
+  link.href = url;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 100);
+}
+function importTilePresetsFile() { $('tile-preset-import-file').click(); }
+function handleImportTilePresets(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const data = JSON.parse(e.target.result);
+      const incoming = Array.isArray(data) ? data : (data && Array.isArray(data.presets) ? data.presets : null);
+      if (!incoming) throw new Error('no presets found');
+      const existing = loadTilePresets();
+      const sig = p => `${String(p.name || '').trim().toLowerCase()}|${p.w}|${p.h}|${p.colorA}|${p.colorB}|${p.gradientMode}|${p.gradientDir}`;
+      const seen = new Set(existing.map(sig));
+      let added = 0;
+      incoming.forEach(p => {
+        if (!p) return;
+        const w = parseInt(p.w), h = parseInt(p.h);
+        if (!(w > 0) || !(h > 0)) return;
+        const norm = {
+          id: 'tpz_' + Date.now() + '_' + Math.round(Math.random() * 1e6),
+          name: String(p.name || 'Tile preset'),
+          w, h,
+          colorA: p.colorA || '#888888', colorB: p.colorB || '#444444',
+          gradientMode: p.gradientMode || 'checker', gradientDir: p.gradientDir || 'horizontal',
+        };
+        if (seen.has(sig(norm))) return; // skip exact duplicates
+        existing.push(norm); seen.add(sig(norm)); added++;
+      });
+      saveTilePresets(existing);
+      renderTilePresetSelect();
+      alert(T('presets_imported').replace('{n}', added));
+    } catch (err) {
+      alert(T('presets_import_failed') + ' ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
 
 const ADV_CANVAS_W = 800;
 const ADV_CANVAS_H = 400;
@@ -8221,6 +8289,9 @@ function wireUp() {
   // Tile presets (reusable, named)
   if ($('tile-preset-add')) $('tile-preset-add').onclick = () => { const v = $('tile-preset-select').value; if (v) addTileTypeFromPreset(v); };
   if ($('tile-preset-del')) $('tile-preset-del').onclick = () => { const v = $('tile-preset-select').value; if (v) deleteTilePreset(v); };
+  if ($('tile-preset-export')) $('tile-preset-export').onclick = exportTilePresets;
+  if ($('tile-preset-import')) $('tile-preset-import').onclick = importTilePresetsFile;
+  if ($('tile-preset-import-file')) $('tile-preset-import-file').onchange = handleImportTilePresets;
   renderTilePresetSelect();
 
   // Arrow keys nudge the selected screen on the canvas, one pixel at a time
