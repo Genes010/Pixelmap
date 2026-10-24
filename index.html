@@ -1420,6 +1420,11 @@
           <div class="btn-row">
             <button id="add-tile-type-btn" data-i18n="add_tile_type">+ Add tile type</button>
           </div>
+          <div class="btn-row" id="tile-preset-row" style="gap:6px; align-items:center;">
+            <select id="tile-preset-select" style="flex:1; min-width:0;"></select>
+            <button id="tile-preset-add" data-i18n="preset_add_btn" data-i18n-title="preset_add_title" title="Add the selected preset as a new tile type">Add</button>
+            <button id="tile-preset-del" class="danger" data-i18n-title="preset_del_title" title="Delete the selected preset" style="padding:3px 8px;">🗑</button>
+          </div>
           <div class="advanced-toolbar">
             <span class="selected-type-indicator" id="selected-type-indicator">
               <span class="swatch" id="selected-type-swatch"></span>
@@ -1802,6 +1807,16 @@ const I18N = {
     tile_types: 'Tile types',
     tile_types_info: 'Define one or more tile types with their own dimensions and colors. Select a type, then click on the canvas below to place tiles.',
     add_tile_type: '+ Add tile type',
+    duplicate_logo: 'Duplicate logo',
+    tile_presets_label: 'Tile presets',
+    no_tile_presets: 'No saved presets yet',
+    preset_add_btn: 'Add',
+    preset_add_title: 'Add the selected preset as a new tile type',
+    preset_del_title: 'Delete the selected preset',
+    save_preset: '💾 Save as preset',
+    save_preset_title: 'Save this tile type as a reusable named preset',
+    preset_name_q: 'Preset name:',
+    delete_preset_q: 'Delete this tile preset?',
     adv_enlarge: '⤢ Enlarge',
     adv_enlarge_title: 'Tile editor',
     adv_zoompan_hint: 'Scroll = zoom · middle-mouse drag = pan',
@@ -2086,6 +2101,16 @@ const I18N = {
     tile_types: 'Tegel types',
     tile_types_info: 'Definieer één of meer tegel types met eigen afmetingen en kleuren. Selecteer een type en klik op het canvas hieronder om tegels te plaatsen.',
     add_tile_type: '+ Tegel type toevoegen',
+    duplicate_logo: 'Logo dupliceren',
+    tile_presets_label: 'Tegel-presets',
+    no_tile_presets: 'Nog geen presets opgeslagen',
+    preset_add_btn: 'Toevoegen',
+    preset_add_title: 'Voeg de geselecteerde preset toe als nieuw tegeltype',
+    preset_del_title: 'Verwijder de geselecteerde preset',
+    save_preset: '💾 Opslaan als preset',
+    save_preset_title: 'Sla dit tegeltype op als herbruikbare, benoemde preset',
+    preset_name_q: 'Preset-naam:',
+    delete_preset_q: 'Deze tegel-preset verwijderen?',
     adv_enlarge: '⤢ Vergroten',
     adv_enlarge_title: 'Tegel-editor',
     adv_zoompan_hint: 'Scroll = zoom · middelste muisknop = pan',
@@ -5914,6 +5939,30 @@ function removeLogo(id) {
   scheduleRender();
 }
 
+// Duplicate a logo so the same image can be reused without re-importing. The copy
+// reuses the loaded image + dataUrl, dropped a little offset from the original.
+function duplicateLogo(id) {
+  const src = state.logos.find(l => l.id === id);
+  if (!src) return;
+  const copy = {
+    id: nextLogoId(),
+    name: src.name,
+    dataUrl: src.dataUrl,
+    image: src.image,
+    x: Math.round(src.x + 30),
+    y: Math.round(src.y + 30),
+    w: src.w,
+    h: src.h,
+    aspectLocked: src.aspectLocked,
+    opacity: src.opacity,
+  };
+  state.logos.push(copy);
+  state.selectedLogoId = null;
+  state.selectedOverlay = { kind: 'logo', id: copy.id };
+  renderLogoList();
+  scheduleRender();
+}
+
 // ============================================================
 // PIXELMAP PLACED ITEMS (color bar, grayscale, project info)
 // ============================================================
@@ -5989,6 +6038,7 @@ function renderLogoList() {
         ${thumbHtml}
         <div class="details">${nameHtml}</div>
         <button data-act="select" data-kind="${kind}" data-id="${data.id}" style="margin-right: 4px;">${isSelected ? T('selected') : T('select')}</button>
+        ${kind === 'logo' ? `<button data-act="duplicate" data-kind="${kind}" data-id="${data.id}" title="${T('duplicate_logo')}" style="margin-right: 4px;">⧉</button>` : ''}
         <button data-act="remove" data-kind="${kind}" data-id="${data.id}" class="danger">×</button>
       </div>
       <div class="controls">
@@ -6022,6 +6072,8 @@ function renderLogoList() {
         state.selectedOverlay = { kind, id };
         renderLogoList();
         scheduleRender();
+      } else if (btn.dataset.act === 'duplicate') {
+        if (kind === 'logo') duplicateLogo(id);
       }
     };
   });
@@ -7408,6 +7460,7 @@ function renderTileTypesList() {
           <option value="diagonal_rev"${t.gradientDir === 'diagonal_rev' ? ' selected' : ''}>${T('dir_diagonal_rev')}</option>
         </select>
         ${s.tileTypes.length > 1 ? `<button data-act="delete-type" data-id="${t.id}" class="danger" style="padding: 3px 8px; font-size: 11px;">${T('delete_type')}</button>` : ''}
+        <button data-act="save-preset" data-id="${t.id}" title="${T('save_preset_title')}" style="padding: 3px 8px; font-size: 11px;">${T('save_preset')}</button>
       </div>
     `;
     container.appendChild(item);
@@ -7460,9 +7513,12 @@ function renderTileTypesList() {
         updateSelectedTypeIndicator();
         renderAdvancedCanvas();
         scheduleRender();
+      } else if (btn.dataset.act === 'save-preset') {
+        saveTileTypeAsPreset(id);
       }
     };
   });
+  renderTilePresetSelect();
 }
 
 function addTileType() {
@@ -7486,7 +7542,76 @@ function addTileType() {
   scheduleRender();
 }
 
-// ----- Advanced canvas (small editor) -----
+// ===== Reusable, named tile presets (stored in this browser) =====
+const TILE_PRESETS_KEY = 'genes_pixelmap_tile_presets';
+function loadTilePresets() {
+  try { const v = JSON.parse(localStorage.getItem(TILE_PRESETS_KEY) || '[]'); return Array.isArray(v) ? v : []; }
+  catch (e) { return []; }
+}
+function saveTilePresets(list) {
+  try { localStorage.setItem(TILE_PRESETS_KEY, JSON.stringify(list)); } catch (e) {}
+}
+function renderTilePresetSelect() {
+  const sel = $('tile-preset-select');
+  if (!sel) return;
+  const presets = loadTilePresets();
+  const addBtn = $('tile-preset-add'), delBtn = $('tile-preset-del');
+  if (!presets.length) {
+    sel.innerHTML = `<option value="">${T('no_tile_presets')}</option>`;
+    sel.disabled = true; if (addBtn) addBtn.disabled = true; if (delBtn) delBtn.disabled = true;
+    return;
+  }
+  const keep = sel.value;
+  sel.disabled = false; if (addBtn) addBtn.disabled = false; if (delBtn) delBtn.disabled = false;
+  sel.innerHTML = presets.map(p => `<option value="${p.id}">${escapeHtml(p.name)} (${p.w}×${p.h})</option>`).join('');
+  if (keep && presets.some(p => p.id === keep)) sel.value = keep;
+}
+function saveTileTypeAsPreset(typeId) {
+  const s = activeScreen();
+  if (!s) return;
+  const t = (s.tileTypes || []).find(tt => tt.id === typeId);
+  if (!t) return;
+  const name = prompt(T('preset_name_q'), t.name || 'Tile preset');
+  if (name === null) return;
+  const presets = loadTilePresets();
+  presets.push({
+    id: 'tpz_' + Date.now() + '_' + Math.round(Math.random() * 1e4),
+    name: (name.trim() || t.name || 'Tile preset'),
+    w: t.w, h: t.h, colorA: t.colorA, colorB: t.colorB,
+    gradientMode: t.gradientMode || 'checker', gradientDir: t.gradientDir || 'horizontal',
+  });
+  saveTilePresets(presets);
+  renderTilePresetSelect();
+}
+function addTileTypeFromPreset(presetId) {
+  const s = activeScreen();
+  if (!s) return;
+  ensureDefaultTileType(s);
+  const p = loadTilePresets().find(x => x.id === presetId);
+  if (!p) return;
+  const newType = {
+    id: nextTileTypeId(), name: p.name, w: p.w, h: p.h,
+    colorA: p.colorA, colorB: p.colorB,
+    gradientMode: p.gradientMode || 'checker', gradientDir: p.gradientDir || 'horizontal',
+  };
+  s.tileTypes.push(newType);
+  s.selectedTileTypeId = newType.id;
+  renderTileTypesList();
+  updateSelectedTypeIndicator();
+  renderAdvancedCanvas();
+  renderStats();
+  scheduleRender();
+}
+function deleteTilePreset(presetId) {
+  if (!presetId) return;
+  const presets = loadTilePresets();
+  const p = presets.find(x => x.id === presetId);
+  if (!p) return;
+  if (!confirm(T('delete_preset_q') + (p.name ? ` "${p.name}"?` : ''))) return;
+  saveTilePresets(presets.filter(x => x.id !== presetId));
+  renderTilePresetSelect();
+}
+
 const ADV_CANVAS_W = 800;
 const ADV_CANVAS_H = 400;
 let advView = { scale: 1, panX: 0, panY: 0 };
@@ -8093,6 +8218,10 @@ function wireUp() {
   
   // Add tile type
   $('add-tile-type-btn').onclick = addTileType;
+  // Tile presets (reusable, named)
+  if ($('tile-preset-add')) $('tile-preset-add').onclick = () => { const v = $('tile-preset-select').value; if (v) addTileTypeFromPreset(v); };
+  if ($('tile-preset-del')) $('tile-preset-del').onclick = () => { const v = $('tile-preset-select').value; if (v) deleteTilePreset(v); };
+  renderTilePresetSelect();
 
   // Arrow keys nudge the selected screen on the canvas, one pixel at a time
   // (hold Shift for 10px). Works in both grid and advanced mode.
@@ -9879,6 +10008,7 @@ function renderTpOverlayList() {
         ${thumbHtml}
         <div class="details">${nameHtml}</div>
         <button data-act="select" data-kind="${kind}" data-id="${data.id}" style="margin-right: 4px;">${isSelected ? T('selected') : T('select')}</button>
+        ${kind === 'logo' ? `<button data-act="duplicate" data-kind="${kind}" data-id="${data.id}" title="${T('duplicate_logo')}" style="margin-right: 4px;">⧉</button>` : ''}
         <button data-act="remove" data-kind="${kind}" data-id="${data.id}" class="danger">×</button>
       </div>
       <div class="controls">
@@ -9910,6 +10040,8 @@ function renderTpOverlayList() {
         tpState.selectedItem = { kind, id };
         renderTpOverlayList();
         tpRenderWithOverlay();
+      } else if (btn.dataset.act === 'duplicate') {
+        if (kind === 'logo') tpDuplicateLogo(id);
       }
     };
   });
@@ -9991,6 +10123,20 @@ function tpRemoveLogo(id) {
   if (tpState.selectedItem && tpState.selectedItem.kind === 'logo' && tpState.selectedItem.id === id) {
     tpState.selectedItem = null;
   }
+  renderTpOverlayList();
+  tpRenderWithOverlay();
+}
+
+function tpDuplicateLogo(id) {
+  const src = tpState.logos.find(l => l.id === id);
+  if (!src) return;
+  const copy = {
+    id: nextTpLogoId(), name: src.name, dataUrl: src.dataUrl, image: src.image,
+    x: Math.round(src.x + 30), y: Math.round(src.y + 30), w: src.w, h: src.h,
+    aspectLocked: src.aspectLocked, opacity: src.opacity,
+  };
+  tpState.logos.push(copy);
+  tpState.selectedItem = { kind: 'logo', id: copy.id };
   renderTpOverlayList();
   tpRenderWithOverlay();
 }
