@@ -910,30 +910,41 @@
     background: var(--bg-input);
   }
 
-  /* Switch-styled checkboxes inside cards */
+  /* Switch-styled checkboxes inside cards: "tally LED" — a dark track with a
+     dot that slides right and glows green when on. */
   .card input[type="checkbox"] {
     appearance: none;
     -webkit-appearance: none;
-    width: 30px; height: 16px;
-    background: var(--bg-hover);
-    border-radius: 9px;
+    width: 36px; height: 20px;
+    background: var(--bg-input);
+    border: 1px solid var(--border-input);
+    border-radius: 10px;
     position: relative;
     cursor: pointer;
     flex-shrink: 0;
     margin: 0;
-    transition: background 0.15s;
+    transition: background 0.15s, border-color 0.15s;
   }
   .card input[type="checkbox"]::after {
     content: '';
     position: absolute;
-    left: 2px; top: 2px;
-    width: 12px; height: 12px;
+    left: 4px; top: 4px;
+    width: 10px; height: 10px;
     background: var(--text-muted);
+    opacity: 0.6;
     border-radius: 50%;
-    transition: transform 0.15s, background 0.15s;
+    transition: transform 0.15s, background 0.15s, box-shadow 0.15s, opacity 0.15s;
   }
-  .card input[type="checkbox"]:checked { background: var(--accent); }
-  .card input[type="checkbox"]:checked::after { transform: translateX(14px); background: white; }
+  .card input[type="checkbox"]:checked { background: rgba(74,222,128,0.10); border-color: rgba(74,222,128,0.6); }
+  .card input[type="checkbox"]:checked::after {
+    transform: translateX(16px);
+    background: var(--ok);
+    opacity: 1;
+    box-shadow: 0 0 0 2px rgba(74,222,128,0.22), 0 0 9px 1px rgba(74,222,128,0.85);
+  }
+  /* No focus ring after a mouse click; keep it for keyboard navigation */
+  .card input[type="checkbox"]:focus { box-shadow: none; }
+  .card input[type="checkbox"]:focus-visible { box-shadow: var(--ring); }
 
   /* Regular checkboxes in viewport action bar keep native look */
   .view-actions input[type="checkbox"] { accent-color: var(--accent); margin: 0; }
@@ -1347,9 +1358,6 @@
   input[type="number"]::-webkit-inner-spin-button,
   input[type="number"]::-webkit-outer-spin-button { margin: 0 -9px 0 4px; border-radius: 0 6px 6px 0; }
   input[type="color"] { width: 30px; height: 30px; border-radius: 7px; padding: 3px; }
-  .card input[type="checkbox"] { width: 34px; height: 19px; border-radius: 10px; }
-  .card input[type="checkbox"]::after { width: 15px; height: 15px; }
-  .card input[type="checkbox"]:checked::after { transform: translateX(15px); }
   button { border-radius: 8px; font-size: 11.5px; }
   .btn-row { gap: 8px; margin-top: 8px; }
   .btn-row button { height: 32px; font-size: 12px; font-weight: 500; }
