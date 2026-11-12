@@ -2718,6 +2718,46 @@ function getTileType(s, typeId) {
   return s.tileTypes.find(t => t.id === typeId) || s.tileTypes[0];
 }
 
+// Checker mode in advanced: which placed tiles get colour A (Map tile -> bool).
+// Tiles are grouped into columns by the most common tile width and counted
+// top-to-bottom per column (a gap counts as whole rows of the most common
+// height), so a half-height tile continues the checkerboard instead of taking
+// the colour of the tile above it. For a uniform layout this is the same as
+// the grid-mode (col + row) % 2 rule.
+function advancedCheckerIsA(s) {
+  const isA = new Map();
+  const tiles = s.placedTiles || [];
+  if (!tiles.length) return isA;
+  const mostCommon = (prop) => {
+    const n = {}; let best = 0, val = 0;
+    tiles.forEach(pt => {
+      const v = getTileType(s, pt.typeId)[prop];
+      n[v] = (n[v] || 0) + 1;
+      if (n[v] > best) { best = n[v]; val = v; }
+    });
+    return val || 1;
+  };
+  const refW = mostCommon('w'), refH = mostCommon('h');
+  const byCol = {};
+  tiles.forEach(pt => {
+    const t = getTileType(s, pt.typeId);
+    const col = Math.floor((pt.x + t.w / 2) / refW);
+    (byCol[col] = byCol[col] || []).push(pt);
+  });
+  Object.keys(byCol).forEach(k => {
+    const col = parseInt(k, 10);
+    let row = 0, prevBottom = null;
+    byCol[k].sort((a, b) => a.y - b.y).forEach(pt => {
+      const t = getTileType(s, pt.typeId);
+      if (prevBottom === null) row = Math.round(pt.y / refH);
+      else row += 1 + Math.max(0, Math.round((pt.y - prevBottom) / refH));
+      prevBottom = pt.y + t.h;
+      isA.set(pt, (((col + row) % 2) + 2) % 2 === 0);
+    });
+  });
+  return isA;
+}
+
 // Convert from grid mode to advanced mode (preserve active tiles as placed tiles of default type)
 function convertScreenToAdvanced(s) {
   ensureDefaultTileType(s);
@@ -5056,6 +5096,7 @@ function drawScreenAdvanced(ctx, s, cw, ch, accent) {
   });
   
   // Draw each placed tile
+  const checkerIsA = advancedCheckerIsA(s);
   s.placedTiles.forEach((pt, idx) => {
     const t = getTileType(s, pt.typeId);
     let x0 = s.offsetX + pt.x;
@@ -5070,11 +5111,7 @@ function drawScreenAdvanced(ctx, s, cw, ch, accent) {
     const gradientDir = t.gradientDir || 'horizontal';
     
     if (gradientMode === 'checker') {
-      // Pseudo-checker based on position
-      const checkCol = Math.floor(pt.x / t.w);
-      const checkRow = Math.floor(pt.y / t.h);
-      const isAlt = (checkCol + checkRow) % 2 === 0;
-      ctx.fillStyle = isAlt ? t.colorA : t.colorB;
+      ctx.fillStyle = checkerIsA.get(pt) ? t.colorA : t.colorB;
     } else if (gradientMode === 'per_tile') {
       let gx1, gy1, gx2, gy2;
       if (gradientDir === 'horizontal')      { gx1=x0; gy1=y0; gx2=x1; gy2=y0; }
@@ -7864,15 +7901,18 @@ function addTileType() {
   const s = activeScreen();
   if (!s) return;
   ensureDefaultTileType(s);
+  // Start from the selected type (size, colours, gradient) so e.g. a half-height
+  // tile matches the rest of the screen; only the size needs changing after.
+  const base = getTileType(s, s.selectedTileTypeId);
   const newType = {
     id: nextTileTypeId(),
     name: `Type ${s.tileTypes.length + 1}`,
-    w: 56,
-    h: 112,
-    colorA: '#2c7c34',
-    colorB: '#0e3a14',
-    gradientMode: 'checker',
-    gradientDir: 'horizontal',
+    w: base.w,
+    h: base.h,
+    colorA: base.colorA,
+    colorB: base.colorB,
+    gradientMode: base.gradientMode || 'checker',
+    gradientDir: base.gradientDir || 'horizontal',
   };
   s.tileTypes.push(newType);
   s.selectedTileTypeId = newType.id;
@@ -8090,15 +8130,14 @@ function renderAdvancedCanvas() {
   ctx.stroke();
   
   // Draw placed tiles
+  const checkerIsA = advancedCheckerIsA(s);
   s.placedTiles.forEach((pt, idx) => {
     const t = getTileType(s, pt.typeId);
     const [sx, sy] = toScreen(pt.x, pt.y);
     const sw = t.w * scale;
     const sh = t.h * scale;
-    // Use colorA as base; if checker, alternate based on position
-    const checkCol = Math.floor(pt.x / t.w);
-    const checkRow = Math.floor(pt.y / t.h);
-    const fillCol = (t.gradientMode === 'checker' && (checkCol + checkRow) % 2 !== 0) ? t.colorB : t.colorA;
+    // Use colorA as base; if checker, alternate like the main render
+    const fillCol = (t.gradientMode === 'checker' && !checkerIsA.get(pt)) ? t.colorB : t.colorA;
     
     if (t.gradientMode === 'per_tile') {
       const dir = t.gradientDir || 'horizontal';
