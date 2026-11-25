@@ -1378,7 +1378,7 @@
   .tile-type-item-header button { height: 26px; padding: 0 10px !important; font-size: 11px !important; }
   .tile-type-controls { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 8px 6px; }
   .tile-type-controls label { grid-column: span 1; font-size: 10.5px; font-weight: 600; letter-spacing: 0.06em; text-align: center; }
-  .tile-type-controls input[type="number"] { grid-column: span 3; width: 100%; padding: 0 8px; font-size: 12px; }
+  .tile-type-controls input[type="number"] { grid-column: span 5; width: 100%; padding: 0 8px; font-size: 12px; }
   .tile-type-controls input[type="color"] { grid-column: span 2; width: 100%; height: 30px; }
   .tile-type-controls select { grid-column: span 6; width: 100%; max-width: none; padding: 0 6px; font-size: 11.5px; }
   .tile-type-controls button { grid-column: span 6; height: 30px; padding: 0 8px !important; font-size: 11.5px !important; white-space: nowrap; }
@@ -1577,8 +1577,37 @@
               <input type="number" class="sc-input" data-key="offsetY" value="0" min="-10000" max="20000" />
             </span>
           </div>
+          <div class="field">
+            <label data-i18n="tile_colors">Colors</label>
+            <span class="f-inputs">
+              <input type="color" class="sc-input" data-key="colorA" value="#d23c3c" />
+              <input type="color" class="sc-input" data-key="colorB" value="#781414" />
+            </span>
+          </div>
+          <div class="field">
+            <label data-i18n="gradient_mode">Gradient</label>
+            <span class="f-inputs">
+              <select class="sc-input" data-key="gradientMode">
+                <option value="checker" data-i18n="grad_checker">Checker (A + B)</option>
+                <option value="per_tile" data-i18n="grad_per_tile">Gradient per tile</option>
+                <option value="full_screen" data-i18n="grad_full">Gradient across screen</option>
+              </select>
+            </span>
+          </div>
+          <div class="field">
+            <label data-i18n="gradient_dir">Direction</label>
+            <span class="f-inputs">
+              <select class="sc-input" data-key="gradientDir">
+                <option value="horizontal" data-i18n="dir_horizontal">Horizontal →</option>
+                <option value="vertical" data-i18n="dir_vertical">Vertical ↓</option>
+                <option value="diagonal" data-i18n="dir_diagonal">Diagonal ↘</option>
+                <option value="diagonal_rev" data-i18n="dir_diagonal_rev">Diagonal ↗</option>
+              </select>
+            </span>
+          </div>
           <!-- Same tile "card" as advanced mode: dbl-click the title to rename, a
-               dropdown to apply a saved preset, and 💾 to save the current tile. -->
+               dropdown to apply a saved preset, and 💾 to save the current tile.
+               Colours are the screen's (fields above), not the tile's. -->
           <div id="grid-tile-card" class="tile-types-list"></div>
           <div class="btn-row">
             <button id="rebuild-grid" data-i18n="rebuild_grid">Rebuild this screen's grid</button>
@@ -1596,6 +1625,34 @@
               <input type="number" class="sc-input-adv" data-key="offsetX" value="0" min="-10000" max="20000" />
               <span class="sep">,</span>
               <input type="number" class="sc-input-adv" data-key="offsetY" value="0" min="-10000" max="20000" />
+            </span>
+          </div>
+          <div class="field">
+            <label data-i18n="tile_colors">Colors</label>
+            <span class="f-inputs">
+              <input type="color" class="sc-input-adv" data-key="colorA" value="#d23c3c" />
+              <input type="color" class="sc-input-adv" data-key="colorB" value="#781414" />
+            </span>
+          </div>
+          <div class="field">
+            <label data-i18n="gradient_mode">Gradient</label>
+            <span class="f-inputs">
+              <select class="sc-input-adv" data-key="gradientMode">
+                <option value="checker" data-i18n="grad_checker">Checker (A + B)</option>
+                <option value="per_tile" data-i18n="grad_per_tile">Gradient per tile</option>
+                <option value="full_screen" data-i18n="grad_full">Gradient across screen</option>
+              </select>
+            </span>
+          </div>
+          <div class="field">
+            <label data-i18n="gradient_dir">Direction</label>
+            <span class="f-inputs">
+              <select class="sc-input-adv" data-key="gradientDir">
+                <option value="horizontal" data-i18n="dir_horizontal">Horizontal →</option>
+                <option value="vertical" data-i18n="dir_vertical">Vertical ↓</option>
+                <option value="diagonal" data-i18n="dir_diagonal">Diagonal ↘</option>
+                <option value="diagonal_rev" data-i18n="dir_diagonal_rev">Diagonal ↗</option>
+              </select>
             </span>
           </div>
           <div class="info" data-i18n="tile_types_info">Define one or more tile types with their own dimensions and colors. Select a type, then click on the canvas below to place tiles.</div>
@@ -1994,7 +2051,7 @@ const I18N = {
     mode_grid: 'Grid mode',
     mode_advanced: 'Advanced (free placement)',
     tile_types: 'Tile types',
-    tile_types_info: 'Define one or more tile types with their own dimensions and colors. Select a type, then click on the canvas below to place tiles.',
+    tile_types_info: 'Define one or more tile types with their own dimensions; they all use the screen colours above. Select a type, then click on the canvas below to place tiles.',
     add_tile_type: '+ Add tile type',
     duplicate_logo: 'Duplicate logo',
     tile_presets_label: 'Tile presets',
@@ -2300,7 +2357,7 @@ const I18N = {
     mode_grid: 'Grid modus',
     mode_advanced: 'Geavanceerd (vrij plaatsen)',
     tile_types: 'Tegel types',
-    tile_types_info: 'Definieer één of meer tegel types met eigen afmetingen en kleuren. Selecteer een type en klik op het canvas hieronder om tegels te plaatsen.',
+    tile_types_info: 'Definieer één of meer tegel types met eigen afmetingen; ze krijgen allemaal de schermkleuren hierboven. Selecteer een type en klik op het canvas hieronder om tegels te plaatsen.',
     add_tile_type: '+ Tegel type toevoegen',
     duplicate_logo: 'Logo dupliceren',
     tile_presets_label: 'Tegel-presets',
@@ -2692,18 +2749,31 @@ function nextTileTypeId() { tileTypeIdCounter++; return `tt_${Date.now()}_${tile
 let placedTileIdCounter = 0;
 function nextPlacedTileId() { placedTileIdCounter++; return placedTileIdCounter; }
 
+// Tile colours (A/B, gradient, direction) belong to the screen, in grid and
+// advanced mode alike; tile types only have a name and a size. Advanced screens
+// saved before that kept colours per tile type: adopt the first type's colours
+// once, so such a screen keeps looking the way it did.
+function adoptTypeColors(s) {
+  if (!s || s.colorsOnScreen) return;
+  const t = s.advancedMode && s.tileTypes && s.tileTypes[0];
+  if (t) {
+    if (t.colorA) s.colorA = t.colorA;
+    if (t.colorB) s.colorB = t.colorB;
+    if (t.gradientMode) s.gradientMode = t.gradientMode;
+    if (t.gradientDir) s.gradientDir = t.gradientDir;
+  }
+  s.colorsOnScreen = true;
+}
+
 // Make sure a screen has at least one tile type defined (for advanced mode)
 function ensureDefaultTileType(s) {
+  adoptTypeColors(s);
   if (!s.tileTypes || s.tileTypes.length === 0) {
     s.tileTypes = [{
       id: nextTileTypeId(),
       name: 'Default',
       w: s.tileW || 56,
       h: s.tileH || 112,
-      colorA: s.colorA || '#d23c3c',
-      colorB: s.colorB || '#781414',
-      gradientMode: s.gradientMode || 'checker',
-      gradientDir: s.gradientDir || 'horizontal',
     }];
   }
   if (!s.selectedTileTypeId) {
@@ -3101,6 +3171,7 @@ function maxScreenExtent(screens) {
 // scaled proportionally to the largest screen (scaleRef). Active tiles are drawn in the
 // screen's colour; the outline shows the full grid extent.
 function screenThumbSVG(s, boxW, boxH, scaleRef) {
+  adoptTypeColors(s);
   const accent = state.project.accent || '#2590ce';
   const ref = scaleRef || maxScreenExtent();
   let gw, gh, cols, rows;
@@ -3360,7 +3431,7 @@ function syncScreenFromUI() {
   // In advanced mode the label + offset live in the .sc-input-adv fields; the hidden
   // grid .sc-input fields are stale, so don't let them clobber those keys (that was
   // why "Offset on canvas" did nothing for advanced screens).
-  const skip = s.advancedMode ? new Set(['offsetX', 'offsetY', 'label']) : null;
+  const skip = s.advancedMode ? new Set(['offsetX', 'offsetY', 'label', 'colorA', 'colorB', 'gradientMode', 'gradientDir']) : null;
   document.querySelectorAll('.sc-input').forEach(inp => {
     const key = inp.dataset.key;
     if (skip && skip.has(key)) return;
@@ -3388,6 +3459,7 @@ function syncScreenToUI() {
   document.querySelectorAll('.sc-input').forEach(inp => {
     const key = inp.dataset.key;
     inp.value = s[key] !== undefined ? s[key] : '';
+    if (inp.tagName === 'SELECT' && inp.selectedIndex < 0) inp.selectedIndex = 0;
   });
   const oc = $('scr-overlay-circle');
   if (oc) oc.checked = resolveOverlayCircle(s);
@@ -3482,6 +3554,7 @@ function addScreen() {
 function duplicateScreen(id) {
   const src = state.screens.find(s => s.id === id);
   if (!src) return;
+  adoptTypeColors(src); // so the copy's new colour below is the one it's drawn in
   const copy = JSON.parse(JSON.stringify(src));
   copy.id = nextScreenId();
   copy.label = src.label ? src.label + ' copy' : '';
@@ -5079,21 +5152,21 @@ function drawScreenAdvanced(ctx, s, cw, ch, accent) {
     pt._isBottomEdge = (pt.y + t.h >= bb.maxY - 1);
   });
   
-  // Build full-screen gradient cache per type (for 'full_screen' mode)
-  const fullGradByType = {};
-  s.tileTypes.forEach(t => {
-    if ((t.gradientMode || 'checker') !== 'full_screen') return;
-    const dir = t.gradientDir || 'horizontal';
+  // All tiles use the screen's colours / gradient settings.
+  const gradientMode = s.gradientMode || 'checker';
+  const gradientDir = s.gradientDir || 'horizontal';
+  // Shared gradient across the whole screen (for 'full_screen' mode)
+  let fullGrad = null;
+  if (gradientMode === 'full_screen') {
     let gx1, gy1, gx2, gy2;
-    if (dir === 'horizontal')      { gx1=bbX; gy1=bbY; gx2=bbX+bbW; gy2=bbY; }
-    else if (dir === 'vertical')   { gx1=bbX; gy1=bbY; gx2=bbX; gy2=bbY+bbH; }
-    else if (dir === 'diagonal')   { gx1=bbX; gy1=bbY; gx2=bbX+bbW; gy2=bbY+bbH; }
-    else                            { gx1=bbX; gy1=bbY+bbH; gx2=bbX+bbW; gy2=bbY; }
-    const g = ctx.createLinearGradient(gx1, gy1, gx2, gy2);
-    g.addColorStop(0, t.colorA);
-    g.addColorStop(1, t.colorB);
-    fullGradByType[t.id] = g;
-  });
+    if (gradientDir === 'horizontal')      { gx1=bbX; gy1=bbY; gx2=bbX+bbW; gy2=bbY; }
+    else if (gradientDir === 'vertical')   { gx1=bbX; gy1=bbY; gx2=bbX; gy2=bbY+bbH; }
+    else if (gradientDir === 'diagonal')   { gx1=bbX; gy1=bbY; gx2=bbX+bbW; gy2=bbY+bbH; }
+    else                                    { gx1=bbX; gy1=bbY+bbH; gx2=bbX+bbW; gy2=bbY; }
+    fullGrad = ctx.createLinearGradient(gx1, gy1, gx2, gy2);
+    fullGrad.addColorStop(0, s.colorA);
+    fullGrad.addColorStop(1, s.colorB);
+  }
   
   // Draw each placed tile
   const checkerIsA = advancedCheckerIsA(s);
@@ -5107,11 +5180,8 @@ function drawScreenAdvanced(ctx, s, cw, ch, accent) {
     if (pt._isRightEdge) x1 -= INSET;
     if (pt._isBottomEdge) y1 -= INSET;
     
-    const gradientMode = t.gradientMode || 'checker';
-    const gradientDir = t.gradientDir || 'horizontal';
-    
     if (gradientMode === 'checker') {
-      ctx.fillStyle = checkerIsA.get(pt) ? t.colorA : t.colorB;
+      ctx.fillStyle = checkerIsA.get(pt) ? s.colorA : s.colorB;
     } else if (gradientMode === 'per_tile') {
       let gx1, gy1, gx2, gy2;
       if (gradientDir === 'horizontal')      { gx1=x0; gy1=y0; gx2=x1; gy2=y0; }
@@ -5119,11 +5189,11 @@ function drawScreenAdvanced(ctx, s, cw, ch, accent) {
       else if (gradientDir === 'diagonal')   { gx1=x0; gy1=y0; gx2=x1; gy2=y1; }
       else                                    { gx1=x0; gy1=y1; gx2=x1; gy2=y0; }
       const g = ctx.createLinearGradient(gx1, gy1, gx2, gy2);
-      g.addColorStop(0, t.colorA);
-      g.addColorStop(1, t.colorB);
+      g.addColorStop(0, s.colorA);
+      g.addColorStop(1, s.colorB);
       ctx.fillStyle = g;
     } else {
-      ctx.fillStyle = fullGradByType[t.id] || t.colorA;
+      ctx.fillStyle = fullGrad || s.colorA;
     }
     ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
   });
@@ -5715,7 +5785,7 @@ function drawInfoBlock(ctx, cw, ch, accent, name, subtitle, mode) {
         grid: 'advanced',
         tileSize: tileSize,
         active: `${numTiles}`,
-        colorA: s.tileTypes[0] ? s.tileTypes[0].colorA : '#888',
+        colorA: s.colorA || '#888',
       };
     }
     let active = 0;
@@ -7547,8 +7617,6 @@ function convertAdvancedToGrid(s) {
   // Keep the layout in the same place on canvas: the grid starts where the tiles do
   s.offsetX += bb.minX;
   s.offsetY += bb.minY;
-  s.colorA = t.colorA || s.colorA;
-  s.colorB = t.colorB || s.colorB;
   
   s.active = Array.from({ length: rows }, () => Array.from({ length: cols }, () => false));
   s.placedTiles.forEach(pt => {
@@ -7655,6 +7723,7 @@ function updateModeUI() {
     document.querySelectorAll('.sc-input-adv').forEach(inp => {
       const key = inp.dataset.key;
       inp.value = s[key] !== undefined ? s[key] : '';
+      if (inp.tagName === 'SELECT' && inp.selectedIndex < 0) inp.selectedIndex = 0;
     });
     $('adv-snap-enabled').checked = s.snapEnabled !== false;
     $('adv-snap-size').value = s.snapSize || 8;
@@ -7667,15 +7736,16 @@ function updateSelectedTypeIndicator() {
   if (!s || !s.advancedMode) return;
   ensureDefaultTileType(s);
   const t = getTileType(s, s.selectedTileTypeId);
-  $('selected-type-swatch').style.background = t.colorA;
+  $('selected-type-swatch').style.background = s.colorA;
   $('selected-type-name').textContent = `${t.name} (${t.w}×${t.h})`;
 }
 
-// Build one tile "card": a title you double-click to rename, size + colour +
-// gradient controls, a dropdown to apply a saved preset, 💾 to save as a preset,
-// and (optionally) a Select button and a 🗑 delete button. Shared by advanced
-// tile types and the single grid tile so both look and behave identically.
-// opts: { name, w, h, colorA, colorB, gradientMode, gradientDir,
+// Build one tile "card": a title you double-click to rename, the tile size, a
+// dropdown to apply a saved preset, 💾 to save as a preset, and (optionally) a
+// Select button and a 🗑 delete button. Shared by advanced tile types and the
+// single grid tile so both look and behave identically. Colours are the
+// screen's (colorA only tints the swatch).
+// opts: { name, w, h, colorA,
 //         selected?, showSelect?, canDelete?,
 //         onProp(prop,val), onRename(valOrNull), onApplyPreset(preset),
 //         onSavePreset(), onSelect?(), onDelete?() }
@@ -7697,19 +7767,6 @@ function buildTileCard(opts) {
       <input type="number" data-prop="w" min="1" max="2000" />
       <label>${T('type_h')}</label>
       <input type="number" data-prop="h" min="1" max="2000" />
-      <input type="color" data-prop="colorA" title="${T('tile_color_a')}" />
-      <input type="color" data-prop="colorB" title="${T('tile_color_b')}" />
-      <select data-prop="gradientMode">
-        <option value="checker">${T('grad_checker')}</option>
-        <option value="per_tile">${T('grad_per_tile')}</option>
-        <option value="full_screen">${T('grad_full')}</option>
-      </select>
-      <select data-prop="gradientDir">
-        <option value="horizontal">${T('dir_horizontal')}</option>
-        <option value="vertical">${T('dir_vertical')}</option>
-        <option value="diagonal">${T('dir_diagonal')}</option>
-        <option value="diagonal_rev">${T('dir_diagonal_rev')}</option>
-      </select>
       <select data-act="apply-preset" title="${T('preset_apply_title')}">${presetOpts}</select>
       <button data-act="save-preset" title="${T('save_preset_title')}" style="padding: 3px 8px; font-size: 11px;">${T('save_preset')}</button>
     </div>
@@ -7725,10 +7782,6 @@ function buildTileCard(opts) {
   paintHeader();
   item.querySelector('[data-prop="w"]').value = opts.w;
   item.querySelector('[data-prop="h"]').value = opts.h;
-  item.querySelector('[data-prop="colorA"]').value = opts.colorA;
-  item.querySelector('[data-prop="colorB"]').value = opts.colorB;
-  item.querySelector('[data-prop="gradientMode"]').value = opts.gradientMode || 'checker';
-  item.querySelector('[data-prop="gradientDir"]').value = opts.gradientDir || 'horizontal';
 
   // Double-click the title to rename inline (no separate "Name" field any more).
   nameEl.ondblclick = (e) => {
@@ -7736,7 +7789,7 @@ function buildTileCard(opts) {
     startInlineRename(nameEl, opts.name, (val) => opts.onRename(val));
   };
 
-  item.querySelectorAll('input[data-prop], select[data-prop]').forEach(el => {
+  item.querySelectorAll('input[data-prop]').forEach(el => {
     el.oninput = () => {
       const prop = el.dataset.prop;
       let val = el.value;
@@ -7745,7 +7798,6 @@ function buildTileCard(opts) {
       opts.onProp(prop, val);
       paintHeader();
     };
-    if (el.type === 'color') el.onchange = el.oninput;
   });
 
   const applySel = item.querySelector('[data-act="apply-preset"]');
@@ -7777,8 +7829,7 @@ function renderTileTypesList() {
 
   s.tileTypes.forEach(t => {
     const card = buildTileCard({
-      name: t.name, w: t.w, h: t.h, colorA: t.colorA, colorB: t.colorB,
-      gradientMode: t.gradientMode, gradientDir: t.gradientDir,
+      name: t.name, w: t.w, h: t.h, colorA: s.colorA,
       selected: s.selectedTileTypeId === t.id,
       showSelect: true,
       canDelete: s.tileTypes.length > 1,
@@ -7797,10 +7848,8 @@ function renderTileTypesList() {
         scheduleRender();
       },
       onApplyPreset: (p) => {
+        // A preset is a name + size; the tile keeps the screen's colours.
         t.name = p.name; t.w = p.w; t.h = p.h;
-        t.colorA = p.colorA; t.colorB = p.colorB;
-        t.gradientMode = p.gradientMode || 'checker';
-        t.gradientDir = p.gradientDir || 'horizontal';
         renderTileTypesList();
         updateSelectedTypeIndicator();
         renderAdvancedCanvas();
@@ -7831,19 +7880,18 @@ function renderTileTypesList() {
   renderTilePresetSelect();
 }
 
-// Grid mode: one card driving the screen's single uniform tile (s.tileW/tileH/
-// colorA/colorB/gradientMode/gradientDir + s.tileName for the title/preset name).
+// Grid mode: one card driving the screen's single uniform tile (s.tileW/tileH +
+// s.tileName for the title/preset name). Colours are set on the screen fields.
 function renderGridTileCard() {
   const s = activeScreen();
   const container = $('grid-tile-card');
   if (!container) return;
   if (!s || s.advancedMode) { container.innerHTML = ''; return; }
   container.innerHTML = '';
-  const GRID_PROP = { w: 'tileW', h: 'tileH', colorA: 'colorA', colorB: 'colorB', gradientMode: 'gradientMode', gradientDir: 'gradientDir' };
+  const GRID_PROP = { w: 'tileW', h: 'tileH' };
   const card = buildTileCard({
     name: s.tileName || T('grid_tile_name'),
-    w: s.tileW, h: s.tileH, colorA: s.colorA, colorB: s.colorB,
-    gradientMode: s.gradientMode, gradientDir: s.gradientDir,
+    w: s.tileW, h: s.tileH, colorA: s.colorA,
     showSelect: false,
     canDelete: false,
     onProp: (prop, val) => {
@@ -7862,9 +7910,6 @@ function renderGridTileCard() {
     },
     onApplyPreset: (p) => {
       s.tileName = p.name; s.tileW = p.w; s.tileH = p.h;
-      s.colorA = p.colorA; s.colorB = p.colorB;
-      s.gradientMode = p.gradientMode || 'checker';
-      s.gradientDir = p.gradientDir || 'horizontal';
       if (s.tileW > 0) state.lastTileW = s.tileW;
       if (s.tileH > 0) state.lastTileH = s.tileH;
       renderGridTileCard();
@@ -7889,8 +7934,7 @@ function saveGridTileAsPreset() {
   presets.push({
     id: 'tpz_' + Date.now() + '_' + Math.round(Math.random() * 1e4),
     name: (name.trim() || s.tileName || T('grid_tile_name')),
-    w: s.tileW, h: s.tileH, colorA: s.colorA, colorB: s.colorB,
-    gradientMode: s.gradientMode || 'checker', gradientDir: s.gradientDir || 'horizontal',
+    w: s.tileW, h: s.tileH,
   });
   saveTilePresets(presets);
   // Re-render so the new preset shows up in the card's apply dropdown too.
@@ -7901,18 +7945,13 @@ function addTileType() {
   const s = activeScreen();
   if (!s) return;
   ensureDefaultTileType(s);
-  // Start from the selected type (size, colours, gradient) so e.g. a half-height
-  // tile matches the rest of the screen; only the size needs changing after.
+  // Start from the selected type's size; colours always come from the screen.
   const base = getTileType(s, s.selectedTileTypeId);
   const newType = {
     id: nextTileTypeId(),
     name: `Type ${s.tileTypes.length + 1}`,
     w: base.w,
     h: base.h,
-    colorA: base.colorA,
-    colorB: base.colorB,
-    gradientMode: base.gradientMode || 'checker',
-    gradientDir: base.gradientDir || 'horizontal',
   };
   s.tileTypes.push(newType);
   s.selectedTileTypeId = newType.id;
@@ -7956,8 +7995,7 @@ function saveTileTypeAsPreset(typeId) {
   presets.push({
     id: 'tpz_' + Date.now() + '_' + Math.round(Math.random() * 1e4),
     name: (name.trim() || t.name || 'Tile preset'),
-    w: t.w, h: t.h, colorA: t.colorA, colorB: t.colorB,
-    gradientMode: t.gradientMode || 'checker', gradientDir: t.gradientDir || 'horizontal',
+    w: t.w, h: t.h,
   });
   saveTilePresets(presets);
   // Re-render so the new preset shows up in every card's apply dropdown too.
@@ -7971,8 +8009,6 @@ function addTileTypeFromPreset(presetId) {
   if (!p) return;
   const newType = {
     id: nextTileTypeId(), name: p.name, w: p.w, h: p.h,
-    colorA: p.colorA, colorB: p.colorB,
-    gradientMode: p.gradientMode || 'checker', gradientDir: p.gradientDir || 'horizontal',
   };
   s.tileTypes.push(newType);
   s.selectedTileTypeId = newType.id;
@@ -7995,7 +8031,8 @@ function deleteTilePreset(presetId) {
 function exportTilePresets() {
   const presets = loadTilePresets();
   if (!presets.length) { alert(T('no_tile_presets')); return; }
-  const json = JSON.stringify({ type: 'genes-pixelmap-tile-presets', version: 1, presets }, null, 2);
+  const clean = presets.map(p => ({ id: p.id, name: p.name, w: p.w, h: p.h }));
+  const json = JSON.stringify({ type: 'genes-pixelmap-tile-presets', version: 2, presets: clean }, null, 2);
   const blob = new Blob([json], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
@@ -8015,7 +8052,8 @@ function handleImportTilePresets(event) {
       const incoming = Array.isArray(data) ? data : (data && Array.isArray(data.presets) ? data.presets : null);
       if (!incoming) throw new Error('no presets found');
       const existing = loadTilePresets();
-      const sig = p => `${String(p.name || '').trim().toLowerCase()}|${p.w}|${p.h}|${p.colorA}|${p.colorB}|${p.gradientMode}|${p.gradientDir}`;
+      // Presets are name + size; colours in older files are ignored.
+      const sig = p => `${String(p.name || '').trim().toLowerCase()}|${p.w}|${p.h}`;
       const seen = new Set(existing.map(sig));
       let added = 0;
       incoming.forEach(p => {
@@ -8026,8 +8064,6 @@ function handleImportTilePresets(event) {
           id: 'tpz_' + Date.now() + '_' + Math.round(Math.random() * 1e6),
           name: String(p.name || 'Tile preset'),
           w, h,
-          colorA: p.colorA || '#888888', colorB: p.colorB || '#444444',
-          gradientMode: p.gradientMode || 'checker', gradientDir: p.gradientDir || 'horizontal',
         };
         if (seen.has(sig(norm))) return; // skip exact duplicates
         existing.push(norm); seen.add(sig(norm)); added++;
@@ -8136,19 +8172,20 @@ function renderAdvancedCanvas() {
     const [sx, sy] = toScreen(pt.x, pt.y);
     const sw = t.w * scale;
     const sh = t.h * scale;
-    // Use colorA as base; if checker, alternate like the main render
-    const fillCol = (t.gradientMode === 'checker' && !checkerIsA.get(pt)) ? t.colorB : t.colorA;
+    // Screen colours; if checker, alternate like the main render
+    const mode = s.gradientMode || 'checker';
+    const fillCol = (mode === 'checker' && !checkerIsA.get(pt)) ? s.colorB : s.colorA;
     
-    if (t.gradientMode === 'per_tile') {
-      const dir = t.gradientDir || 'horizontal';
+    if (mode === 'per_tile') {
+      const dir = s.gradientDir || 'horizontal';
       let gx1, gy1, gx2, gy2;
       if (dir === 'horizontal')      { gx1=sx; gy1=sy; gx2=sx+sw; gy2=sy; }
       else if (dir === 'vertical')   { gx1=sx; gy1=sy; gx2=sx; gy2=sy+sh; }
       else if (dir === 'diagonal')   { gx1=sx; gy1=sy; gx2=sx+sw; gy2=sy+sh; }
       else                            { gx1=sx; gy1=sy+sh; gx2=sx+sw; gy2=sy; }
       const g = ctx.createLinearGradient(gx1, gy1, gx2, gy2);
-      g.addColorStop(0, t.colorA);
-      g.addColorStop(1, t.colorB);
+      g.addColorStop(0, s.colorA);
+      g.addColorStop(1, s.colorB);
       ctx.fillStyle = g;
     } else {
       ctx.fillStyle = fillCol;
@@ -8552,6 +8589,7 @@ function wireUp() {
       renderGrid();
       renderStats();
       renderScreenTabs();
+      if (key === 'colorA') renderGridTileCard(); // card swatch shows the screen colour
       scheduleRender();
     };
     inp.oninput = scInputHandler;
@@ -8632,7 +8670,7 @@ function wireUp() {
     tab.onclick = () => setMode(tab.dataset.mode);
   });
   
-  // Advanced inputs (label, offsetX, offsetY)
+  // Advanced inputs (label, offset, screen colours)
   document.querySelectorAll('.sc-input-adv').forEach(inp => {
     inp.oninput = () => {
       const s = activeScreen();
@@ -8641,9 +8679,17 @@ function wireUp() {
       let val = inp.value;
       if (inp.type === 'number') val = parseInt(val) || 0;
       s[key] = val;
+      if (['colorA', 'colorB', 'gradientMode', 'gradientDir'].includes(key)) {
+        renderAdvancedCanvas();
+        updateSelectedTypeIndicator();
+        renderStats();
+        if (key === 'colorA') renderTileTypesList(); // card swatches
+      }
       renderScreenTabs();
       scheduleRender();
     };
+    // Color inputs sometimes only settle on 'change' (picker close)
+    if (inp.type === 'color') inp.onchange = inp.oninput;
   });
   
   // Add tile type
