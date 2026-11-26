@@ -4046,7 +4046,32 @@ function drawOverviewActiveOverlay(ctx, dragging) {
   }
   ctx.restore();
 }
-// Light per-frame overlay: target highlight, snap guides, dashed ghost.
+// Picture of the dragged screen exactly as it is drawn on its output (tiles,
+// circle/cross, labels and its info box), cropped to the screen's rect. Built
+// once per drag and drawn at the moving position, so you keep seeing the screen
+// instead of an empty box.
+function overviewDragSnapshot(d) {
+  const src = state.canvases.find(c => c.id === d.srcId);
+  const scr = src && (src.screens || []).find(x => x.id === d.screenId);
+  if (!scr || !(d.sw > 0) || !(d.sh > 0)) return null;
+  const r = screenRect(scr);
+  const off = document.createElement('canvas');
+  off.width = Math.ceil(d.sw); off.height = Math.ceil(d.sh);
+  const ctx = off.getContext('2d');
+  ctx.translate(-r.x, -r.y);
+  const accent = state.project.accent || '#2590ce';
+  // drawScreen / the info box read the working fields, so draw from the source output
+  loadCanvasIntoWorking(src);
+  try {
+    drawScreen(ctx, scr, src.canvasW, src.canvasH, accent);
+    (src.placedItems || []).filter(it => it.type === 'screeninfo' && it.screenId === scr.id)
+      .forEach(it => drawPmScreenInfoItem(ctx, it));
+  } finally {
+    loadCanvasIntoWorking(state.canvases.find(c => c.id === state.activeCanvasId));
+  }
+  return off;
+}
+// Light per-frame overlay: target highlight, snap guides, the dragged screen.
 function drawOverviewDragOverlay(ctx) {
   if (overviewOverlayDrag) { drawOverviewActiveOverlay(ctx, true); return; }
   if (!overviewDrag) return;
@@ -4073,12 +4098,20 @@ function drawOverviewDragOverlay(ctx) {
     });
     ctx.restore();
   }
+  // The screen itself moves along; a dashed outline marks where it will land.
+  if (overviewDrag.img === undefined) overviewDrag.img = overviewDragSnapshot(overviewDrag);
   ctx.save();
+  if (overviewDrag.img) {
+    ctx.globalAlpha = 0.92;
+    ctx.drawImage(overviewDrag.img, g.gx, g.gy, overviewDrag.sw, overviewDrag.sh);
+    ctx.globalAlpha = 1;
+  } else {
+    ctx.fillStyle = 'rgba(37,144,206,0.18)';
+    ctx.fillRect(g.gx, g.gy, overviewDrag.sw, overviewDrag.sh);
+  }
   ctx.setLineDash([12, 8]);
   ctx.lineWidth = 4;
   ctx.strokeStyle = accent;
-  ctx.fillStyle = 'rgba(37,144,206,0.18)';
-  ctx.fillRect(g.gx, g.gy, overviewDrag.sw, overviewDrag.sh);
   ctx.strokeRect(g.gx, g.gy, overviewDrag.sw, overviewDrag.sh);
   ctx.restore();
 }
