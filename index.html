@@ -1206,25 +1206,36 @@
      Visual layer on top of the base styles above: deeper neutrals, a segmented
      page switcher, roomier side panels and inputs, floating viewport toolbars. */
   :root {
-    --bg-app: #0b0d11;
-    --bg-panel: #101318;
-    --bg-card: #151920;
-    --bg-input: #0c0f14;
-    --bg-chip: #1a1f28;
-    --bg-viewport: #090b0e;
-    --bg-hover: #222835;
-    --bg-active-row: rgba(37,144,206,0.14);
+    /* Clear steps: app < panels < cards; inputs sit below their card */
+    --bg-app: #0a0b0e;
+    --bg-panel: #1b1f27;
+    --bg-card: #282d38;
+    --bg-input: #13161b;
+    --bg-inset: #1a1d24;      /* tile cards, stat tiles */
+    --bg-chip: #2a2f3a;
+    --bg-viewport: #060709;
+    --bg-topbar: #14161c;
+    --bg-hover: #313745;
+    --bg-active-row: rgba(37,144,206,0.20);
 
     --text-primary: #eef0f4;
-    --text-secondary: #a9afbb;
-    --text-muted: #767c89;
+    --text-secondary: #b4bac6;
+    --text-muted: #8a909c;
 
-    --border: #1b2029;
-    --border-card: #1f2530;
-    --border-input: #2a303c;
-    --border-field: #1c212b;
+    --border: #2c313c;
+    --border-card: #3b4250;
+    --border-input: #454d5e;
+    --border-field: #2a2f3a;
 
-    --float-bg: rgba(19,23,30,0.88);
+    /* One colour per section (see "Zones" below) */
+    --zone-green: #4ade80;
+    --zone-blue: #5fb5e6;
+    --zone-amber: #f2b84b;
+    --zone-purple: #b48cf2;
+    --zone-teal: #4fd1c5;
+    --zone-rose: #f2728f;
+
+    --float-bg: rgba(33,37,46,0.94);
     --float-shadow: 0 10px 28px -10px rgba(0,0,0,0.75);
     --ring: 0 0 0 3px rgba(37,144,206,0.24);
   }
@@ -1237,8 +1248,20 @@
     --bg-viewport: #dfe2e8;
     --bg-hover: #e6e9ef;
     --bg-active-row: rgba(37,144,206,0.10);
+    --bg-inset: #f3f4f7;
+    --bg-topbar: #f7f8fa;
     --text-muted: #7b808c;
+    --border: #dfe2e8;
+    --border-card: #e4e6ea;
+    --border-input: #d5d8df;
     --border-field: #eceef2;
+    /* darker zone tints so they stay readable on white */
+    --zone-green: #15803d;
+    --zone-blue: #1d74b5;
+    --zone-amber: #b7791f;
+    --zone-purple: #7c4dcc;
+    --zone-teal: #0f8f85;
+    --zone-rose: #c2416a;
     --float-bg: rgba(255,255,255,0.9);
     --float-shadow: 0 10px 28px -12px rgba(20,30,50,0.35);
   }
@@ -1406,6 +1429,38 @@
   .app-footer { height: 30px; font-size: 10px; padding: 0 16px; }
   ::-webkit-scrollbar { width: 10px; height: 10px; }
   ::-webkit-scrollbar-thumb { border: 3px solid transparent; background-clip: padding-box; border-radius: 6px; }
+
+  /* ── Surfaces & zones ──
+     Panels, cards and inputs each have their own tone with visible edges, and
+     every section has its own colour (top edge + heading) so the parts of the
+     app are easy to tell apart. */
+  .topbar { background: var(--bg-topbar); border-bottom: 1px solid var(--border-card); }
+  .left-panel, .right-panel { background: var(--bg-panel); }
+  .left-panel { border-right: 1px solid var(--border-card); }
+  .right-panel { border-left: 1px solid var(--border-card); }
+  .card:has(> h3 [data-i18n="project"])           { --zone: var(--zone-green); }
+  .card:has(> h3 [data-i18n="screen_properties"]) { --zone: var(--zone-blue); }
+  .card:has(> h3 [data-i18n="overlays"])          { --zone: var(--zone-amber); }
+  .card:has(> h3 [data-i18n="display_options"])   { --zone: var(--zone-purple); }
+  .card:has(> h3 [data-i18n="presets"])           { --zone: var(--zone-teal); }
+  .card:has(> h3 [data-i18n="tp_resolution"])     { --zone: var(--zone-blue); }
+  .card:has(> h3 [data-i18n="tp_pattern"])        { --zone: var(--zone-purple); }
+  .card:has(> h3 [data-i18n="tp_options"])        { --zone: var(--zone-rose); }
+  .card:has(> h3 [data-i18n="tp_overlays"])       { --zone: var(--zone-amber); }
+  .card:has(> h3 [data-i18n="tp_video_export"])   { --zone: var(--zone-teal); }
+  .card {
+    background: var(--bg-card); border-color: var(--border-card);
+    border-top: 3px solid var(--zone, var(--border-card));
+    box-shadow: 0 8px 18px -10px rgba(0,0,0,0.7);
+  }
+  body.light .card { box-shadow: 0 6px 16px -12px rgba(20,30,50,0.25); }
+  .card > h3 { color: var(--zone, var(--text-primary)); padding-bottom: 10px; border-bottom: 1px solid var(--border-field); }
+  .card.collapsed > h3 { padding-bottom: 0; border-bottom: 0; }
+  /* Outputs list: green, like the active-output marker; only the active output gets the bar */
+  .left-panel .panel-h { color: var(--zone-green); }
+  .cnv-row { background: var(--bg-card); border-color: var(--border-card); border-left: 3px solid var(--border-card); }
+  .cnv-row.on { border-color: var(--border-input); border-left-color: var(--zone-green); }
+  .tile-type-item, .stat { background: var(--bg-inset); }
 </style>
 </head>
 <body>
