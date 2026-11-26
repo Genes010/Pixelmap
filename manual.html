@@ -167,13 +167,13 @@
   <p>On the canvas each screen shows its <strong>0,0 position</strong> in the top-left corner (the canvas pixel coordinate of that corner). The value updates live while you drag a screen, and can be toggled off under <em>Display options → Screen 0,0 position</em>.</p>
 
   <h2 id="screen-properties">Screen properties</h2>
-  <p>At the top of this panel you choose <strong>Grid mode</strong> or <strong>Advanced</strong> per screen.</p>
+  <p>At the top of this panel you choose <strong>Grid mode</strong> or <strong>Edit</strong> per screen.</p>
 
   <h3>Grid mode</h3>
   <p>A regular grid of identical tiles:</p>
   <ul>
     <li><strong>Tile pixels</strong> — width × height of one tile (in pixels).</li>
-    <li><strong>Grid (cols × rows)</strong> — number of columns and rows.</li>
+    <li><strong>Grid (cols × rows)</strong> — number of columns and rows. Use a half (e.g. <code>20.5</code> × <code>5.5</code>) to add a column of half-width tiles on the right and/or a row of half-height tiles at the bottom (a quarter tile in the corner).</li>
     <li><strong>Offset</strong> — the screen's position on the canvas (x, y).</li>
     <li><strong>Colors</strong> — colour A and B (checker/gradient).</li>
     <li><strong>Gradient</strong> — Checker (A+B), gradient per tile, or gradient across the whole screen, with a direction.</li>
@@ -181,17 +181,20 @@
   </ul>
   <p>Turn individual tiles on/off with the <strong>tile tool</strong> (click/drag on the canvas).</p>
 
-  <h3>Advanced mode (free tile placement)</h3>
+  <h3>Edit mode (free tile placement)</h3>
   <p>For irregular walls: define one or more <strong>tile types</strong> (each with its own size; all tiles use the screen's colours) and place them freely:</p>
   <ul>
     <li><strong>+ Add tile type</strong> — a new tile type.</li>
-    <li>Select a type, click the editor canvas to place; drag to move; <strong>right-click</strong> or <kbd>Delete</kbd> to remove.</li>
+    <li>Select a type, click to place a tile (in the editor canvas or with the tile tool on the main canvas); <strong>right-click</strong> or <kbd>Delete</kbd> to remove.</li>
+    <li><strong>Select tiles</strong> — drag across empty space to draw a selection rectangle; every tile whose centre falls inside is selected. <kbd>Shift</kbd> adds to the selection, a click on a tile selects just that tile, <kbd>Ctrl</kbd>/<kbd>⌘</kbd> + <kbd>A</kbd> selects all, <kbd>Esc</kbd> deselects.</li>
+    <li><strong>Move a selection</strong> — drag any selected tile and the whole selection follows (with snapping); the arrow keys nudge it by 1 px (<kbd>Shift</kbd>: 10 px). <kbd>Delete</kbd> removes the selected tiles.</li>
+    <li><strong>✂ Split selection</strong> — turns the selected tiles into a separate screen, in place on the same output. The two screens are named <em>“… – Part 1”</em> and <em>“… – Part 2”</em> and keep the colours. The circle and cross keep running across the parts, so the outputs together still show one picture. Drag Part 2 onto another output in the <strong>All outputs</strong> view. Splitting a part again makes Part 3, and so on.</li>
     <li><strong>Snap</strong> — place on a grid (adjustable step size).</li>
     <li><strong>Clear all</strong> — remove all placed tiles.</li>
   </ul>
 
   <h2 id="enlarged-editor">Enlarged tile editor</h2>
-  <p>The advanced editor canvas is small; click <strong>⤢ Enlarge</strong> to open it temporarily in a large window. In that window:</p>
+  <p>The Edit-mode editor canvas is small; click <strong>⤢ Enlarge</strong> to open it temporarily in a large window. In that window:</p>
   <ul>
     <li><strong>Zoom</strong> with the mouse wheel (toward the cursor) and <strong>pan</strong> with the middle mouse button.</li>
     <li><strong>Fit view</strong> (top right) resets the view to fit.</li>
@@ -273,7 +276,9 @@
       <tr><td>Zoom in/out (toward cursor)</td><td>Mouse wheel</td></tr>
       <tr><td>Pan</td><td>Middle-mouse drag</td></tr>
       <tr><td>Move a screen</td><td><kbd>Alt</kbd> + click drag (or the move/grab tool)</td></tr>
-      <tr><td>Delete a tile (advanced)</td><td>Right-click or <kbd>Delete</kbd></td></tr>
+      <tr><td>Delete a tile (Edit mode)</td><td>Right-click or <kbd>Delete</kbd></td></tr>
+      <tr><td>Select tiles (Edit mode)</td><td>Drag across empty space; <kbd>Shift</kbd> adds, <kbd>Ctrl</kbd>/<kbd>⌘</kbd> + <kbd>A</kbd> all, <kbd>Esc</kbd> none</td></tr>
+      <tr><td>Move selected tiles</td><td>Drag a selected tile, or arrow keys (<kbd>Shift</kbd> = 10 px)</td></tr>
       <tr><td>Close the enlarged editor</td><td><kbd>Escape</kbd></td></tr>
     </tbody>
   </table>
