@@ -645,7 +645,7 @@
   .adv-modal-head #adv-enlarge-close:hover { color: var(--text-primary); }
   .adv-modal-content { flex: 1; min-height: 0; display: flex; }
   .adv-modal-sidebar {
-    width: 240px; flex-shrink: 0; overflow-y: auto;
+    width: 300px; flex-shrink: 0; overflow-y: auto;
     padding: 12px; border-right: 1px solid var(--border-input);
     display: flex; flex-direction: column; gap: 8px;
   }
@@ -1142,6 +1142,10 @@
     font-size: 11px; color: var(--text-secondary);
   }
   .tile-sel-bar #tile-sel-info { flex: 1; min-width: 0; }
+  /* Muted until tiles are selected; then highlighted with an active split button */
+  .tile-sel-bar:not(.has-sel) { background: var(--bg-input); border-color: var(--border-input); color: var(--text-muted); }
+  .tile-sel-bar #tile-split-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+  .tile-sel-bar.has-sel #tile-split-btn:not(:disabled) { background: var(--accent); border-color: var(--accent); color: #fff; }
   .selected-type-indicator {
     display: inline-flex;
     align-items: center;
@@ -1560,7 +1564,7 @@
       <div class="card-body">
         <div class="mode-tabs">
           <button class="mode-tab active" data-mode="grid" data-i18n="mode_grid">Grid mode</button>
-          <button class="mode-tab" data-mode="advanced" data-i18n="mode_advanced">Edit</button>
+          <button class="mode-tab" data-mode="advanced" data-i18n="mode_advanced" data-i18n-title="mode_edit_title" title="Edit the tiles in a large window">Edit</button>
         </div>
 
         <div id="screen-config">
@@ -1675,9 +1679,8 @@
             <label><input type="checkbox" id="adv-snap-enabled" checked /> <span data-i18n="snap">Snap</span></label>
             <input type="number" id="adv-snap-size" value="8" min="1" max="200" />
             <button id="adv-clear-all" data-i18n="clear_all">Clear all</button>
-            <button id="adv-enlarge-btn" data-i18n="adv_enlarge" title="Open the tile editor in a larger window">⤢ Enlarge</button>
           </div>
-          <div class="tile-sel-bar" id="tile-sel-bar" style="display:none;">
+          <div class="tile-sel-bar" id="tile-sel-bar">
             <span id="tile-sel-info"></span>
             <button id="tile-split-btn" data-i18n="split_selection" data-i18n-title="split_selection_title" title="Make the selected tiles a separate screen (Part 2)">✂ Split selection</button>
           </div>
@@ -2086,7 +2089,7 @@ const I18N = {
     grid_tile_name: 'Tile',
     preset_export_short: 'Export',
     preset_import_short: 'Import',
-    adv_enlarge: '⤢ Enlarge',
+    mode_edit_title: 'Edit the tiles in a large window',
     adv_enlarge_title: 'Tile editor',
     adv_zoompan_hint: 'Scroll = zoom · middle-mouse drag = pan',
     adv_fit_view: 'Fit view',
@@ -2098,6 +2101,8 @@ const I18N = {
     split_selection: '✂ Split selection',
     split_selection_title: 'Make the selected tiles a separate screen (Part 2), e.g. to put it on another output',
     split_need_rest: 'Leave at least one tile unselected to split the screen.',
+    tiles_select_hint: 'Drag across empty space to select tiles',
+    split_need_sel: 'Select the tiles for Part 2 first: drag across empty space',
     part_label: 'Part',
     type_name: 'Name',
     type_w: 'W',
@@ -2397,7 +2402,7 @@ const I18N = {
     grid_tile_name: 'Tegel',
     preset_export_short: 'Exporteren',
     preset_import_short: 'Importeren',
-    adv_enlarge: '⤢ Vergroten',
+    mode_edit_title: 'Tegels bewerken in een groot venster',
     adv_enlarge_title: 'Tegel-editor',
     adv_zoompan_hint: 'Scroll = zoom · middelste muisknop = pan',
     adv_fit_view: 'Passend',
@@ -2409,6 +2414,8 @@ const I18N = {
     split_selection: '✂ Selectie afsplitsen',
     split_selection_title: 'Maak van de geselecteerde tegels een apart scherm (Part 2), bijv. om het op een andere output te zetten',
     split_need_rest: 'Laat minstens één tegel niet geselecteerd om het scherm te splitsen.',
+    tiles_select_hint: 'Sleep over een lege plek om tegels te selecteren',
+    split_need_sel: 'Selecteer eerst de tegels voor Part 2: sleep over een lege plek',
     part_label: 'Part',
     type_name: 'Naam',
     type_w: 'B',
@@ -2614,6 +2621,7 @@ function setLanguage(lang) {
   renderPresets();
   renderLogoList();
   renderTileTypesList(); // tile cards build their labels/buttons via T() at render time
+  updateTileSelUI();
   scheduleRender();
 }
 
@@ -3418,7 +3426,7 @@ function renderScreenTabs() {
     const isActiveCanvas = c.id === state.activeCanvasId;
     const w = isActiveCanvas ? state.project.canvasW : c.canvasW;
     const h = isActiveCanvas ? state.project.canvasH : c.canvasH;
-    const screens = c.screens || [];
+    const screens = (isActiveCanvas ? state.screens : c.screens) || [];
     const orow = document.createElement('div');
     orow.className = 'cnv-row' + (isActiveCanvas ? ' on' : '');
     orow.innerHTML = `<span class="cnv-nm">${escapeHtml(canvasDisplayName(c))}</span>`
@@ -3646,6 +3654,19 @@ function duplicateScreen(id) {
   scheduleRender();
 }
 
+// The active output's slot (state.canvases[…]) shares its arrays with the
+// working fields. Code that replaces a working array (filter → new array) must
+// hand the new one to the slot too, or the outputs list, the all-outputs view
+// and the Test patterns list keep showing what was removed.
+function syncActiveCanvasSlot() {
+  const c = (state.canvases || []).find(c => c.id === state.activeCanvasId);
+  if (!c) return;
+  c.screens = state.screens;
+  c.activeScreenId = state.activeScreenId;
+  c.placedItems = state.placedItems;
+  c.logos = state.logos;
+}
+
 function removeScreen(id) {
   state.screens = state.screens.filter(s => s.id !== id);
   // Allow removing the last screen too (empty canvas). Pick a new active screen,
@@ -3659,11 +3680,16 @@ function removeScreen(id) {
   if (state.selectedOverlay && state.selectedOverlay.kind === 'item' && orphanedIds.includes(state.selectedOverlay.id)) {
     state.selectedOverlay = null;
   }
+  syncActiveCanvasSlot();
   renderScreenTabs();
   syncScreenToUI();
   renderGrid();
   renderStats();
+  updateModeUI();
+  renderTileTypesList();
+  renderAdvancedCanvas();
   renderLogoList();
+  updateFooterStats();
   scheduleRender(); // re-render the canvas so the removed screen disappears immediately
 }
 
@@ -3678,6 +3704,7 @@ function clearAllScreens() {
   state.logos = [];
   state.selectedLogoId = null;
   state.selectedOverlay = null;
+  syncActiveCanvasSlot();
   renderScreenTabs();
   syncScreenToUI();
   renderGrid();
@@ -4612,6 +4639,7 @@ function removeScreenInfoItem(s) {
   if (state.selectedOverlay && state.selectedOverlay.kind === 'item' && removedIds.includes(state.selectedOverlay.id)) {
     state.selectedOverlay = null;
   }
+  syncActiveCanvasSlot();
 }
 
 // Computes how far screens extend beyond the logical canvas (0..cw, 0..ch),
@@ -6325,6 +6353,7 @@ function addLogosFromFiles(files) {
 
 function removeLogo(id) {
   state.logos = state.logos.filter(l => l.id !== id);
+  syncActiveCanvasSlot();
   if (state.selectedLogoId === id) state.selectedLogoId = null;
   if (state.selectedOverlay && state.selectedOverlay.kind === 'logo' && state.selectedOverlay.id === id) {
     state.selectedOverlay = null;
@@ -6382,6 +6411,7 @@ function pmAddItem(type) {
 
 function pmRemoveItem(id) {
   state.placedItems = state.placedItems.filter(i => i.id !== id);
+  syncActiveCanvasSlot();
   if (state.selectedOverlay && state.selectedOverlay.kind === 'item' && state.selectedOverlay.id === id) {
     state.selectedOverlay = null;
   }
@@ -6612,13 +6642,14 @@ function updateTileSelUI() {
   if (!bar) return;
   const s = activeScreen();
   const n = (s && s.advancedMode) ? tileSelOf(s).size : 0;
-  bar.style.display = n ? '' : 'none';
-  if (!n) return;
-  $('tile-sel-info').textContent = T('tiles_selected').replace('{n}', n);
+  // Always shown in Edit mode so the split button is easy to find; without a
+  // selection it shows how to select and the button is disabled.
+  bar.classList.toggle('has-sel', n > 0);
+  $('tile-sel-info').textContent = n ? T('tiles_selected').replace('{n}', n) : T('tiles_select_hint');
   const btn = $('tile-split-btn');
-  const canSplit = n < s.placedTiles.length;
+  const canSplit = n > 0 && n < s.placedTiles.length;
   btn.disabled = !canSplit;
-  btn.title = canSplit ? T('split_selection_title') : T('split_need_rest');
+  btn.title = canSplit ? T('split_selection_title') : (n ? T('split_need_rest') : T('split_need_sel'));
 }
 // Highlight the selection (and the lasso while dragging) on the main preview.
 function drawTileSelection(ctx) {
@@ -6660,14 +6691,14 @@ function handleTileSelKeys(e) {
   const s = activeScreen();
   if (!s || !s.advancedMode) return false;
   const sel = tileSelOf(s);
-  if ((e.ctrlKey || e.metaKey) && (e.key === 'a' || e.key === 'A') && activeTool === 'tile') {
+  if ((e.ctrlKey || e.metaKey) && (e.key === 'a' || e.key === 'A') && (activeTool === 'tile' || advEnlargeState)) {
     e.preventDefault();
     s.placedTiles.forEach(pt => sel.add(pt));
     tileSelRefresh();
     return true;
   }
   if (!sel.size) return false;
-  if (e.key === 'Escape') { sel.clear(); tileSelRefresh(); return true; }
+  if (e.key === 'Escape') { sel.clear(); tileSelRefresh(); e.stopImmediatePropagation(); return true; }
   if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); tileSelDelete(s); tileSelRefresh(); scheduleRender(); return true; }
   const map = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
   const d = map[e.key];
@@ -8631,14 +8662,11 @@ function openAdvancedEnlarge() {
   const addRow = $('add-tile-type-btn') && $('add-tile-type-btn').closest('.btn-row');
   advMoveInto(addRow, sidebar, moved);
   advMoveInto(document.querySelector('#advanced-config .advanced-toolbar'), sidebar, moved);
+  advMoveInto($('tile-sel-bar'), sidebar, moved); // selection count + ✂ split button
   // Move the canvas into the big canvas area.
   advMoveInto(wrap, body, moved);
   wrap.classList.add('enlarged');
-  // Hide the (now-relocated) Enlarge button while we're already enlarged.
-  const enlargeBtn = $('adv-enlarge-btn');
-  const enlargeBtnDisplay = enlargeBtn ? enlargeBtn.style.display : '';
-  if (enlargeBtn) enlargeBtn.style.display = 'none';
-  advEnlargeState = { moved, w: canvas.width, h: canvas.height, enlargeBtn, enlargeBtnDisplay };
+  advEnlargeState = { moved, w: canvas.width, h: canvas.height };
   modal.style.display = 'flex';
   // Size the canvas backing resolution to the available space, fit once, then
   // hand zoom/pan control to the user.
@@ -8662,7 +8690,6 @@ function closeAdvancedEnlarge() {
   advEnlargeState.moved.slice().reverse().forEach(({ el, parent, next }) => {
     if (parent) parent.insertBefore(el, next);
   });
-  if (advEnlargeState.enlargeBtn) advEnlargeState.enlargeBtn.style.display = advEnlargeState.enlargeBtnDisplay;
   if (modal) modal.style.display = 'none';
   advEnlargeState = null;
   advFreeView = false;   // back to auto-fit in the small panel
@@ -8960,7 +8987,11 @@ function wireUp() {
   
   // Mode tabs (Grid / Advanced)
   document.querySelectorAll('.mode-tab').forEach(tab => {
-    tab.onclick = () => setMode(tab.dataset.mode);
+    tab.onclick = () => {
+      setMode(tab.dataset.mode);
+      // Edit goes straight into the large tile editor (if the switch went ahead)
+      if (tab.dataset.mode === 'advanced' && activeScreen() && activeScreen().advancedMode) openAdvancedEnlarge();
+    };
   });
   
   // Advanced inputs (label, offset, screen colours)
@@ -9046,8 +9077,7 @@ function wireUp() {
     scheduleRender();
   };
   
-  // Enlarge / restore the advanced tile editor in a big modal window
-  if ($('adv-enlarge-btn')) $('adv-enlarge-btn').onclick = openAdvancedEnlarge;
+  // The large tile editor opens from the Edit tab (see the mode tabs above)
   if ($('adv-enlarge-close')) $('adv-enlarge-close').onclick = closeAdvancedEnlarge;
   if ($('adv-enlarge-fit')) $('adv-enlarge-fit').onclick = fitAdvancedEnlarge;
   if ($('adv-enlarge-modal')) $('adv-enlarge-modal').addEventListener('mousedown', (e) => {
