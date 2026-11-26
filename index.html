@@ -1135,6 +1135,13 @@
   }
   .advanced-toolbar input[type="checkbox"]::after { display: none; }
   .advanced-toolbar input[type="number"] { width: 46px; }
+  .tile-sel-bar {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    margin: 0 0 8px; padding: 7px 9px; border-radius: 6px;
+    background: var(--bg-active-row); border: 1px solid var(--border-pill-info);
+    font-size: 11px; color: var(--text-secondary);
+  }
+  .tile-sel-bar #tile-sel-info { flex: 1; min-width: 0; }
   .selected-type-indicator {
     display: inline-flex;
     align-items: center;
@@ -1299,7 +1306,7 @@
   #canvas-list .scr-row:hover, #tp-session-list .scr-row:hover { background: var(--bg-hover); }
   #canvas-list .scr-row.on, #tp-session-list .scr-row.on { background: var(--bg-active-row); box-shadow: inset 0 0 0 1px rgba(37,144,206,0.5); }
   .scr-row .scr-thumb { width: 38px; height: 26px; border-radius: 5px; }
-  #canvas-list .scr-row .nm, #tp-session-list .scr-row .nm { font-size: 12.5px; font-weight: 500; }
+  #canvas-list .scr-row .nm, #tp-session-list .scr-row .nm { font-size: 12.5px; font-weight: 500; white-space: normal; overflow-wrap: anywhere; line-height: 1.25; }
   .scr-row .res { font-size: 10px; }
   #canvas-list .scr-add {
     margin: 6px 0 4px 14px; padding: 7px 10px; text-align: center;
@@ -1553,7 +1560,7 @@
       <div class="card-body">
         <div class="mode-tabs">
           <button class="mode-tab active" data-mode="grid" data-i18n="mode_grid">Grid mode</button>
-          <button class="mode-tab" data-mode="advanced" data-i18n="mode_advanced">Advanced</button>
+          <button class="mode-tab" data-mode="advanced" data-i18n="mode_advanced">Edit</button>
         </div>
 
         <div id="screen-config">
@@ -1564,9 +1571,9 @@
           <div class="field">
             <label data-i18n="grid_label">Grid (cols × rows)</label>
             <span class="f-inputs">
-              <input type="number" class="sc-input" data-key="cols" value="20" min="1" max="200" />
+              <input type="number" class="sc-input" data-key="cols" value="20" min="0.5" step="0.5" max="200" />
               <span class="sep">×</span>
-              <input type="number" class="sc-input" data-key="rows" value="5" min="1" max="200" />
+              <input type="number" class="sc-input" data-key="rows" value="5" min="0.5" step="0.5" max="200" />
             </span>
           </div>
           <div class="field">
@@ -1669,6 +1676,10 @@
             <input type="number" id="adv-snap-size" value="8" min="1" max="200" />
             <button id="adv-clear-all" data-i18n="clear_all">Clear all</button>
             <button id="adv-enlarge-btn" data-i18n="adv_enlarge" title="Open the tile editor in a larger window">⤢ Enlarge</button>
+          </div>
+          <div class="tile-sel-bar" id="tile-sel-bar" style="display:none;">
+            <span id="tile-sel-info"></span>
+            <button id="tile-split-btn" data-i18n="split_selection" data-i18n-title="split_selection_title" title="Make the selected tiles a separate screen (Part 2)">✂ Split selection</button>
           </div>
           <div class="info" data-i18n="advanced_canvas_hint">Click to place. Click existing tile to select. Drag to move. Right-click or Delete key to remove.</div>
           <div class="advanced-canvas-wrap">
@@ -2049,7 +2060,7 @@ const I18N = {
     dir_diagonal: 'Diagonal ↘',
     dir_diagonal_rev: 'Diagonal ↗',
     mode_grid: 'Grid mode',
-    mode_advanced: 'Advanced (free placement)',
+    mode_advanced: 'Edit',
     tile_types: 'Tile types',
     tile_types_info: 'Define one or more tile types with their own dimensions; they all use the screen colours above. Select a type, then click on the canvas below to place tiles.',
     add_tile_type: '+ Add tile type',
@@ -2082,7 +2093,12 @@ const I18N = {
     place_tiles: 'Place tiles',
     snap: 'Snap',
     snap_size: 'Snap size',
-    advanced_canvas_hint: 'Click to place. Click existing tile to select. Drag to move. Right-click or Delete key to remove.',
+    advanced_canvas_hint: 'Click to place a tile. Drag across empty space to select tiles (Shift adds), drag a selected tile to move the whole selection. Right-click or Delete removes, Esc deselects.',
+    tiles_selected: '{n} tile(s) selected',
+    split_selection: '✂ Split selection',
+    split_selection_title: 'Make the selected tiles a separate screen (Part 2), e.g. to put it on another output',
+    split_need_rest: 'Leave at least one tile unselected to split the screen.',
+    part_label: 'Part',
     type_name: 'Name',
     type_w: 'W',
     type_h: 'H',
@@ -2091,10 +2107,10 @@ const I18N = {
     selected_type: '✓ Selected',
     confirm_delete_type: 'Delete this tile type? All placed tiles of this type will also be removed.',
     confirm_clear_advanced: 'Remove all placed tiles?',
-    convert_to_advanced: 'Convert grid to advanced',
-    convert_advanced_warning: 'Switching to advanced mode will convert your current grid into individually placed tiles. Continue?',
-    mixed_tile_sizes_warning: 'This screen uses more than one tile size. Grid mode supports only a single tile size, so differently sized tiles will be approximated to the most-used size. Switch anyway? (Cancel to stay in advanced mode.)',
-    grid_locked_tip: "This screen uses multiple tile sizes and can't be shown as a uniform grid — it stays in Advanced.",
+    convert_to_advanced: 'Convert grid to Edit mode',
+    convert_advanced_warning: 'Switching to Edit mode will convert your current grid into individually placed tiles. Continue?',
+    mixed_tile_sizes_warning: 'This screen uses more than one tile size. Grid mode supports only a single tile size, so differently sized tiles will be approximated to the most-used size. Switch anyway? (Cancel to stay in Edit mode.)',
+    grid_locked_tip: "This screen uses multiple tile sizes and can't be shown as a uniform grid — it stays in Edit mode.",
     // Top-level modes
     topmode_pixelmap: 'Pixelmap',
     topmode_testpattern: 'Test patterns',
@@ -2190,7 +2206,7 @@ const I18N = {
     tool_pointer: 'Pointer',
     tool_move: 'Move screens — drag, or Alt+click',
     tool_tile: 'Toggle tiles on/off',
-    tool_tile_adv: 'Place tiles (click to add, drag to move, right-click to remove)',
+    tool_tile_adv: 'Edit tiles (click = add, drag on empty space = select, drag a tile = move, right-click = remove)',
     snap_toggle: 'Snap: on',
     snap_label: 'Snap',
     snap_on: 'Snap on',
@@ -2355,7 +2371,7 @@ const I18N = {
     dir_diagonal: 'Diagonaal ↘',
     dir_diagonal_rev: 'Diagonaal ↗',
     mode_grid: 'Grid modus',
-    mode_advanced: 'Geavanceerd (vrij plaatsen)',
+    mode_advanced: 'Bewerken',
     tile_types: 'Tegel types',
     tile_types_info: 'Definieer één of meer tegel types met eigen afmetingen; ze krijgen allemaal de schermkleuren hierboven. Selecteer een type en klik op het canvas hieronder om tegels te plaatsen.',
     add_tile_type: '+ Tegel type toevoegen',
@@ -2388,7 +2404,12 @@ const I18N = {
     place_tiles: 'Tegels plaatsen',
     snap: 'Uitlijnen',
     snap_size: 'Uitlijn raster',
-    advanced_canvas_hint: 'Klik om te plaatsen. Klik bestaande tegel om te selecteren. Sleep om te verplaatsen. Rechtermuisknop of Delete om te verwijderen.',
+    advanced_canvas_hint: 'Klik om een tegel te plaatsen. Sleep over een lege plek om tegels te selecteren (Shift voegt toe), sleep een geselecteerde tegel om de hele selectie te verplaatsen. Rechtermuisknop of Delete verwijdert, Esc deselecteert.',
+    tiles_selected: '{n} tegel(s) geselecteerd',
+    split_selection: '✂ Selectie afsplitsen',
+    split_selection_title: 'Maak van de geselecteerde tegels een apart scherm (Part 2), bijv. om het op een andere output te zetten',
+    split_need_rest: 'Laat minstens één tegel niet geselecteerd om het scherm te splitsen.',
+    part_label: 'Part',
     type_name: 'Naam',
     type_w: 'B',
     type_h: 'H',
@@ -2397,10 +2418,10 @@ const I18N = {
     selected_type: '✓ Geselecteerd',
     confirm_delete_type: 'Dit tegel type verwijderen? Alle geplaatste tegels van dit type worden ook verwijderd.',
     confirm_clear_advanced: 'Alle geplaatste tegels verwijderen?',
-    convert_to_advanced: 'Grid naar geavanceerd omzetten',
-    convert_advanced_warning: 'Overschakelen naar geavanceerde modus zet je huidige grid om naar individueel geplaatste tegels. Doorgaan?',
-    mixed_tile_sizes_warning: 'Dit scherm gebruikt meerdere tegelformaten. Grid-modus ondersteunt maar één tegelformaat, dus afwijkende tegels worden benaderd naar het meest gebruikte formaat. Toch overschakelen? (Annuleer om in geavanceerde modus te blijven.)',
-    grid_locked_tip: 'Dit scherm gebruikt meerdere tegelformaten en past niet in een uniform raster — blijft in Advanced.',
+    convert_to_advanced: 'Grid omzetten naar Bewerken',
+    convert_advanced_warning: 'Overschakelen naar Bewerken zet je huidige grid om naar individueel geplaatste tegels. Doorgaan?',
+    mixed_tile_sizes_warning: 'Dit scherm gebruikt meerdere tegelformaten. Grid-modus ondersteunt maar één tegelformaat, dus afwijkende tegels worden benaderd naar het meest gebruikte formaat. Toch overschakelen? (Annuleer om in Bewerken te blijven.)',
+    grid_locked_tip: 'Dit scherm gebruikt meerdere tegelformaten en past niet in een uniform raster — blijft in Bewerken.',
     // Top-level modes
     topmode_pixelmap: 'Pixelmap',
     topmode_testpattern: 'Test patronen',
@@ -2496,7 +2517,7 @@ const I18N = {
     tool_pointer: 'Aanwijzer',
     tool_move: 'Schermen verplaatsen — sleep, of Alt+klik',
     tool_tile: 'Tegels aan/uit',
-    tool_tile_adv: 'Tegels plaatsen (klik = toevoegen, slepen = verplaatsen, rechtsklik = verwijderen)',
+    tool_tile_adv: 'Tegels bewerken (klik = toevoegen, sleep over lege plek = selecteren, tegel slepen = verplaatsen, rechtsklik = verwijderen)',
     snap_toggle: 'Snap: aan',
     snap_label: 'Snap',
     snap_on: 'Snap aan',
@@ -2718,6 +2739,24 @@ function makeActiveArray(rows, cols, defaultVal = true) {
   return arr;
 }
 
+// ---- Grid geometry with optional half tiles ----
+// s.cols / s.rows may end in .5: the last column then holds half-width tiles
+// (always on the right) and the last row half-height tiles (always at the
+// bottom); where both meet it is a quarter tile. Column c starts at c * tileW
+// either way, because only the last column / row can be a half one.
+function gridNumCols(s) { return Math.ceil(s.cols); }
+function gridNumRows(s) { return Math.ceil(s.rows); }
+function gridColW(s, c) { return (s.cols % 1 && c === Math.floor(s.cols)) ? Math.round(s.tileW / 2) : s.tileW; }
+function gridRowH(s, r) { return (s.rows % 1 && r === Math.floor(s.rows)) ? Math.round(s.tileH / 2) : s.tileH; }
+// Pixel width of columns c0..c1 / height of rows r0..r1 (inclusive).
+function gridSpanW(s, c0, c1) { return (c1 - c0) * s.tileW + gridColW(s, c1); }
+function gridSpanH(s, r0, r1) { return (r1 - r0) * s.tileH + gridRowH(s, r1); }
+function gridTotalW(s) { return gridSpanW(s, 0, gridNumCols(s) - 1); }
+function gridTotalH(s) { return gridSpanH(s, 0, gridNumRows(s) - 1); }
+// Number of tiles a span covers, counting a half tile as 0.5 (for labels).
+function gridSpanCols(s, c0, c1) { return (c1 - c0) + (gridColW(s, c1) < s.tileW ? 0.5 : 1); }
+function gridSpanRows(s, r0, r1) { return (r1 - r0) + (gridRowH(s, r1) < s.tileH ? 0.5 : 1); }
+
 function hexToRgb(hex) {
   hex = hex.replace('#', '');
   if (hex.length === 3) hex = hex.split('').map(c => c+c).join('');
@@ -2788,6 +2827,16 @@ function getTileType(s, typeId) {
   return s.tileTypes.find(t => t.id === typeId) || s.tileTypes[0];
 }
 
+// The area the circle / cross (and a screen-wide gradient) are laid out on, in
+// canvas coords: normally the screen's own tiles; for a screen that was split
+// into parts it is the original whole screen (s.overlayFrame, screen-local), so
+// the overlay keeps running across Part 1, Part 2, … and lines up again when
+// the parts are shown side by side.
+function overlayFrameCanvas(s, bbX, bbY, bbW, bbH) {
+  const f = s.overlayFrame;
+  return f ? { x: s.offsetX + f.x, y: s.offsetY + f.y, w: f.w, h: f.h } : { x: bbX, y: bbY, w: bbW, h: bbH };
+}
+
 // Checker mode in advanced: which placed tiles get colour A (Map tile -> bool).
 // Tiles are grouped into columns by the most common tile width and counted
 // top-to-bottom per column (a gap counts as whole rows of the most common
@@ -2832,6 +2881,14 @@ function advancedCheckerIsA(s) {
 function convertScreenToAdvanced(s) {
   ensureDefaultTileType(s);
   const defaultType = s.tileTypes[0];
+  // Tile type for a given size: the default for full tiles, otherwise an
+  // existing type of that size or a new "½ w×h" one (half rows/columns).
+  const typeFor = (w, h) => {
+    if (w === defaultType.w && h === defaultType.h) return defaultType;
+    let t = s.tileTypes.find(tt => tt.w === w && tt.h === h);
+    if (!t) { t = { id: nextTileTypeId(), name: `½ ${w}×${h}`, w, h }; s.tileTypes.push(t); }
+    return t;
+  };
   s.placedTiles = [];
   if (s.active) {
     for (let r = 0; r < s.rows; r++) {
@@ -2841,7 +2898,7 @@ function convertScreenToAdvanced(s) {
             id: nextPlacedTileId(),
             x: c * s.tileW,
             y: r * s.tileH,
-            typeId: defaultType.id,
+            typeId: typeFor(gridColW(s, c), gridRowH(s, r)).id,
           });
         }
       }
@@ -3160,7 +3217,7 @@ function maxScreenExtent(screens) {
   (screens || state.screens).forEach(s => {
     let gw, gh;
     if (s.advancedMode) { const bb = getAdvancedBBox(s); gw = bb.w; gh = bb.h; }
-    else { gw = s.cols * s.tileW; gh = s.rows * s.tileH; }
+    else { gw = gridTotalW(s); gh = gridTotalH(s); }
     if (gw > m) m = gw;
     if (gh > m) m = gh;
   });
@@ -3180,8 +3237,8 @@ function screenThumbSVG(s, boxW, boxH, scaleRef) {
     if (!bb || bb.w <= 0) return `<svg viewBox="0 0 ${boxW} ${boxH}"></svg>`;
     gw = bb.w; gh = bb.h;
   } else {
-    cols = s.cols; rows = s.rows;
-    gw = cols * s.tileW; gh = rows * s.tileH;
+    cols = gridNumCols(s); rows = gridNumRows(s);
+    gw = gridTotalW(s); gh = gridTotalH(s);
   }
   // Scale so that the largest screen fills ~90% of the box; this screen is drawn
   // proportionally smaller if it's smaller than the reference.
@@ -3195,7 +3252,7 @@ function screenThumbSVG(s, boxW, boxH, scaleRef) {
     return `<svg viewBox="0 0 ${boxW} ${boxH}" xmlns="http://www.w3.org/2000/svg">`
       + `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${w.toFixed(1)}" height="${h.toFixed(1)}" fill="${col}" rx="1"/></svg>`;
   }
-  const cw = w / cols, ch = h / rows;
+  const cw = s.tileW * scale, ch = s.tileH * scale; // a trailing half column/row is drawn narrower
   const colA = s.colorA || accent;
   const colB = s.colorB || colA;
   const mode = s.gradientMode || 'checker';
@@ -3211,7 +3268,7 @@ function screenThumbSVG(s, boxW, boxH, scaleRef) {
             // gradient approximation: blend A→B across columns
             fill = mixHex(colA, colB, cols === 1 ? 0 : c / (cols - 1));
           } else fill = colA;
-          rects += `<rect x="${(x + c * cw).toFixed(2)}" y="${(y + r * ch).toFixed(2)}" width="${(cw + 0.3).toFixed(2)}" height="${(ch + 0.3).toFixed(2)}" fill="${fill}"/>`;
+          rects += `<rect x="${(x + c * cw).toFixed(2)}" y="${(y + r * ch).toFixed(2)}" width="${(gridColW(s, c) * scale + 0.3).toFixed(2)}" height="${(gridRowH(s, r) * scale + 0.3).toFixed(2)}" fill="${fill}"/>`;
         }
       }
     }
@@ -3291,7 +3348,7 @@ function screenResText(s) {
         if (c < minC) minC = c; if (c > maxC) maxC = c;
       }
     }
-    if (maxR >= 0) return `${(maxC - minC + 1) * s.tileW}×${(maxR - minR + 1) * s.tileH}`;
+    if (maxR >= 0) return `${gridSpanW(s, minC, maxC)}×${gridSpanH(s, minR, maxR)}`;
   }
   return '—';
 }
@@ -3436,7 +3493,9 @@ function syncScreenFromUI() {
     const key = inp.dataset.key;
     if (skip && skip.has(key)) return;
     let val = inp.value;
-    if (inp.type === 'number') val = parseInt(val) || 0;
+    // Columns / rows may be a half (x.5 = an extra half tile at the right / bottom)
+    if (key === 'cols' || key === 'rows') val = Math.max(0.5, Math.round((parseFloat(val) || 1) * 2) / 2);
+    else if (inp.type === 'number') val = parseInt(val) || 0;
     s[key] = val;
   });
   // Remember the tile size so the next new screen inherits it (also across empty outputs).
@@ -3504,7 +3563,7 @@ function nextScreenOffset() {
   state.screens.forEach(s => {
     let w;
     if (s.advancedMode) { const bb = getAdvancedBBox(s); w = bb.maxX; }
-    else w = s.cols * s.tileW;
+    else w = gridTotalW(s);
     maxRight = Math.max(maxRight, s.offsetX + w);
   });
   return { x: maxRight, y: 0 };
@@ -4386,11 +4445,11 @@ function renderStats() {
       }
     }
   }
-  const bbW = maxC>=0 ? (maxC-minC+1)*s.tileW : 0;
-  const bbH = maxR>=0 ? (maxR-minR+1)*s.tileH : 0;
+  const bbW = maxC>=0 ? gridSpanW(s, minC, maxC) : 0;
+  const bbH = maxR>=0 ? gridSpanH(s, minR, maxR) : 0;
   
   $('stats').innerHTML = `
-    <div class="stat"><div class="stat-label">${T('active')}</div><div class="stat-value">${count}/${s.cols*s.rows}</div></div>
+    <div class="stat"><div class="stat-label">${T('active')}</div><div class="stat-value">${count}/${gridNumCols(s)*gridNumRows(s)}</div></div>
     <div class="stat"><div class="stat-label">${T('active_bb')}</div><div class="stat-value">${bbW}×${bbH}</div></div>
     <div class="stat"><div class="stat-label">${T('grid')}</div><div class="stat-value">${s.cols}×${s.rows}</div></div>
     <div class="stat"><div class="stat-label">${T('tile')}</div><div class="stat-value">${s.tileW}×${s.tileH}</div></div>
@@ -4486,8 +4545,8 @@ function getScreenBBoxCanvas(s) {
   return {
     x: s.offsetX + minC * s.tileW,
     y: s.offsetY + minR * s.tileH,
-    w: (maxC - minC + 1) * s.tileW,
-    h: (maxR - minR + 1) * s.tileH,
+    w: gridSpanW(s, minC, maxC),
+    h: gridSpanH(s, minR, maxR),
   };
 }
 
@@ -4575,8 +4634,8 @@ function getCanvasBleed(cw, ch) {
       sx0 = s.offsetX + bb.minX; sy0 = s.offsetY + bb.minY;
       sx1 = s.offsetX + bb.maxX; sy1 = s.offsetY + bb.maxY;
     } else {
-      sx1 = s.offsetX + s.cols * s.tileW;
-      sy1 = s.offsetY + s.rows * s.tileH;
+      sx1 = s.offsetX + gridTotalW(s);
+      sy1 = s.offsetY + gridTotalH(s);
     }
     if (sx0 < minX) minX = sx0;
     if (sy0 < minY) minY = sy0;
@@ -4696,7 +4755,7 @@ function renderCanvas() {
         ensureDefaultTileType(s);
         return s.offsetX + getAdvancedBBox(s).maxX;
       }
-      return s.offsetX + s.cols*s.tileW;
+      return s.offsetX + gridTotalW(s);
     }));
     if (screensFarRight < cw - 200) {
       labelX = screensFarRight + (cw - screensFarRight) / 2;
@@ -4718,7 +4777,7 @@ function renderCanvas() {
         ensureDefaultTileType(s);
         return s.offsetY + getAdvancedBBox(s).maxY;
       }
-      return s.offsetY + s.rows*s.tileH;
+      return s.offsetY + gridTotalH(s);
     }));
     if (screensFarBot < ch - 200) {
       labelY = screensFarBot + (ch - screensFarBot) / 2;
@@ -4904,8 +4963,8 @@ function drawScreen(ctx, s, cw, ch, accent) {
   // (so the gradient maps to where actual tiles are, not the full grid)
   const ssBbX = s.offsetX + minC * s.tileW;
   const ssBbY = s.offsetY + minR * s.tileH;
-  const ssBbW = (maxC - minC + 1) * s.tileW;
-  const ssBbH = (maxR - minR + 1) * s.tileH;
+  const ssBbW = gridSpanW(s, minC, maxC);
+  const ssBbH = gridSpanH(s, minR, maxR);
   
   // Helper: gradient endpoints relative to active BB
   function gradEndpoints() {
@@ -4931,8 +4990,8 @@ function drawScreen(ctx, s, cw, ch, accent) {
       if (!s.active[r][c]) continue;
       let x0 = s.offsetX + c * s.tileW;
       let y0 = s.offsetY + r * s.tileH;
-      let x1 = x0 + s.tileW;
-      let y1 = y0 + s.tileH;
+      let x1 = x0 + gridColW(s, c);
+      let y1 = y0 + gridRowH(s, r);
       // Inset on outer-right + outer-bottom of active area
       if (c === maxC) x1 -= INSET;
       if (r === maxR) y1 -= INSET;
@@ -4967,8 +5026,8 @@ function drawScreen(ctx, s, cw, ch, accent) {
         if (!s.active[r][c]) continue;
         let x0 = s.offsetX + c * s.tileW;
         let y0 = s.offsetY + r * s.tileH;
-        let x1 = x0 + s.tileW;
-        let y1 = y0 + s.tileH;
+        let x1 = x0 + gridColW(s, c);
+        let y1 = y0 + gridRowH(s, r);
         if (c === maxC) x1 -= INSET;
         if (r === maxR) y1 -= INSET;
         ctx.strokeRect(x0 + 0.5, y0 + 0.5, x1 - x0 - 1, y1 - y0 - 1);
@@ -4979,8 +5038,8 @@ function drawScreen(ctx, s, cw, ch, accent) {
   // Active BB extents (in canvas coords)
   const bbX = s.offsetX + minC * s.tileW;
   const bbY = s.offsetY + minR * s.tileH;
-  const bbW = (maxC - minC + 1) * s.tileW;
-  const bbH = (maxR - minR + 1) * s.tileH;
+  const bbW = gridSpanW(s, minC, maxC);
+  const bbH = gridSpanH(s, minR, maxR);
   
   // ============ OVERLAY (clipped to active tiles) ============
   const _oCircle = resolveOverlayCircle(s);
@@ -4993,8 +5052,8 @@ function drawScreen(ctx, s, cw, ch, accent) {
         if (!s.active[r][c]) continue;
         let x0 = s.offsetX + c * s.tileW;
         let y0 = s.offsetY + r * s.tileH;
-        let x1 = x0 + s.tileW;
-        let y1 = y0 + s.tileH;
+        let x1 = x0 + gridColW(s, c);
+        let y1 = y0 + gridRowH(s, r);
         if (c === maxC) x1 -= INSET;
         if (r === maxR) y1 -= INSET;
         region.rect(x0, y0, x1-x0, y1-y0);
@@ -5046,8 +5105,11 @@ function drawScreen(ctx, s, cw, ch, accent) {
     for (let r=0; r<s.rows; r++) {
       for (let c=0; c<s.cols; c++) {
         if (!s.active[r][c]) continue;
-        const cx = s.offsetX + c * s.tileW + s.tileW / 2;
-        const cy = s.offsetY + r * s.tileH + s.tileH / 2;
+        const tw = gridColW(s, c), th = gridRowH(s, r);
+        const cx = s.offsetX + c * s.tileW + tw / 2;
+        const cy = s.offsetY + r * s.tileH + th / 2;
+        // Half tiles get a font that still fits
+        ctx.font = `500 ${(tw < s.tileW || th < s.tileH) ? Math.max(7, Math.min(fs, Math.floor(Math.min(tw, th) / 4.5))) : fs}px sans-serif`;
         ctx.fillText(`${c+1},${r+1}`, cx, cy);
       }
     }
@@ -5123,7 +5185,7 @@ function drawScreen(ctx, s, cw, ch, accent) {
   
   // ============ RULERS ============
   if (state.display.showRulers) {
-    drawRulers(ctx, s, bbX, bbY, bbW, bbH, maxC - minC + 1, maxR - minR + 1, cw, ch, accent);
+    drawRulers(ctx, s, bbX, bbY, bbW, bbH, maxC - minC + 1, maxR - minR + 1, cw, ch, accent); // counts incl. a half tile
   }
 }
 
@@ -5155,14 +5217,17 @@ function drawScreenAdvanced(ctx, s, cw, ch, accent) {
   // All tiles use the screen's colours / gradient settings.
   const gradientMode = s.gradientMode || 'checker';
   const gradientDir = s.gradientDir || 'horizontal';
-  // Shared gradient across the whole screen (for 'full_screen' mode)
+  // Shared gradient across the whole screen (for 'full_screen' mode); for a
+  // split screen it spans the original whole screen, like the overlays.
+  const ovf = overlayFrameCanvas(s, bbX, bbY, bbW, bbH);
   let fullGrad = null;
   if (gradientMode === 'full_screen') {
+    const fx = ovf.x, fy = ovf.y, fw = ovf.w, fh = ovf.h;
     let gx1, gy1, gx2, gy2;
-    if (gradientDir === 'horizontal')      { gx1=bbX; gy1=bbY; gx2=bbX+bbW; gy2=bbY; }
-    else if (gradientDir === 'vertical')   { gx1=bbX; gy1=bbY; gx2=bbX; gy2=bbY+bbH; }
-    else if (gradientDir === 'diagonal')   { gx1=bbX; gy1=bbY; gx2=bbX+bbW; gy2=bbY+bbH; }
-    else                                    { gx1=bbX; gy1=bbY+bbH; gx2=bbX+bbW; gy2=bbY; }
+    if (gradientDir === 'horizontal')      { gx1=fx; gy1=fy; gx2=fx+fw; gy2=fy; }
+    else if (gradientDir === 'vertical')   { gx1=fx; gy1=fy; gx2=fx; gy2=fy+fh; }
+    else if (gradientDir === 'diagonal')   { gx1=fx; gy1=fy; gx2=fx+fw; gy2=fy+fh; }
+    else                                    { gx1=fx; gy1=fy+fh; gx2=fx+fw; gy2=fy; }
     fullGrad = ctx.createLinearGradient(gx1, gy1, gx2, gy2);
     fullGrad.addColorStop(0, s.colorA);
     fullGrad.addColorStop(1, s.colorB);
@@ -5261,16 +5326,16 @@ function drawScreenAdvanced(ctx, s, cw, ch, accent) {
     ctx.lineWidth = resolveOverlayWidth(s);
     if (_oCrossA) {
       ctx.beginPath();
-      ctx.moveTo(bbX, bbY);
-      ctx.lineTo(bbX + bbW - 1, bbY + bbH - 1);
-      ctx.moveTo(bbX + bbW - 1, bbY);
-      ctx.lineTo(bbX, bbY + bbH - 1);
+      ctx.moveTo(ovf.x, ovf.y);
+      ctx.lineTo(ovf.x + ovf.w - 1, ovf.y + ovf.h - 1);
+      ctx.moveTo(ovf.x + ovf.w - 1, ovf.y);
+      ctx.lineTo(ovf.x, ovf.y + ovf.h - 1);
       ctx.stroke();
     }
     if (_oCircleA) {
-      const cx = bbX + bbW / 2;
-      const cy = bbY + bbH / 2;
-      const radius = Math.min(bbW, bbH) / 2 * 0.85;
+      const cx = ovf.x + ovf.w / 2;
+      const cy = ovf.y + ovf.h / 2;
+      const radius = Math.min(ovf.w, ovf.h) / 2 * 0.85;
       ctx.beginPath();
       ctx.arc(cx, cy, radius, 0, Math.PI * 2);
       ctx.stroke();
@@ -5348,13 +5413,21 @@ function drawPmScreenInfoItem(ctx, item) {
   const maxTextW = w - 20;
   
   ctx.fillStyle = 'white';
-  ctx.font = `700 ${titleFs}px sans-serif`;
+  // A long name (e.g. "Screen 1 – Part 2") first gets a smaller font; if it
+  // still doesn't fit, the name is shortened but a "– Part N" suffix is kept.
+  let tFs = titleFs;
+  const minFs = Math.max(8, Math.round(titleFs * 0.5));
+  ctx.font = `700 ${tFs}px sans-serif`;
+  while (tFs > minFs && ctx.measureText(line1).width > maxTextW) { tFs--; ctx.font = `700 ${tFs}px sans-serif`; }
   let title = line1;
   if (ctx.measureText(title).width > maxTextW) {
-    while (title.length > 1 && ctx.measureText(title + '…').width > maxTextW) title = title.slice(0, -1);
-    title += '…';
+    const m = title.match(/^(.*?)( – \S+\s\d+)$/);
+    let head = m ? m[1] : title;
+    const tail = m ? m[2] : '';
+    while (head.length > 1 && ctx.measureText(head + '…' + tail).width > maxTextW) head = head.slice(0, -1);
+    title = head + '…' + tail;
   }
-  ctx.fillText(title, centerX, startY);
+  ctx.fillText(title, centerX, startY + (titleFs - tFs));
   
   ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
   ctx.font = `400 ${subFs}px sans-serif`;
@@ -5512,8 +5585,8 @@ function drawRulers(ctx, s, bbX, bbY, bbW, bbH, ntilesH, ntilesV, cw, ch, accent
       if (oMaxR < 0) continue;
       const oX = other.offsetX + oMinC * other.tileW;
       const oY = other.offsetY + oMinR * other.tileH;
-      const oW = (oMaxC - oMinC + 1) * other.tileW;
-      const oH = (oMaxR - oMinR + 1) * other.tileH;
+      const oW = gridSpanW(other, oMinC, oMaxC);
+      const oH = gridSpanH(other, oMinR, oMaxR);
       // AABB overlap test
       if (x1 < oX + oW && x2 > oX && y1 < oY + oH && y2 > oY) return false;
     }
@@ -5566,7 +5639,7 @@ function drawRulers(ctx, s, bbX, bbY, bbW, bbH, ntilesH, ntilesV, cw, ch, accent
     ctx.moveTo(bbX, ry); ctx.lineTo(bbX + bbW, ry);
     ctx.stroke();
     for (let i = 0; i <= ntilesH; i++) {
-      const x = bbX + i * s.tileW;
+      const x = Math.min(bbX + i * s.tileW, bbX + bbW);
       ctx.beginPath();
       ctx.moveTo(x, ry - 5); ctx.lineTo(x, ry + 5);
       ctx.stroke();
@@ -5643,7 +5716,7 @@ function drawRulers(ctx, s, bbX, bbY, bbW, bbH, ntilesH, ntilesV, cw, ch, accent
     ctx.moveTo(rx, bbY); ctx.lineTo(rx, bbY + bbH);
     ctx.stroke();
     for (let i = 0; i <= ntilesV; i++) {
-      const y = bbY + i * s.tileH;
+      const y = Math.min(bbY + i * s.tileH, bbY + bbH);
       ctx.beginPath();
       ctx.moveTo(rx - 5, y); ctx.lineTo(rx + 5, y);
       ctx.stroke();
@@ -5703,7 +5776,7 @@ function drawInfoBlock(ctx, cw, ch, accent, name, subtitle, mode) {
       }
       let maxR=-1;
       for (let r=0;r<s.rows;r++)for(let c=0;c<s.cols;c++)if(s.active[r][c])maxR=Math.max(maxR,r);
-      return s.offsetY + (maxR+1) * s.tileH;
+      return maxR < 0 ? s.offsetY : s.offsetY + maxR * s.tileH + gridRowH(s, maxR);
     }));
     infoX = Math.max(30, Math.round(cw / 12));
     infoY = farBottom + Math.max(120, Math.round(ch / 8));
@@ -5754,9 +5827,9 @@ function drawInfoBlock(ctx, cw, ch, accent, name, subtitle, mode) {
         const x = s.offsetX + c * s.tileW;
         const y = s.offsetY + r * s.tileH;
         if (x < minX) minX = x;
-        if (x + s.tileW > maxX) maxX = x + s.tileW;
+        if (x + gridColW(s, c) > maxX) maxX = x + gridColW(s, c);
         if (y < minY) minY = y;
-        if (y + s.tileH > maxY) maxY = y + s.tileH;
+        if (y + gridRowH(s, r) > maxY) maxY = y + gridRowH(s, r);
       }
     }
   });
@@ -5782,7 +5855,7 @@ function drawInfoBlock(ctx, cw, ch, accent, name, subtitle, mode) {
         label: s.label || `Screen ${idx + 1}`,
         resolution: bb.w > 0 ? `${bb.w} × ${bb.h}` : '—',
         offset: `${s.offsetX}, ${s.offsetY}`,
-        grid: 'advanced',
+        grid: 'edit',
         tileSize: tileSize,
         active: `${numTiles}`,
         colorA: s.colorA || '#888',
@@ -5797,10 +5870,10 @@ function drawInfoBlock(ctx, cw, ch, accent, name, subtitle, mode) {
         if (c<sMinC) sMinC=c; if (c>sMaxC) sMaxC=c;
       }
     }
-    const cols = sMaxC >= 0 ? (sMaxC - sMinC + 1) : 0;
-    const rows = sMaxR >= 0 ? (sMaxR - sMinR + 1) : 0;
-    const resW = cols * s.tileW;
-    const resH = rows * s.tileH;
+    const cols = sMaxC >= 0 ? gridSpanCols(s, sMinC, sMaxC) : 0;
+    const rows = sMaxR >= 0 ? gridSpanRows(s, sMinR, sMaxR) : 0;
+    const resW = sMaxC >= 0 ? gridSpanW(s, sMinC, sMaxC) : 0;
+    const resH = sMaxR >= 0 ? gridSpanH(s, sMinR, sMaxR) : 0;
     return {
       label: s.label || `Screen ${idx + 1}`,
       resolution: resW > 0 ? `${resW} × ${resH}` : '—',
@@ -6443,12 +6516,241 @@ function escapeHtml(s) {
 let dragState = null; // { logoId, mode: 'move'|'resize', handle, startX, startY, origX, origY, origW, origH }
 let paintState = null; // { screen, newValue, painted: Set of "row,col" }
 let screenDragState = null; // { screen, startX, startY, origOffsetX, origOffsetY }
-let advTileDrag = null; // advanced mode on the main canvas: { screen, tileIdx, startX, startY, origX, origY }
+// ===== Edit mode: tile selection, shared by the main canvas and the tile editor =====
+// The selection is a set of placed-tile objects of one screen. A drag across
+// empty space draws a lasso rectangle (tiles whose centre falls inside are
+// selected; Shift/Ctrl adds), a plain click on empty space places a tile (or
+// just clears the selection if there is one), and dragging a tile moves the
+// whole selection. All coordinates here are screen-local tile coordinates.
+let tileSel = { screen: null, tiles: new Set() };
+let tileGesture = null; // { s, src: 'main'|'editor', mode: 'pending'|'lasso'|'move', ... }
+function tileSelOf(s) {
+  if (tileSel.screen !== s) tileSel = { screen: s, tiles: new Set() };
+  const tiles = tileSel.tiles;
+  if (tiles.size) {
+    const live = new Set(s.placedTiles || []);
+    tiles.forEach(pt => { if (!live.has(pt)) tiles.delete(pt); });
+  }
+  return tiles;
+}
+function tileGestureDown(s, x, y, e, src) {
+  const sel = tileSelOf(s);
+  const add = e.shiftKey || e.ctrlKey || e.metaKey;
+  const idx = findTileAt(s, x, y);
+  if (idx >= 0) {
+    const pt = s.placedTiles[idx];
+    s.selectedTileTypeId = pt.typeId;
+    updateSelectedTypeIndicator();
+    renderTileTypesList();
+    if (add) { if (sel.has(pt)) sel.delete(pt); else sel.add(pt); tileGesture = null; return; }
+    if (!sel.has(pt)) { sel.clear(); sel.add(pt); }
+    const orig = new Map();
+    sel.forEach(t => orig.set(t, { x: t.x, y: t.y }));
+    tileGesture = { s, src, mode: 'move', grab: pt, startX: x, startY: y, orig };
+    return;
+  }
+  tileGesture = { s, src, mode: 'pending', startX: x, startY: y, curX: x, curY: y, cx: e.clientX, cy: e.clientY, add };
+}
+function tileGestureMove(x, y, e) {
+  const g = tileGesture;
+  if (!g) return;
+  if (g.mode === 'pending') {
+    if (Math.hypot(e.clientX - g.cx, e.clientY - g.cy) < 4) return; // still a click
+    g.mode = 'lasso';
+  }
+  if (g.mode === 'lasso') { g.curX = x; g.curY = y; return; }
+  // Move the whole selection; the grabbed tile snaps, the rest follows.
+  const o = g.orig.get(g.grab);
+  const t = getTileType(g.s, g.grab.typeId);
+  const sn = advSnapTilePos(g.s, o.x + (x - g.startX), o.y + (y - g.startY), t.w, t.h, g.orig);
+  const dx = sn.x - o.x, dy = sn.y - o.y;
+  g.orig.forEach((p0, pt) => { pt.x = p0.x + dx; pt.y = p0.y + dy; });
+  activeSnapGuides = sn.guides;
+}
+// Ends the gesture. Returns 'place' when it was a click on empty space that
+// should place a tile at (g.startX, g.startY); the caller does the placing.
+function tileGestureUp() {
+  const g = tileGesture;
+  tileGesture = null;
+  if (!g) return { result: null };
+  const sel = tileSelOf(g.s);
+  activeSnapGuides = [];
+  if (g.mode === 'pending') {
+    if (sel.size && !g.add) { sel.clear(); return { result: 'cleared', g }; }
+    return { result: 'place', g };
+  }
+  if (g.mode === 'lasso') {
+    if (!g.add) sel.clear();
+    const x0 = Math.min(g.startX, g.curX), x1 = Math.max(g.startX, g.curX);
+    const y0 = Math.min(g.startY, g.curY), y1 = Math.max(g.startY, g.curY);
+    g.s.placedTiles.forEach(pt => {
+      const t = getTileType(g.s, pt.typeId);
+      const cx = pt.x + t.w / 2, cy = pt.y + t.h / 2;
+      if (cx >= x0 && cx <= x1 && cy >= y0 && cy <= y1) sel.add(pt);
+    });
+    return { result: 'lasso', g };
+  }
+  return { result: 'move', g };
+}
+function tileSelDelete(s) {
+  const sel = tileSelOf(s);
+  if (!sel.size) return false;
+  s.placedTiles = s.placedTiles.filter(pt => !sel.has(pt));
+  sel.clear();
+  return true;
+}
+// Refresh everything that shows tiles or the selection.
+function tileSelRefresh() {
+  updateTileSelUI();
+  renderStats();
+  renderAdvancedCanvas();
+  renderNow();
+}
+// Selection bar in the Edit panel: count + split button.
+function updateTileSelUI() {
+  const bar = $('tile-sel-bar');
+  if (!bar) return;
+  const s = activeScreen();
+  const n = (s && s.advancedMode) ? tileSelOf(s).size : 0;
+  bar.style.display = n ? '' : 'none';
+  if (!n) return;
+  $('tile-sel-info').textContent = T('tiles_selected').replace('{n}', n);
+  const btn = $('tile-split-btn');
+  const canSplit = n < s.placedTiles.length;
+  btn.disabled = !canSplit;
+  btn.title = canSplit ? T('split_selection_title') : T('split_need_rest');
+}
+// Highlight the selection (and the lasso while dragging) on the main preview.
+function drawTileSelection(ctx) {
+  const s = activeScreen();
+  if (!s || !s.advancedMode) return;
+  const sel = tileSelOf(s);
+  const g = (tileGesture && tileGesture.s === s && tileGesture.mode === 'lasso') ? tileGesture : null;
+  if (!sel.size && !g) return;
+  const lw = Math.max(2, Math.round(state.project.canvasW / 900));
+  ctx.save();
+  sel.forEach(pt => {
+    const t = getTileType(s, pt.typeId);
+    const x = s.offsetX + pt.x, y = s.offsetY + pt.y;
+    ctx.fillStyle = 'rgba(37,144,206,0.30)';
+    ctx.fillRect(x, y, t.w, t.h);
+    ctx.strokeStyle = '#5fb5e6';
+    ctx.lineWidth = lw;
+    ctx.strokeRect(x + lw / 2, y + lw / 2, t.w - lw, t.h - lw);
+  });
+  if (g) {
+    const x0 = s.offsetX + Math.min(g.startX, g.curX), y0 = s.offsetY + Math.min(g.startY, g.curY);
+    const w = Math.abs(g.curX - g.startX), h = Math.abs(g.curY - g.startY);
+    ctx.fillStyle = 'rgba(37,144,206,0.12)';
+    ctx.fillRect(x0, y0, w, h);
+    ctx.strokeStyle = '#2590ce';
+    ctx.lineWidth = lw;
+    ctx.setLineDash([lw * 4, lw * 3]);
+    ctx.strokeRect(x0, y0, w, h);
+  }
+  ctx.restore();
+}
+// Keyboard for the selection (Edit mode): arrows nudge, Delete removes,
+// Esc clears, Ctrl/Cmd+A selects all tiles (tile tool). Returns true if handled.
+function handleTileSelKeys(e) {
+  if ($('container-pixelmap') && $('container-pixelmap').style.display === 'none') return false;
+  const ae = document.activeElement;
+  if (ae && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA' || ae.tagName === 'SELECT' || ae.isContentEditable)) return false;
+  if (document.querySelector('.modal-backdrop')) return false;
+  const s = activeScreen();
+  if (!s || !s.advancedMode) return false;
+  const sel = tileSelOf(s);
+  if ((e.ctrlKey || e.metaKey) && (e.key === 'a' || e.key === 'A') && activeTool === 'tile') {
+    e.preventDefault();
+    s.placedTiles.forEach(pt => sel.add(pt));
+    tileSelRefresh();
+    return true;
+  }
+  if (!sel.size) return false;
+  if (e.key === 'Escape') { sel.clear(); tileSelRefresh(); return true; }
+  if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); tileSelDelete(s); tileSelRefresh(); scheduleRender(); return true; }
+  const map = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
+  const d = map[e.key];
+  if (d && !e.ctrlKey && !e.metaKey && !e.altKey) {
+    e.preventDefault();
+    const step = e.shiftKey ? 10 : 1;
+    sel.forEach(pt => { pt.x += d[0] * step; pt.y += d[1] * step; });
+    tileSelRefresh();
+    scheduleRender();
+    return true;
+  }
+  return false;
+}
+// Split the selected tiles off into a new screen, in place on the same output.
+// Both screens keep the colours and tile types; they are named "<name> – Part 1"
+// and "– Part 2" (splitting a part again continues the numbering), and their
+// circle / cross keep using the original whole screen (overlayFrame) so they
+// still form one picture. Part 2 becomes the active screen, ready to be dragged
+// onto another output in the "All outputs" view.
+function splitTileSelection() {
+  const s = activeScreen();
+  if (!s || !s.advancedMode) return;
+  const sel = tileSelOf(s);
+  if (!sel.size) return;
+  if (sel.size >= s.placedTiles.length) { alert(T('split_need_rest')); return; }
+  ensureDefaultTileType(s);
+  if (!s.overlayFrame) {
+    const bb = getAdvancedBBox(s);
+    s.overlayFrame = { x: bb.minX, y: bb.minY, w: bb.w, h: bb.h };
+  }
+  // non-breaking space keeps "Part 2" together when a long name wraps
+  const partName = (base, n) => `${base} – ${T('part_label')}\u00a0${n}`;
+  if (!s.splitGroup) {
+    s.splitGroup = 'sg_' + Date.now();
+    s.splitBase = screenDisplayName(s);
+    s.partNo = 1;
+    s.label = partName(s.splitBase, 1);
+  }
+  // Next free part number across all outputs
+  const all = state.screens.concat(...(state.canvases || []).filter(c => c.id !== state.activeCanvasId).map(c => c.screens || []));
+  const nextNo = 1 + Math.max(...all.filter(x => x.splitGroup === s.splitGroup).map(x => x.partNo || 1));
+  const hadInfo = hasScreenInfo(s);
+  const selIdx = [];
+  s.placedTiles.forEach((pt, i) => { if (sel.has(pt)) selIdx.push(i); });
+  const part = JSON.parse(JSON.stringify(s));
+  part.id = nextScreenId();
+  part.placedTiles = selIdx.map(i => part.placedTiles[i]);
+  part.partNo = nextNo;
+  part.label = partName(s.splitBase, nextNo);
+  part.selectedTileTypeId = s.selectedTileTypeId;
+  delete part._infoBB;
+  s.placedTiles = s.placedTiles.filter(pt => !sel.has(pt));
+  sel.clear();
+  state.screens.push(part);
+  if (hadInfo) {
+    addScreenInfoItem(part);     // its own info box (name + resolution), centred on Part 2
+    state.selectedOverlay = null;
+  }
+  state.activeScreenId = part.id;
+  renderScreenTabs();
+  syncScreenToUI();
+  updateModeUI();
+  renderTileTypesList();
+  renderAdvancedCanvas();
+  renderStats();
+  renderCanvasList();
+  updateTileSelUI();
+  scheduleRender();
+}
+// Place a new tile of the selected type centred on (x, y) (screen-local).
+function placeTileAt(s, x, y) {
+  ensureDefaultTileType(s);
+  const t = getTileType(s, s.selectedTileTypeId);
+  if (!t) return;
+  const sn = advSnapTilePos(s, x - t.w / 2, y - t.h / 2, t.w, t.h, -1);
+  s.placedTiles.push({ id: nextPlacedTileId(), x: sn.x, y: sn.y, typeId: t.id });
+}
 let screenSnapEnabled = true;
 let activeTool = 'pointer'; // 'pointer' (default, no action) | 'move' (drag screens) | 'tile' (toggle tiles)
 
 // Select a tool and reflect it in the toolbar (radio behaviour)
 function selectToolGlobal(tool) {
+  if (tool !== 'tile' && tileSel.tiles.size) { tileSel.tiles.clear(); updateTileSelUI(); scheduleRender(); }
   activeTool = tool;
   document.querySelectorAll('#tile-toolbar .tool-btn[data-tool]').forEach(b => {
     b.classList.toggle('active', b.dataset.tool === tool);
@@ -6476,8 +6778,8 @@ function findScreenTileAt(x, y) {
   for (let si = state.screens.length - 1; si >= 0; si--) {
     const s = state.screens[si];
     if (s.advancedMode) continue; // advanced mode handled separately
-    const totalW = s.cols * s.tileW;
-    const totalH = s.rows * s.tileH;
+    const totalW = gridTotalW(s);
+    const totalH = gridTotalH(s);
     if (x < s.offsetX || x >= s.offsetX + totalW) continue;
     if (y < s.offsetY || y >= s.offsetY + totalH) continue;
     const col = Math.floor((x - s.offsetX) / s.tileW);
@@ -6543,7 +6845,7 @@ function screenRect(s) {
     const bb = getAdvancedBBox(s);
     return { x: s.offsetX + bb.minX, y: s.offsetY + bb.minY, w: bb.w, h: bb.h };
   }
-  return { x: s.offsetX, y: s.offsetY, w: s.cols * s.tileW, h: s.rows * s.tileH };
+  return { x: s.offsetX, y: s.offsetY, w: gridTotalW(s), h: gridTotalH(s) };
 }
 
 // Which screen is under a logical point (topmost first)
@@ -6657,28 +6959,12 @@ function attachCanvasDragHandlers() {
       // Tile painting only in the tile tool
       if (activeTool === 'tile') {
         const as = activeScreen();
-        // Advanced mode: place / move free tiles directly on the main canvas
+        // Edit mode: select (lasso), move, or place free tiles on the main canvas
         if (as && as.advancedMode) {
           e.preventDefault();
-          const lx = x - as.offsetX, ly = y - as.offsetY;
-          const idx = findTileAt(as, lx, ly);
-          if (idx >= 0) {
-            const pt = as.placedTiles[idx];
-            advTileDrag = { screen: as, tileIdx: idx, startX: lx, startY: ly, origX: pt.x, origY: pt.y };
-            as.selectedTileTypeId = pt.typeId;
-            updateSelectedTypeIndicator();
-            renderTileTypesList();
-          } else {
-            ensureDefaultTileType(as);
-            const t = getTileType(as, as.selectedTileTypeId);
-            if (t) {
-              const sn = advSnapTilePos(as, lx - t.w / 2, ly - t.h / 2, t.w, t.h, -1);
-              as.placedTiles.push({ id: nextPlacedTileId(), x: sn.x, y: sn.y, typeId: as.selectedTileTypeId });
-              renderStats();
-              renderAdvancedCanvas();
-              renderNow();
-            }
-          }
+          if (e.button !== 0) return;
+          tileGestureDown(as, x - as.offsetX, y - as.offsetY, e, 'main');
+          tileSelRefresh();
           return;
         }
         const tileHit = findScreenTileAt(x, y);
@@ -6753,18 +7039,11 @@ function attachCanvasDragHandlers() {
     if (state.viewMode === 'all') return; // overview handles its own drag via window listeners
     const { x, y } = getCanvasCoords(e);
     updateViewMeta(x, y);
-    // Advanced free-tile dragging (main canvas)
-    if (advTileDrag) {
-      const s2 = advTileDrag.screen;
-      const pt = s2.placedTiles[advTileDrag.tileIdx];
-      if (!pt) { advTileDrag = null; return; }
-      const t = getTileType(s2, pt.typeId);
-      const lx = x - s2.offsetX, ly = y - s2.offsetY;
-      const propX = advTileDrag.origX + (lx - advTileDrag.startX);
-      const propY = advTileDrag.origY + (ly - advTileDrag.startY);
-      const sn = advSnapTilePos(s2, propX, propY, t ? t.w : 0, t ? t.h : 0, advTileDrag.tileIdx);
-      pt.x = sn.x; pt.y = sn.y;
-      activeSnapGuides = sn.guides;
+    // Edit mode: lasso / moving the selection (main canvas)
+    if (tileGesture && tileGesture.src === 'main') {
+      const s2 = tileGesture.s;
+      tileGestureMove(x - s2.offsetX, y - s2.offsetY, e);
+      if (tileGesture.mode === 'move') renderAdvancedCanvas();
       renderNow();
       return;
     }
@@ -6885,26 +7164,35 @@ function attachCanvasDragHandlers() {
       const { x, y } = getCanvasCoords(e);
       const idx = findTileAt(as, x - as.offsetX, y - as.offsetY);
       if (idx >= 0) {
-        as.placedTiles.splice(idx, 1);
-        renderStats();
-        renderAdvancedCanvas();
-        renderNow();
+        // Right-click on a selected tile removes the whole selection
+        if (!(tileSelOf(as).has(as.placedTiles[idx]) && tileSelDelete(as))) as.placedTiles.splice(idx, 1);
+        tileSelRefresh();
       }
     }
   };
+  // Finish an Edit-mode gesture on the main canvas; a click on empty space
+  // places a tile, unless the mouse left the canvas.
+  const endMainTileGesture = (allowPlace) => {
+    if (!tileGesture || tileGesture.src !== 'main') return false;
+    const { result, g } = tileGestureUp();
+    if (result === 'place' && allowPlace) placeTileAt(g.s, g.startX, g.startY);
+    tileSelRefresh();
+    scheduleRender();
+    return true;
+  };
   canvas.onmouseup = () => {
     if (state.viewMode === 'all') return; // overview drag ends via its own window listener
-    const wasDragging = dragState || screenDragState || advTileDrag;
+    const wasDragging = dragState || screenDragState;
     dragState = null; paintState = null;
     if (screenDragState) { screenDragState = null; activeSnapGuides = []; frozenCanvasBleed = null; renderStats(); canvas.style.cursor = 'default'; }
-    if (advTileDrag) { advTileDrag = null; activeSnapGuides = []; renderStats(); renderAdvancedCanvas(); }
+    endMainTileGesture(true);
     if (wasDragging) { renderLogoList(); scheduleRender(); }
   };
   canvas.onmouseleave = () => {
-    const wasDragging = dragState || screenDragState || advTileDrag;
+    const wasDragging = dragState || screenDragState;
     dragState = null; paintState = null;
     if (screenDragState) { screenDragState = null; activeSnapGuides = []; frozenCanvasBleed = null; renderStats(); canvas.style.cursor = 'default'; }
-    if (advTileDrag) { advTileDrag = null; activeSnapGuides = []; renderStats(); renderAdvancedCanvas(); }
+    endMainTileGesture(false);
     if (wasDragging) { renderLogoList(); scheduleRender(); }
     updateViewMeta(null, null);
   };
@@ -6958,6 +7246,7 @@ function drawSelectionOverlayOnPreview() {
     drawInactiveTileHints(ctx);
   }
   drawLogoSelectionOverlay(ctx);
+  drawTileSelection(ctx);
   drawScreenDragGuides(ctx);
   ctx.restore();
 }
@@ -6984,7 +7273,7 @@ function drawInactiveTileHints(ctx) {
         if (s.active[r][c]) continue; // only inactive tiles
         const x0 = s.offsetX + c * s.tileW;
         const y0 = s.offsetY + r * s.tileH;
-        ctx.strokeRect(x0 + 0.5, y0 + 0.5, s.tileW - 1, s.tileH - 1);
+        ctx.strokeRect(x0 + 0.5, y0 + 0.5, gridColW(s, c) - 1, gridRowH(s, r) - 1);
       }
     }
     ctx.setLineDash([]);
@@ -7729,6 +8018,7 @@ function updateModeUI() {
     $('adv-snap-size').value = s.snapSize || 8;
     updateSelectedTypeIndicator();
   }
+  updateTileSelUI();
 }
 
 function updateSelectedTypeIndicator() {
@@ -8083,7 +8373,6 @@ const ADV_CANVAS_W = 800;
 const ADV_CANVAS_H = 400;
 let advView = { scale: 1, panX: 0, panY: 0 };
 let advFreeView = false; // true while the enlarged editor is open: user controls zoom/pan (no auto-fit)
-let advDrag = null; // { tileIdx, mode: 'move' | 'place', startX, startY, origX, origY }
 let advHoverTile = null;
 
 function renderAdvancedCanvas() {
@@ -8167,6 +8456,7 @@ function renderAdvancedCanvas() {
   
   // Draw placed tiles
   const checkerIsA = advancedCheckerIsA(s);
+  const edSel = tileSelOf(s);
   s.placedTiles.forEach((pt, idx) => {
     const t = getTileType(s, pt.typeId);
     const [sx, sy] = toScreen(pt.x, pt.y);
@@ -8198,12 +8488,31 @@ function renderAdvancedCanvas() {
     ctx.strokeRect(sx + 0.5, sy + 0.5, sw - 1, sh - 1);
     
     // Highlight if selected/hovered
-    if (advHoverTile === idx) {
+    if (edSel.has(pt)) {
+      ctx.fillStyle = 'rgba(37,144,206,0.35)';
+      ctx.fillRect(sx, sy, sw, sh);
+      ctx.strokeStyle = '#5fb5e6';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(sx + 1, sy + 1, sw - 2, sh - 2);
+    } else if (advHoverTile === idx) {
       ctx.strokeStyle = '#2590ce';
       ctx.lineWidth = 2;
       ctx.strokeRect(sx, sy, sw, sh);
     }
   });
+  // Lasso rectangle while dragging
+  if (tileGesture && tileGesture.s === s && tileGesture.mode === 'lasso') {
+    const g = tileGesture;
+    const [lx, ly] = toScreen(Math.min(g.startX, g.curX), Math.min(g.startY, g.curY));
+    const lw = Math.abs(g.curX - g.startX) * scale, lh = Math.abs(g.curY - g.startY) * scale;
+    ctx.fillStyle = 'rgba(37,144,206,0.12)';
+    ctx.fillRect(lx, ly, lw, lh);
+    ctx.strokeStyle = '#2590ce';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([5, 4]);
+    ctx.strokeRect(lx + 0.5, ly + 0.5, lw, lh);
+    ctx.setLineDash([]);
+  }
   
   // Draw bounding box outline
   if (s.placedTiles.length > 0) {
@@ -8237,7 +8546,7 @@ function advSnapTilePos(s, propX, propY, w, h, skipIdx) {
   let bestX = null, bestDX = null, gx = null;
   let bestY = null, bestDY = null, gy = null;
   (s.placedTiles || []).forEach((pt, i) => {
-    if (i === skipIdx) return;
+    if (typeof skipIdx === 'number' ? i === skipIdx : (skipIdx && skipIdx.has(pt))) return;
     const tt = getTileType(s, pt.typeId);
     if (!tt) return;
     // Vertical lines: left/right edges of the other tile
@@ -8431,47 +8740,18 @@ function attachAdvancedCanvasHandlers() {
     const { x, y } = advCanvasCoords(e);
     
     if (e.button === 2) {
-      // Right click: delete tile if hit
+      // Right click: delete the tile (or the whole selection if it is selected)
       const idx = findTileAt(s, x, y);
       if (idx >= 0) {
-        s.placedTiles.splice(idx, 1);
-        renderAdvancedCanvas();
+        if (!(tileSelOf(s).has(s.placedTiles[idx]) && tileSelDelete(s))) s.placedTiles.splice(idx, 1);
+        tileSelRefresh();
         scheduleRender();
       }
       return;
     }
-    
-    const idx = findTileAt(s, x, y);
-    if (idx >= 0) {
-      // Start dragging existing tile
-      const pt = s.placedTiles[idx];
-      advDrag = {
-        tileIdx: idx,
-        mode: 'move',
-        startX: x,
-        startY: y,
-        origX: pt.x,
-        origY: pt.y,
-      };
-      // Also switch selected type to match clicked tile
-      s.selectedTileTypeId = pt.typeId;
-      updateSelectedTypeIndicator();
-      renderTileTypesList();
-    } else {
-      // Place new tile at click position
-      ensureDefaultTileType(s);
-      const t = getTileType(s, s.selectedTileTypeId);
-      const px = snapValue(s, x - t.w / 2);
-      const py = snapValue(s, y - t.h / 2);
-      s.placedTiles.push({
-        id: nextPlacedTileId(),
-        x: px,
-        y: py,
-        typeId: s.selectedTileTypeId,
-      });
-      renderAdvancedCanvas();
-      scheduleRender();
-    }
+    // Select (lasso) / move the selection / place a tile — see tileGestureDown
+    tileGestureDown(s, x, y, e, 'editor');
+    tileSelRefresh();
   };
   
   canvas.onmousemove = (e) => {
@@ -8479,15 +8759,10 @@ function attachAdvancedCanvasHandlers() {
     if (!s || !s.advancedMode) return;
     const { x, y } = advCanvasCoords(e);
     
-    if (advDrag) {
-      const pt = s.placedTiles[advDrag.tileIdx];
-      if (!pt) { advDrag = null; return; }
-      const dx = x - advDrag.startX;
-      const dy = y - advDrag.startY;
-      pt.x = snapValue(s, advDrag.origX + dx);
-      pt.y = snapValue(s, advDrag.origY + dy);
+    if (tileGesture && tileGesture.src === 'editor') {
+      tileGestureMove(x, y, e);
       renderAdvancedCanvas();
-      scheduleRender();
+      if (tileGesture.mode === 'move') scheduleRender();
     } else {
       const idx = findTileAt(s, x, y);
       if (idx !== advHoverTile) {
@@ -8498,8 +8773,25 @@ function attachAdvancedCanvasHandlers() {
     }
   };
   
-  canvas.onmouseup = () => { advDrag = null; };
-  canvas.onmouseleave = () => { advDrag = null; advHoverTile = null; renderAdvancedCanvas(); };
+  const endEditorTileGesture = (allowPlace) => {
+    if (!tileGesture || tileGesture.src !== 'editor') return;
+    const { result, g } = tileGestureUp();
+    if (result === 'place' && allowPlace) {
+      // Place new tile at click position (editor uses the grid snap only)
+      ensureDefaultTileType(g.s);
+      const t = getTileType(g.s, g.s.selectedTileTypeId);
+      g.s.placedTiles.push({
+        id: nextPlacedTileId(),
+        x: snapValue(g.s, g.startX - t.w / 2),
+        y: snapValue(g.s, g.startY - t.h / 2),
+        typeId: t.id,
+      });
+    }
+    tileSelRefresh();
+    scheduleRender();
+  };
+  canvas.onmouseup = () => endEditorTileGesture(true);
+  canvas.onmouseleave = () => { endEditorTileGesture(false); advHoverTile = null; renderAdvancedCanvas(); };
   canvas.oncontextmenu = (e) => { e.preventDefault(); };
   
   // Delete key support when canvas is hovered/focused
@@ -8508,6 +8800,7 @@ function attachAdvancedCanvasHandlers() {
     if (e.key === 'Delete' || e.key === 'Backspace') {
       const s = activeScreen();
       if (!s || !s.advancedMode) return;
+      if (tileSelDelete(s)) { tileSelRefresh(); scheduleRender(); return; }
       if (advHoverTile != null && advHoverTile >= 0) {
         s.placedTiles.splice(advHoverTile, 1);
         advHoverTile = null;
@@ -8694,6 +8987,7 @@ function wireUp() {
   
   // Add tile type
   $('add-tile-type-btn').onclick = addTileType;
+  if ($('tile-split-btn')) $('tile-split-btn').onclick = splitTileSelection;
   // Tile presets (reusable, named)
   if ($('tile-preset-add')) $('tile-preset-add').onclick = () => { const v = $('tile-preset-select').value; if (v) addTileTypeFromPreset(v); };
   if ($('tile-preset-del')) $('tile-preset-del').onclick = () => { const v = $('tile-preset-select').value; if (v) deleteTilePreset(v); };
@@ -8705,6 +8999,8 @@ function wireUp() {
   // Arrow keys nudge the selected screen on the canvas, one pixel at a time
   // (hold Shift for 10px). Works in both grid and advanced mode.
   document.addEventListener('keydown', (e) => {
+    // A tile selection (Edit mode) takes the keys first: arrows move the tiles.
+    if (handleTileSelKeys(e)) return;
     const map = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
     const d = map[e.key];
     if (!d) return;
@@ -8918,8 +9214,8 @@ function tpScreenResolution(s) {
     if (!bb || bb.w <= 0 || bb.h <= 0) return null;
     return { w: Math.round(bb.w), h: Math.round(bb.h) };
   }
-  const w = s.cols * s.tileW;
-  const h = s.rows * s.tileH;
+  const w = gridTotalW(s);
+  const h = gridTotalH(s);
   if (w <= 0 || h <= 0) return null;
   return { w, h };
 }
@@ -9119,7 +9415,7 @@ function renderTpOverview() {
       rw = bb.w * sx; rh = bb.h * sy;
     } else {
       rx = s.offsetX * sx; ry = s.offsetY * sy;
-      rw = s.cols * s.tileW * sx; rh = s.rows * s.tileH * sy;
+      rw = gridTotalW(s) * sx; rh = gridTotalH(s) * sy;
     }
     const isActive = s.id === activeScreenId;
     const fill = isActive ? accent : 'rgba(255,255,255,0.12)';
