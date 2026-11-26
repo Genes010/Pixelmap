@@ -1142,6 +1142,19 @@
     font-size: 11px; color: var(--text-secondary);
   }
   .tile-sel-bar #tile-sel-info { flex: 1; min-width: 0; }
+  /* Parts of a split screen: pick which part to edit */
+  .adv-parts { display: flex; flex-direction: column; gap: 6px; margin: 4px 0 8px; }
+  .adv-parts-h { font-size: 10.5px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--zone-blue); }
+  .adv-part {
+    display: flex; align-items: center; gap: 10px; padding: 7px 8px; border-radius: 9px;
+    border: 1px solid var(--border-card); background: var(--bg-inset); cursor: pointer;
+  }
+  .adv-part:hover { background: var(--bg-hover); }
+  .adv-part.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); background: var(--bg-active-row); cursor: default; }
+  .adv-part svg { flex-shrink: 0; display: block; background: var(--bg-input); border-radius: 4px; }
+  .adv-part-txt { min-width: 0; }
+  .adv-part-nm { font-size: 12px; font-weight: 600; color: var(--text-primary); line-height: 1.25; }
+  .adv-part-res { font-family: var(--mono); font-size: 10px; color: var(--text-muted); margin-top: 2px; }
   /* Muted until tiles are selected; then highlighted with an active split button */
   .tile-sel-bar:not(.has-sel) { background: var(--bg-input); border-color: var(--border-input); color: var(--text-muted); }
   .tile-sel-bar #tile-split-btn:disabled { opacity: 0.45; cursor: not-allowed; }
@@ -1721,6 +1734,7 @@
               </select>
             </span>
           </div>
+          <div class="adv-parts" id="adv-parts" style="display:none;"></div>
           <div class="info" data-i18n="tile_types_info">Define one or more tile types with their own dimensions and colors. Select a type, then click on the canvas below to place tiles.</div>
           <div id="tile-types-list" class="tile-types-list"></div>
           <div class="btn-row">
@@ -2157,6 +2171,8 @@ const I18N = {
     split_selection_title: 'Make the selected tiles a separate screen (Part 2), e.g. to put it on another output',
     split_need_rest: 'Leave at least one tile unselected to split the screen.',
     tiles_select_hint: 'Drag across empty space to select tiles',
+    parts_title: 'Parts of this screen',
+    part_click_hint: 'click to edit',
     split_need_sel: 'Select the tiles for Part 2 first: drag across empty space',
     part_label: 'Part',
     type_name: 'Name',
@@ -2470,6 +2486,8 @@ const I18N = {
     split_selection_title: 'Maak van de geselecteerde tegels een apart scherm (Part 2), bijv. om het op een andere output te zetten',
     split_need_rest: 'Laat minstens één tegel niet geselecteerd om het scherm te splitsen.',
     tiles_select_hint: 'Sleep over een lege plek om tegels te selecteren',
+    parts_title: 'Delen van dit scherm',
+    part_click_hint: 'klik om te bewerken',
     split_need_sel: 'Selecteer eerst de tegels voor Part 2: sleep over een lege plek',
     part_label: 'Part',
     type_name: 'Naam',
@@ -6800,6 +6818,70 @@ function handleTileSelKeys(e) {
   }
   return false;
 }
+// All parts that came from the same split (Part 1, Part 2, …), across all
+// outputs, in part order. Parts share their tile coordinates, so they line up.
+function splitPartsOf(s) {
+  if (!s || !s.splitGroup) return [];
+  const out = [];
+  (state.canvases || []).forEach(c => {
+    const list = c.id === state.activeCanvasId ? state.screens : (c.screens || []);
+    list.forEach(x => { if (x.splitGroup === s.splitGroup && x.advancedMode) out.push({ screen: x, canvas: c }); });
+  });
+  return out.sort((a, b) => (a.screen.partNo || 1) - (b.screen.partNo || 1));
+}
+// Another part with a tile at (x, y) (screen-local), or null.
+function otherPartAt(s, x, y) {
+  return splitPartsOf(s).find(p => p.screen !== s && findTileAt(p.screen, x, y) >= 0) || null;
+}
+// Another screen on this output with a tile at canvas point (cx, cy), or null.
+function otherScreenTileAt(s, cx, cy) {
+  for (let i = state.screens.length - 1; i >= 0; i--) {
+    const o = state.screens[i];
+    if (o === s) continue;
+    if (o.advancedMode) { if (o.placedTiles && findTileAt(o, cx - o.offsetX, cy - o.offsetY) >= 0) return o; }
+    else { const h = findScreenTileAt(cx, cy); if (h && h.screen === o && o.active[h.row][h.col]) return o; }
+  }
+  return null;
+}
+// Preview of one part: the whole original screen, this part's tiles in its
+// colour and the other parts grey.
+function partPreviewSVG(part, parts, boxW, boxH) {
+  let f = part.overlayFrame;
+  if (!f) { const bb = getAdvancedBBox(part); f = { x: bb.minX, y: bb.minY, w: bb.w, h: bb.h }; }
+  const sc = Math.min(boxW / Math.max(1, f.w), boxH / Math.max(1, f.h));
+  const ox = (boxW - f.w * sc) / 2 - f.x * sc, oy = (boxH - f.h * sc) / 2 - f.y * sc;
+  let rects = '';
+  parts.forEach(p => {
+    const mine = p.screen === part;
+    const fill = mine ? (part.colorA || '#2590ce') : '#6a7180';
+    p.screen.placedTiles.forEach(pt => {
+      const t = getTileType(p.screen, pt.typeId);
+      rects += `<rect x="${(ox + pt.x * sc).toFixed(1)}" y="${(oy + pt.y * sc).toFixed(1)}" width="${Math.max(0.6, t.w * sc - 0.4).toFixed(1)}" height="${Math.max(0.6, t.h * sc - 0.4).toFixed(1)}" fill="${fill}"${mine ? '' : ' opacity="0.5"'}/>`;
+    });
+  });
+  return `<svg viewBox="0 0 ${boxW} ${boxH}" width="${boxW}" height="${boxH}" xmlns="http://www.w3.org/2000/svg">${rects}</svg>`;
+}
+// Parts list in the Edit panel / editor sidebar; click a part to edit it
+// (switches output when that part lives on another one).
+function renderSplitParts() {
+  const box = $('adv-parts');
+  if (!box) return;
+  const s = activeScreen();
+  const parts = (s && s.advancedMode) ? splitPartsOf(s) : [];
+  if (parts.length < 2) { box.style.display = 'none'; box.innerHTML = ''; return; }
+  box.style.display = '';
+  box.innerHTML = `<div class="adv-parts-h">${T('parts_title')}</div>` + parts.map((p, i) => {
+    const bb = getAdvancedBBox(p.screen);
+    const where = p.canvas.id !== state.activeCanvasId ? ` · ${escapeHtml(canvasDisplayName(p.canvas))}` : '';
+    return `<div class="adv-part${p.screen === s ? ' on' : ''}" data-i="${i}">${partPreviewSVG(p.screen, parts, 64, 40)}`
+      + `<div class="adv-part-txt"><div class="adv-part-nm">${escapeHtml(screenDisplayName(p.screen))}</div>`
+      + `<div class="adv-part-res">${bb.w}×${bb.h}${where}</div></div></div>`;
+  }).join('');
+  box.querySelectorAll('.adv-part').forEach(el => {
+    el.onclick = () => { const p = parts[+el.dataset.i]; if (p.screen !== s) onScreenPick(p.canvas.id, p.screen.id); };
+  });
+}
+
 // Split the selected tiles off into a new screen, in place on the same output.
 // Both screens keep the colours and tile types; they are named "<name> – Part 1"
 // and "– Part 2" (splitting a part again continues the numbering), and their
@@ -7294,6 +7376,9 @@ function attachCanvasDragHandlers() {
   const endMainTileGesture = (allowPlace) => {
     if (!tileGesture || tileGesture.src !== 'main') return false;
     const { result, g } = tileGestureUp();
+    // A click on another screen's tile selects that screen instead of dropping a tile in it
+    const other = (result === 'place' && allowPlace) ? otherScreenTileAt(g.s, g.s.offsetX + g.startX, g.s.offsetY + g.startY) : null;
+    if (other) { onScreenPick(state.activeCanvasId, other.id); return true; }
     if (result === 'place' && allowPlace) placeTileAt(g.s, g.startX, g.startY);
     tileSelRefresh();
     scheduleRender();
@@ -8287,6 +8372,7 @@ function renderTileTypesList() {
     container.appendChild(card);
   });
   renderTilePresetSelect();
+  renderSplitParts();
 }
 
 // Grid mode: one card driving the screen's single uniform tile (s.tileW/tileH +
@@ -8509,12 +8595,14 @@ function renderAdvancedCanvas() {
   if (!document.body.classList.contains('light')) ctx.fillStyle = '#22222a';
   ctx.fillRect(0, 0, cw, ch);
   
-  // Determine content bounds
+  // Determine content bounds (for a split screen: all its parts, so the
+  // other parts stay in view)
+  const ghostParts = splitPartsOf(s).filter(p => p.screen !== s && p.screen.placedTiles && p.screen.placedTiles.length);
   let bbW, bbH, originX, originY;
-  if (s.placedTiles.length > 0) {
-    const bb = getAdvancedBBox(s);
-    bbW = bb.w; bbH = bb.h;
-    originX = bb.minX; originY = bb.minY;
+  const boxes = [s, ...ghostParts.map(p => p.screen)].filter(x => x.placedTiles.length > 0).map(getAdvancedBBox);
+  if (boxes.length) {
+    originX = Math.min(...boxes.map(b => b.minX)); originY = Math.min(...boxes.map(b => b.minY));
+    bbW = Math.max(...boxes.map(b => b.maxX)) - originX; bbH = Math.max(...boxes.map(b => b.maxY)) - originY;
   } else {
     bbW = 800; bbH = 400; originX = 0; originY = 0;
   }
@@ -8573,6 +8661,30 @@ function renderAdvancedCanvas() {
   ctx.moveTo(ox, 0); ctx.lineTo(ox, ch);
   ctx.stroke();
   
+  // Other parts of a split screen: dimmed, with their name (click one to edit it)
+  const isLight = document.body.classList.contains('light');
+  ghostParts.forEach(p => {
+    ctx.save();
+    ctx.globalAlpha = 0.28;
+    ctx.fillStyle = p.screen.colorA || '#888';
+    p.screen.placedTiles.forEach(pt => {
+      const t = getTileType(p.screen, pt.typeId);
+      const [gx, gy] = toScreen(pt.x, pt.y);
+      ctx.fillRect(gx, gy, t.w * scale - 1, t.h * scale - 1);
+    });
+    ctx.restore();
+    const gbb = getAdvancedBBox(p.screen);
+    const [lx, ly] = toScreen(gbb.minX + gbb.w / 2, gbb.minY + gbb.h / 2);
+    ctx.save();
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = isLight ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.75)';
+    ctx.font = '600 13px sans-serif';
+    ctx.fillText(screenDisplayName(p.screen), lx, ly - 9);
+    ctx.font = '400 11px sans-serif';
+    ctx.fillText(T('part_click_hint'), lx, ly + 9);
+    ctx.restore();
+  });
+
   // Draw placed tiles
   const checkerIsA = advancedCheckerIsA(s);
   const edSel = tileSelOf(s);
@@ -8746,6 +8858,7 @@ function openAdvancedEnlarge() {
   if (!wrap || !canvas || !modal || !body || !sidebar) return;
   const moved = [];
   // Move the tile-type controls into the sidebar so you can pick tiles without leaving.
+  advMoveInto($('adv-parts'), sidebar, moved);       // Part 1 / Part 2 … previews (split screens)
   advMoveInto($('tile-types-list'), sidebar, moved);
   const addRow = $('add-tile-type-btn') && $('add-tile-type-btn').closest('.btn-row');
   advMoveInto(addRow, sidebar, moved);
@@ -8880,9 +8993,10 @@ function attachAdvancedCanvasHandlers() {
       if (tileGesture.mode === 'move') scheduleRender();
     } else {
       const idx = findTileAt(s, x, y);
+      const overPart = idx < 0 && otherPartAt(s, x, y);
+      canvas.style.cursor = idx >= 0 ? 'move' : (overPart ? 'pointer' : 'crosshair');
       if (idx !== advHoverTile) {
         advHoverTile = idx;
-        canvas.style.cursor = idx >= 0 ? 'move' : 'crosshair';
         renderAdvancedCanvas();
       }
     }
@@ -8891,6 +9005,8 @@ function attachAdvancedCanvasHandlers() {
   const endEditorTileGesture = (allowPlace) => {
     if (!tileGesture || tileGesture.src !== 'editor') return;
     const { result, g } = tileGestureUp();
+    const part = (result === 'place' && allowPlace) ? otherPartAt(g.s, g.startX, g.startY) : null;
+    if (part) { onScreenPick(part.canvas.id, part.screen.id); return; } // clicked another part: edit that one
     if (result === 'place' && allowPlace) {
       // Place new tile at click position (editor uses the grid snap only)
       ensureDefaultTileType(g.s);
